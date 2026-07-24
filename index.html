@@ -33,20 +33,15 @@
 
             <h2>3DPitSimulator</h2>
             <span>v0.1</span>
+            <span id="currentFileLabel" class="current-file-label" title="Archivo actual">Sin guardar</span>
 
             <div id="projectDrawer" class="project-drawer hidden">
 
                 <div class="project-drawer-section">
                     <button class="project-drawer-item" id="pdNewProject">🆕 Nuevo proyecto</button>
+                    <button class="project-drawer-item" id="pdOpenProject" title="Ctrl+O">📂 Abrir…</button>
                     <button class="project-drawer-item" id="pdSaveProject" title="Ctrl+S">💾 Guardar</button>
-                    <button class="project-drawer-item" id="pdOpenProject">📂 Abrir</button>
-                </div>
-
-                <div class="project-drawer-separator"></div>
-
-                <div class="project-drawer-section">
-                    <button class="project-drawer-item" id="pdImportFile">⬆ Abrir desde archivo…</button>
-                    <button class="project-drawer-item" id="pdExportFile" title="Ctrl+S / Guardar también actualizará este mismo archivo de ahora en más (Chrome/Edge)">⬇ Guardar como archivo…</button>
+                    <button class="project-drawer-item" id="pdSaveAsProject" title="Ctrl+Shift+S">💾 Guardar como…</button>
                 </div>
 
                 <div class="project-drawer-separator"></div>

@@ -78,10 +78,26 @@ class Toolbar {
 
             }
 
+            if (e.ctrlKey && e.shiftKey && (e.key === "s" || e.key === "S")) {
+
+                e.preventDefault();
+                this.saveProjectAsWithFeedback();
+                return;
+
+            }
+
             if (e.ctrlKey && !e.shiftKey && (e.key === "s" || e.key === "S")) {
 
                 e.preventDefault();
                 this.saveProjectWithFeedback();
+                return;
+
+            }
+
+            if (e.ctrlKey && !e.shiftKey && (e.key === "o" || e.key === "O")) {
+
+                e.preventDefault();
+                void this.simulator.projectManager.openProject();
                 return;
 
             }
@@ -149,10 +165,12 @@ class Toolbar {
     }
 
     //------------------------------------------------------
-    // Deslizador de Proyecto (junto al logo): Nuevo / Guardar
-    // (Ctrl+S) / Recargar + Abrir/Guardar como archivo + Validar
-    // (estos últimos vivían como botones fijos del toolbar, ahora
-    // agrupados acá para no saturar la barra).
+    // Deslizador de Proyecto (junto al logo): Nuevo / Abrir / Guardar
+    // (Ctrl+S) / Guardar como (Ctrl+Shift+S) / Validar. Mismo patrón
+    // que cualquier editor estándar -- ver ProjectManager.js para el
+    // detalle de por qué "Abrir" y "Guardar" ya no distinguen entre
+    // localStorage y archivo real (antes había 4 botones para esto,
+    // ahora 2: Abrir y Guardar/Guardar como).
     //------------------------------------------------------
 
     bindProjectDrawer() {
@@ -194,24 +212,19 @@ class Toolbar {
             await this.simulator.projectManager.newProject();
         });
 
-        document.getElementById("pdSaveProject")?.addEventListener("click", () => {
-            close();
-            this.saveProjectWithFeedback();
-        });
-
         document.getElementById("pdOpenProject")?.addEventListener("click", async () => {
             close();
             await this.simulator.projectManager.openProject();
         });
 
-        document.getElementById("pdExportFile")?.addEventListener("click", () => {
+        document.getElementById("pdSaveProject")?.addEventListener("click", () => {
             close();
-            this.exportProject();
+            this.saveProjectWithFeedback();
         });
 
-        document.getElementById("pdImportFile")?.addEventListener("click", () => {
+        document.getElementById("pdSaveAsProject")?.addEventListener("click", () => {
             close();
-            this.importProject();
+            this.saveProjectAsWithFeedback();
         });
 
         document.getElementById("pdValidate")?.addEventListener("click", () => {
@@ -219,42 +232,41 @@ class Toolbar {
             this.validateCircuit();
         });
 
+        this.bindCurrentFileLabel();
+
     }
 
     //------------------------------------------------------
-    // Guardar + feedback visual breve en la barra de estado
-    // (así Ctrl+S y el botón "Guardar" del drawer se sienten
-    // igual de "instantáneos" que en un editor de texto normal)
+    // Nombre del archivo actual + indicador de cambios sin guardar,
+    // junto al logo (ver ProjectManager._setCurrentFile/_setDirty).
     //------------------------------------------------------
 
-    async saveProjectWithFeedback() {
+    bindCurrentFileLabel() {
 
-        this.simulator.projectManager.saveToLocalStorage();
+        const label = document.getElementById("currentFileLabel");
+        if (!label) return;
 
-        // Si había un archivo vinculado ANTES de este guardado, y ya
-        // no lo hay después de saveToLinkedFile(), es porque se acaba
-        // de perder el vínculo (permiso revocado, archivo movido/borrado,
-        // etc. -- ver ProjectManager.saveToLinkedFile). Avisamos con un
-        // alert la primera vez que pasa, para que quede claro que hay
-        // que volver a "Guardar como archivo..." -- si no, el usuario
-        // sigue presionando Ctrl+S pensando que el archivo en disco se
-        // actualiza, cuando en realidad solo se está guardando en el
-        // navegador (localStorage).
-        const hadLinkedFile = !!this.simulator.projectManager.fileHandle;
+        const render = () => {
+            const pm = this.simulator.projectManager;
+            label.textContent = (pm.currentFileName || "Sin guardar") + (pm.dirty ? " •" : "");
+            label.classList.toggle("dirty", !!pm.dirty);
+        };
 
-        // Si ya se vinculó un archivo (con "Guardar como archivo..."),
-        // este mismo guardado también lo sobreescribe -- sin volver a
-        // preguntar dónde. En navegadores sin soporte (Firefox, Safari)
-        // o si todavía no se eligió ningún archivo, esto no hace nada.
-        const savedToFile = await this.simulator.projectManager.saveToLinkedFile();
+        this.simulator.eventBus.on("project:file-changed", render);
+        this.simulator.eventBus.on("project:dirty-changed", render);
+        this.simulator.eventBus.on("project:new", render);
 
-        if (hadLinkedFile && !savedToFile) {
-            alert(
-                "⚠️ Se perdió el vínculo con el archivo (permiso revocado, o el archivo se movió/borró).\n\n" +
-                "El proyecto se guardó igual en este navegador, pero para volver a actualizar el archivo en disco " +
-                "usá \"Guardar como archivo...\" de nuevo."
-            );
-        }
+        render();
+
+    }
+
+    //------------------------------------------------------
+    // Guardar / Guardar como + feedback visual breve en la barra de
+    // estado (así se sienten igual de "instantáneos" que en un
+    // editor de texto normal).
+    //------------------------------------------------------
+
+    _showSaveFeedback(result) {
 
         const status = document.getElementById("statusText");
         if (!status || this.simulator.isRunning) return;
@@ -262,7 +274,11 @@ class Toolbar {
         const previousText  = status.textContent;
         const previousColor = status.style.color;
 
-        status.textContent = savedToFile ? "💾 Guardado en el archivo" : "💾 Guardado";
+        if (result.cancelled) return;
+
+        status.textContent = result.savedToFile
+            ? (result.downloaded ? "⬇ Descargado" : "💾 Guardado")
+            : "💾 Guardado en el navegador";
         status.style.color = "#4da3ff";
 
         clearTimeout(this._saveFeedbackTimeout);
@@ -273,22 +289,24 @@ class Toolbar {
 
     }
 
+    async saveProjectWithFeedback() {
+
+        const result = await this.simulator.projectManager.saveProject();
+        this._showSaveFeedback(result);
+
+    }
+
+    async saveProjectAsWithFeedback() {
+
+        const result = await this.simulator.projectManager.saveProjectAs();
+        this._showSaveFeedback(result);
+
+    }
+
     validateCircuit() {
 
         const report = this.simulator.validationEngine.getReport();
         alert(report);
-
-    }
-
-    exportProject() {
-
-        this.simulator.projectManager.exportJSON();
-
-    }
-
-    importProject() {
-
-        void this.simulator.projectManager.importJSON();
 
     }
 

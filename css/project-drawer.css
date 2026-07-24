@@ -47,6 +47,35 @@
 }
 
 /* --------------------------------------------------------
+   Nombre del archivo actual + indicador de cambios sin guardar
+   (el "•" que agrega ProjectManager cuando dirty=true) -- mismo
+   lugar donde otro software (VSCode, editores de imagen, etc.)
+   muestra qué documento está abierto. Selector más específico que
+   ".logo span" para no heredar el look de badge gris de "v0.1".
+   -------------------------------------------------------- */
+
+.logo .current-file-label {
+
+    background: none;
+    padding: 0;
+    border-radius: 0;
+
+    color: #888;
+    font-size: 13px;
+    font-weight: 400;
+
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+}
+
+.logo .current-file-label.dirty {
+    color: #f2c94c;
+}
+
+/* --------------------------------------------------------
    Panel deslizable
    -------------------------------------------------------- */
 

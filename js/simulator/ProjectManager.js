@@ -23,10 +23,25 @@ class ProjectManager {
         this.legacyStorageKey = "pit-project_data";
 
         // Handle del archivo vinculado (File System Access API) -- lo
-        // asigna exportJSON() la primera vez que el usuario elige dónde
-        // guardar, para que después Ctrl+S / "Guardar" puedan
-        // sobreescribir ESE MISMO archivo (ver saveToLinkedFile()).
+        // asigna saveProjectAs() la primera vez que el usuario elige
+        // dónde guardar (o openProject() al abrir uno existente), para
+        // que después Ctrl+S / "Guardar" puedan sobreescribir ESE MISMO
+        // archivo sin volver a preguntar (ver saveProject()).
         this.fileHandle = null;
+
+        // Nombre del archivo actualmente "abierto", solo para mostrar
+        // en la UI (ver currentFileLabel en index.html/Toolbar.js) --
+        // null = "Sin guardar" todavía. Independiente de fileHandle:
+        // en navegadores sin File System Access API (Firefox, Safari)
+        // igual queremos mostrar el nombre después de abrir/exportar,
+        // aunque no haya vínculo real para sobreescribir en silencio.
+        this.currentFileName = null;
+
+        // Cambios sin guardar EN EL ARCHIVO actual (no en localStorage,
+        // que se sigue actualizando solo de fondo como red de
+        // seguridad) -- lo que un editor de texto normal mostraría como
+        // el punto/asterisco al lado del nombre del archivo.
+        this.dirty = false;
 
         this.autoSaveInterval = null;
         this.autoSaveDelay = 5000; // 5 segundos
@@ -38,15 +53,17 @@ class ProjectManager {
     }
 
     //------------------------------------------------------
-    // Vincular eventos para auto-guardar
+    // Vincular eventos para auto-guardar + marcar "sucio"
     //------------------------------------------------------
 
     bindEvents() {
 
-        this.simulator.eventBus.on("wire:added", () => this.markDirty());
-        this.simulator.eventBus.on("wire:removed", () => this.markDirty());
-        this.simulator.eventBus.on("component:moved", () => this.markDirty());
-        this.simulator.eventBus.on("component:dragend", () => this.markDirty());
+        const onChange = () => this.markDirty();
+
+        this.simulator.eventBus.on("wire:added", onChange);
+        this.simulator.eventBus.on("wire:removed", onChange);
+        this.simulator.eventBus.on("component:moved", onChange);
+        this.simulator.eventBus.on("component:dragend", onChange);
         // Antes esto envolvía (monkey-patch) HistoryManager.push() para
         // marcar "sucio" el proyecto en cada comando nuevo -- pero
         // undo()/redo() NO pasan por push() (empujan directo a sus
@@ -55,11 +72,16 @@ class ProjectManager {
         // emite "history:changed" para los tres casos (push/undo/redo),
         // así que alcanza con escuchar el evento -- más simple y ya no
         // depende de parchear un método ajeno.
-        this.simulator.eventBus.on("history:changed", () => this.markDirty());
+        this.simulator.eventBus.on("history:changed", onChange);
 
     }
 
+    // "Sucio" respecto del ARCHIVO (fileHandle/descarga), no de
+    // localStorage -- localStorage se sigue actualizando solo cada
+    // vez que esto se llama, sin importar el estado de "dirty".
     markDirty() {
+
+        this._setDirty(true);
 
         if (this.autoSaveTimeout) {
             clearTimeout(this.autoSaveTimeout);
@@ -68,6 +90,21 @@ class ProjectManager {
         this.autoSaveTimeout = setTimeout(() => {
             this.saveToLocalStorage();
         }, this.autoSaveDelay);
+
+    }
+
+    _setDirty(value) {
+
+        if (this.dirty === value) return;
+        this.dirty = value;
+        this.simulator.eventBus.emit("project:dirty-changed", value);
+
+    }
+
+    _setCurrentFile(name) {
+
+        this.currentFileName = name;
+        this.simulator.eventBus.emit("project:file-changed", name);
 
     }
 
@@ -259,10 +296,10 @@ class ProjectManager {
 
     async newProject({ askConfirm = true } = {}) {
 
-        if (askConfirm) {
+        if (askConfirm && this.dirty) {
 
             const ok = confirm(
-                "¿Crear un proyecto nuevo?\n\nSe perderán los cambios de este proyecto que todavía no se hayan guardado."
+                "¿Crear un proyecto nuevo?\n\nSe perderán los cambios que todavía no guardaste."
             );
 
             if (!ok) return false;
@@ -291,6 +328,14 @@ class ProjectManager {
         this.simulator.history.undoStack = [];
         this.simulator.history.redoStack = [];
 
+        // "Nuevo proyecto" no está vinculado a ningún archivo todavía --
+        // el próximo "Guardar" tiene que preguntar dónde, igual que en
+        // cualquier editor (Word, VSCode, etc.) al arrancar un documento
+        // en blanco.
+        this.fileHandle = null;
+        this._setCurrentFile(null);
+        this._setDirty(false);
+
         this.simulator.eventBus.emit("project:new");
 
         return true;
@@ -298,196 +343,34 @@ class ProjectManager {
     }
 
     //------------------------------------------------------
-    // Abrir: descartar los cambios en memoria y volver a
-    // la última versión guardada del proyecto (localStorage)
+    // Abrir: SIEMPRE un archivo real elegido por el usuario (patrón
+    // estándar de "Abrir" en cualquier editor -- ya no existe la
+    // distinción anterior entre "Abrir" (volvía a la última versión en
+    // localStorage) y "Abrir desde archivo..." -- localStorage queda
+    // reservado para la recuperación automática al recargar la página,
+    // nunca como una acción explícita del menú).
     //------------------------------------------------------
 
-    async openProject({ askConfirm = true } = {}) {
+    async openProject() {
 
-        try {
+        if (this.dirty) {
 
-            const saved = localStorage.getItem(this.storageKey);
+            const ok = confirm(
+                "Hay cambios sin guardar.\n\n¿Abrir otro proyecto de todas formas? Se perderán los cambios que todavía no guardaste."
+            );
 
-            if (!saved) {
-                alert("Todavía no se guardó nada -- no hay ningún proyecto para abrir.");
-                return false;
-            }
-
-            if (askConfirm) {
-
-                const ok = confirm(
-                    "¿Abrir el último proyecto guardado?\n\nSe perderán los cambios hechos desde el último guardado."
-                );
-
-                if (!ok) return false;
-
-            }
-
-            const data = JSON.parse(saved);
-            return await this.deserialize(data);
-
-        } catch (err) {
-
-            console.warn("[ProjectManager] No se pudo abrir el proyecto guardado:", err);
-            return false;
+            if (!ok) return false;
 
         }
 
-    }
-
-    //------------------------------------------------------
-    // Export / Import JSON
-    //------------------------------------------------------
-
-    async exportJSON() {
-
-        const data = this.serialize();
-        const json = JSON.stringify(data, null, 2);
-        const blob = new Blob([json], { type: "application/json" });
-        const suggestedName = `proyecto_${new Date().toISOString().slice(0, 10)}.json`;
-
-        if (window.showSaveFilePicker) {
-            try {
-                const handle = await window.showSaveFilePicker({
-                    suggestedName,
-                    types: [{
-                        description: "Archivos JSON",
-                        accept: { "application/json": [".json"] }
-                    }]
-                });
-                const writable = await handle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-
-                // Recordar este archivo (nombre/ubicación ya elegidos por
-                // el usuario) para que, de ahora en más, Ctrl+S / el botón
-                // "Guardar" (ver saveToLinkedFile más abajo) puedan
-                // sobreescribirlo directamente -- sin volver a mostrar el
-                // selector del sistema operativo cada vez. Solo dura
-                // mientras esta pestaña siga abierta: el navegador no deja
-                // persistir el handle en sí entre recargas de página sin
-                // pedir permiso de nuevo, así que tras un F5 el primer
-                // Ctrl+S vuelve a guardar solo en el navegador hasta que
-                // se elija un archivo otra vez acá.
-                this.fileHandle = handle;
-
-                return;
-            } catch (err) {
-
-                // BUGFIX: antes, si el usuario cancelaba el selector
-                // (AbortError), el catch se limitaba a no loguear el
-                // error pero DEJABA CONTINUAR la ejecución hacia el
-                // fallback de <a download> de más abajo -- es decir,
-                // "cancelar" terminaba igual descargando el archivo
-                // solo, sin que this.fileHandle quedara vinculado (por
-                // eso además Ctrl+S nunca tenía un archivo real al cual
-                // escribir después: como nunca se completó el "Guardar
-                // como archivo...", cada Ctrl+S solo guardaba en
-                // localStorage y el usuario sentía que tenía que volver
-                // a abrir la ventana y ponerle nombre siempre).
-                // Cancelar debe cancelar de verdad: no se guarda nada
-                // ni se descarga nada.
-                if (err?.name === "AbortError") {
-                    return;
-                }
-
-                // Cualquier otro error (ej. de permisos) sí cae al
-                // fallback de descarga de abajo, para no dejar al
-                // usuario sin ninguna forma de guardar.
-                console.warn("No se pudo abrir el selector de guardado", err);
-            }
-        }
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = suggestedName;
-        a.click();
-        URL.revokeObjectURL(url);
-
-    }
-
-    //------------------------------------------------------
-    // Sobreescribir directamente el archivo vinculado (si existe),
-    // sin mostrar ningún selector -- lo usan Ctrl+S y el botón
-    // "Guardar" del deslizador de Proyecto, además del guardado
-    // normal en localStorage. Si todavía no se vinculó ningún
-    // archivo (nunca se hizo "Guardar como archivo...") o el
-    // navegador no soporta la File System Access API (Firefox,
-    // Safari), no hace nada y devuelve false -- el guardado en
-    // localStorage sigue funcionando igual en ambos casos.
-    //------------------------------------------------------
-
-    async saveToLinkedFile() {
-
-        if (!this.fileHandle) return false;
-
         try {
 
-            // El navegador puede haber revocado el permiso de escritura
-            // (ej. pasó mucho tiempo, o el archivo se movió/borró) --
-            // se re-pide antes de intentar escribir.
-            if ((await this.fileHandle.queryPermission({ mode: "readwrite" })) !== "granted") {
+            let selectedFile = null;
+            let handle = null;
 
-                const perm = await this.fileHandle.requestPermission({ mode: "readwrite" });
+            if (window.showOpenFilePicker) {
 
-                if (perm !== "granted") {
-                    // Antes esto devolvía false y dejaba this.fileHandle
-                    // intacto -- como el permiso sigue sin estar
-                    // otorgado, CADA Ctrl+S futuro repetía el mismo
-                    // pedido silencioso y volvía a fallar sin avisar
-                    // nada, dando la sensación de que "no se puede
-                    // guardar en el archivo nunca más" sin pista de por
-                    // qué. Ahora se desvincula el archivo explícitamente
-                    // -- el próximo intento de reconectar requiere
-                    // "Guardar como archivo..." de nuevo, en vez de
-                    // reintentar en silencio para siempre.
-                    this.fileHandle = null;
-                    return false;
-                }
-
-            }
-
-            const data = this.serialize();
-            const json = JSON.stringify(data, null, 2);
-
-            const writable = await this.fileHandle.createWritable();
-            await writable.write(json);
-            await writable.close();
-
-            return true;
-
-        } catch (err) {
-
-            console.warn("[ProjectManager] No se pudo guardar en el archivo vinculado:", err);
-
-            // Si el archivo ya no existe o se movió, dejamos de intentar
-            // escribirle hasta que el usuario elija uno nuevo con
-            // "Guardar como archivo...".
-            this.fileHandle = null;
-
-            return false;
-
-        }
-
-    }
-
-    async importJSON(file = null) {
-
-        const readFile = async (selectedFile) => {
-            const reader = new FileReader();
-            return await new Promise((resolve, reject) => {
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
-                reader.readAsText(selectedFile);
-            });
-        };
-
-        try {
-            let selectedFile = file;
-
-            if (!selectedFile && window.showOpenFilePicker) {
-                const [handle] = await window.showOpenFilePicker({
+                [handle] = await window.showOpenFilePicker({
                     multiple: false,
                     types: [{
                         description: "Archivos JSON",
@@ -495,9 +378,13 @@ class ProjectManager {
                     }]
                 });
                 selectedFile = await handle.getFile();
-            }
 
-            if (!selectedFile) {
+            } else {
+
+                // Fallback para navegadores sin File System Access API
+                // (Firefox, Safari) -- no hay "handle" para vincular
+                // futuros guardados, así que el próximo "Guardar" se
+                // comporta como "Guardar como" (ver saveProject()).
                 const input = document.createElement("input");
                 input.type = "file";
                 input.accept = ".json";
@@ -505,21 +392,202 @@ class ProjectManager {
                     input.onchange = () => resolve(input.files?.[0] || null);
                     input.click();
                 });
+
             }
 
-            if (!selectedFile) return;
+            if (!selectedFile) return false;
 
-            const text = await readFile(selectedFile);
+            const text = await selectedFile.text();
             const data = JSON.parse(text);
-            if (await this.deserialize(data)) {
-                alert("✅ Proyecto cargado correctamente");
-            } else {
-                alert("❌ No se pudo cargar el proyecto");
+
+            if (!(await this.deserialize(data))) {
+                alert("❌ No se pudo abrir el proyecto (formato inválido).");
+                return false;
             }
+
+            // Abrir otro archivo corta cualquier simulación en curso --
+            // mismo criterio que "Nuevo proyecto".
+            if (this.simulator.isRunning) {
+                this.simulator.stopSimulation();
+            }
+
+            this.simulator.history.undoStack = [];
+            this.simulator.history.redoStack = [];
+
+            this.fileHandle = handle; // null si vino del <input> fallback
+            this._setCurrentFile(selectedFile.name);
+            this._setDirty(false);
+
+            return true;
+
         } catch (err) {
+
             if (err?.name !== "AbortError") {
-                alert("❌ Error leyendo el archivo: " + err.message);
+                alert("❌ Error abriendo el archivo: " + err.message);
             }
+            return false;
+
+        }
+
+    }
+
+    //------------------------------------------------------
+    // Guardar (Ctrl+S / botón "Guardar"): siempre actualiza
+    // localStorage (red de seguridad silenciosa) y además, si hay un
+    // archivo vinculado (por haber abierto o guardado uno antes),
+    // lo sobreescribe en silencio -- sin mostrar ningún selector,
+    // exactamente como Ctrl+S en cualquier editor de texto.
+    //
+    // Si todavía no hay ningún archivo vinculado (primera vez, o el
+    // navegador no soporta File System Access API, o se perdió el
+    // vínculo), se comporta como "Guardar como": pide ubicación.
+    //------------------------------------------------------
+
+    async saveProject() {
+
+        this.saveToLocalStorage();
+
+        if (this.fileHandle) {
+
+            const ok = await this._writeToHandle(this.fileHandle);
+
+            if (ok) {
+                this._setDirty(false);
+                return { savedToFile: true, fileName: this.currentFileName };
+            }
+
+            // Se perdió el vínculo (permiso revocado, archivo movido/
+            // borrado) -- cae a "Guardar como" para no dejar al usuario
+            // sin ninguna forma de guardar en disco.
+        }
+
+        return await this.saveProjectAs();
+
+    }
+
+    //------------------------------------------------------
+    // Guardar como...: SIEMPRE pide ubicación (o dispara una
+    // descarga, en navegadores sin File System Access API), y
+    // vincula ese archivo para que los próximos "Guardar" lo
+    // sobreescriban en silencio.
+    //------------------------------------------------------
+
+    async saveProjectAs() {
+
+        this.saveToLocalStorage();
+
+        const data = this.serialize();
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const suggestedName = this.currentFileName || `proyecto_${new Date().toISOString().slice(0, 10)}.json`;
+
+        if (window.showSaveFilePicker) {
+
+            try {
+
+                const handle = await window.showSaveFilePicker({
+                    suggestedName,
+                    types: [{
+                        description: "Archivos JSON",
+                        accept: { "application/json": [".json"] }
+                    }]
+                });
+
+                const ok = await this._writeToHandle(handle, blob);
+
+                if (ok) {
+                    this.fileHandle = handle;
+                    this._setCurrentFile(handle.name);
+                    this._setDirty(false);
+                    return { savedToFile: true, fileName: handle.name };
+                }
+
+                return { savedToFile: false };
+
+            } catch (err) {
+
+                // Cancelar debe cancelar de verdad: no se guarda nada
+                // ni se descarga nada (ver bugfix histórico: antes esto
+                // caía igual al fallback de <a download> de abajo).
+                if (err?.name === "AbortError") {
+                    return { savedToFile: false, cancelled: true };
+                }
+
+                console.warn("[ProjectManager] No se pudo abrir el selector de guardado:", err);
+
+            }
+
+        }
+
+        // Fallback sin File System Access API (Firefox, Safari): no
+        // hay forma de obtener un handle reutilizable, así que esto
+        // dispara una descarga nueva cada vez -- "Guardar" y "Guardar
+        // como" se comportan igual en estos navegadores.
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = suggestedName;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        this._setCurrentFile(suggestedName);
+        this._setDirty(false);
+
+        return { savedToFile: true, fileName: suggestedName, downloaded: true };
+
+    }
+
+    //------------------------------------------------------
+    // Escribir en un FileSystemFileHandle ya obtenido (por
+    // showOpenFilePicker o showSaveFilePicker) -- usado tanto por
+    // saveProject() (vínculo existente) como por saveProjectAs()
+    // (vínculo recién creado). "blob" es opcional -- si no se pasa,
+    // serializa el estado actual (caso normal de saveProject()).
+    //------------------------------------------------------
+
+    async _writeToHandle(handle, blob = null) {
+
+        try {
+
+            // El navegador puede haber revocado el permiso de escritura
+            // (ej. pasó mucho tiempo, o el archivo se movió/borró) --
+            // se re-pide antes de intentar escribir.
+            if ((await handle.queryPermission({ mode: "readwrite" })) !== "granted") {
+
+                const perm = await handle.requestPermission({ mode: "readwrite" });
+
+                if (perm !== "granted") {
+                    // Antes esto devolvía false y dejaba this.fileHandle
+                    // intacto -- como el permiso sigue sin estar
+                    // otorgado, CADA Ctrl+S futuro repetía el mismo
+                    // pedido silencioso y volvía a fallar sin avisar
+                    // nada. Ahora se desvincula el archivo explícitamente
+                    // -- el próximo intento de reconectar requiere
+                    // "Guardar como..." de nuevo, en vez de reintentar
+                    // en silencio para siempre.
+                    if (handle === this.fileHandle) this.fileHandle = null;
+                    return false;
+                }
+
+            }
+
+            const writable = await handle.createWritable();
+            await writable.write(blob || JSON.stringify(this.serialize(), null, 2));
+            await writable.close();
+
+            return true;
+
+        } catch (err) {
+
+            console.warn("[ProjectManager] No se pudo escribir en el archivo:", err);
+
+            // Si el archivo ya no existe o se movió, dejamos de intentar
+            // escribirle hasta que el usuario elija uno nuevo con
+            // "Guardar como...".
+            if (handle === this.fileHandle) this.fileHandle = null;
+
+            return false;
+
         }
 
     }

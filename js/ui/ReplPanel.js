@@ -536,6 +536,15 @@ class ReplPanel {
             if (loadedTypes.has(type)) continue;
             loadedTypes.add(type);
 
+            // El ESP32 (o cualquier otro microcontrolador futuro que
+            // empiece con "esp32") es el anfitrión, no un periférico --
+            // nunca va a tener su propio components/<type>/<type>.hal.py
+            // (mismo criterio que ya usa QemuBridge.getEsp32() para
+            // encontrarlo). Sin este salto, cada "Ejecutar" intentaba
+            // ese fetch y lo dejaba en 404 en la consola sin ninguna
+            // razón real.
+            if (type.startsWith("esp32")) continue;
+
             if (this._halSentToFirmware.has(type)) continue; // ya está en el firmware, no lo repetimos
 
             const hal = await this._loadHal(type);
