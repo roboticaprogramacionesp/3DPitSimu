@@ -58,9 +58,11 @@
 # enganchado a nada.
 #
 # ── Limitaciones conocidas (por ahora) ──────────────────────────
-# - .text(font, s, x, y, fg=WHITE, bg=BLACK) solo soporta módulos de
-#   fuente bitmap de ancho fijo <= 8px (ej. vga_8x8) -- fuentes más
-#   anchas o de ancho variable (proporcionales) todavía no.
+# - .text(font, s, x, y, fg=WHITE, bg=BLACK) soporta cualquier módulo
+#   de fuente bitmap de ANCHO FIJO (vga_8x8, vga1_16x32,
+#   vga1_bold_16x32, vga2_bold_16x32, etc.) -- fuentes PROPORCIONALES
+#   de ancho variable (las que usan write()/write_len() en vez de
+#   text()) todavía no.
 # - .draw_icon() asume 1bpp fila por fila MSB-primero (formato más
 #   común) -- si tu módulo de íconos usa otro layout, avisá.
 # - self.rotation (0-3) SÍ rota posición y contenido de todo lo que
@@ -419,27 +421,28 @@ class ST7789:
     def text(self, font, s, x, y, fg=0xFFFF, bg=0x0000):
         """
         Dibuja texto con un MÓDULO DE FUENTE bitmap externo (ej.
-        vga_8x8, vga1_8x8 -- los típicos "vgaN_WxH.py" que se bajan
-        sueltos o vienen con russhughes/st7789_mpy) -- mismo orden de
-        argumentos que las librerías reales que usan esta convención:
-        text(font, string, x, y, fg=WHITE, bg=BLACK).
+        vga_8x8, vga1_16x32, vga1_bold_16x32, vga2_bold_16x32 -- los
+        típicos "vgaN_WxH.py" que se bajan sueltos o vienen con
+        russhughes/st7789_mpy) -- mismo orden de argumentos que las
+        librerías reales que usan esta convención: text(font, string,
+        x, y, fg=WHITE, bg=BLACK).
 
         El módulo de fuente debe exponer:
-          WIDTH, HEIGHT -- tamaño de cada glifo en píxeles (acá solo
-                           soportamos WIDTH <= 8, ver más abajo)
+          WIDTH, HEIGHT -- tamaño de cada glifo en píxeles (cualquier
+                           WIDTH fijo; ver bytes_per_row más abajo)
           FIRST, LAST   -- primer/último código de caracter soportado
-          FONT (o _FONT) -- bytes: HEIGHT bytes por glifo, 1 byte por
-                            fila, bit más significativo = píxel más a
-                            la izquierda, 1 = trazo / 0 = fondo. Es el
-                            formato más común de estos módulos para
-                            fuentes de ancho fijo <= 8px (como
-                            vga_8x8).
+          FONT (o _FONT) -- bytes: HEIGHT filas por glifo,
+                            ceil(WIDTH/8) bytes por fila, bit más
+                            significativo del primer byte = píxel más
+                            a la izquierda (mismo empaquetado 1bpp
+                            MSB-primero que ya usa draw_icon() más
+                            abajo -- vga_8x8 con WIDTH=8 es el caso
+                            particular de 1 byte/fila).
 
-        LIMITACIÓN: si el módulo de fuente es de ancho > 8px (ej.
-        vga2_8x16 con glifos de más de 1 byte por fila, o fuentes
-        PROPORCIONALES de ancho variable como las que usan
-        write()/write_len() en devbis/st7789py_mpy) esto todavía no
-        lo soporta -- levanta un error claro en vez de dibujar
+        LIMITACIÓN: solo fuentes de ancho FIJO (bitmap monoespaciado).
+        Fuentes PROPORCIONALES de ancho variable (las que usan
+        write()/write_len() en vez de text() en devbis/st7789py_mpy)
+        todavía no -- levantan un error claro en vez de dibujar
         cualquier cosa rota. Si necesitás esa fuente en particular,
         avisá qué módulo es y lo sumamos.
         """
@@ -457,12 +460,13 @@ class ST7789:
                 "módulo de fuente bitmap compatible (se espera "
                 "WIDTH/HEIGHT/FIRST/LAST/FONT, como vga_8x8.py)")
 
-        if font_w > 8:
-            raise NotImplementedError(
-                "Fuente de %d px de ancho no soportada todavía -- "
-                "este HAL solo dibuja fuentes de ancho fijo <= 8px "
-                "(como vga_8x8). Avisá si necesitás una fuente más "
-                "ancha para agregarle soporte." % font_w)
+        # ceil(WIDTH/8) bytes por fila -- mismo cálculo que ya usa
+        # draw_icon() para íconos de más de 8px de ancho. WIDTH<=8
+        # (vga_8x8) da 1 byte/fila, igual que antes; WIDTH=16
+        # (vga1_16x32, vga1_bold_16x32, vga2_bold_16x32) da 2
+        # bytes/fila. Antes esto asumía SIEMPRE 1 byte/fila y
+        # rechazaba con NotImplementedError cualquier WIDTH>8.
+        bytes_per_row = (font_w + 7) // 8
 
         fg_hi, fg_lo = (fg >> 8) & 0xFF, fg & 0xFF
         bg_hi, bg_lo = (bg >> 8) & 0xFF, bg & 0xFF
@@ -472,13 +476,13 @@ class ST7789:
             code = ord(ch)
             if code < first or code > last:
                 code = first  # fuera de rango -> cae al primer glifo (típ. espacio)
-            glyph_offset = (code - first) * font_h
+            glyph_offset = (code - first) * font_h * bytes_per_row
 
             buf = bytearray(font_w * font_h * 2)
             for row in range(font_h):
-                row_bits = data[glyph_offset + row]
+                row_start = glyph_offset + row * bytes_per_row
                 for col in range(font_w):
-                    bit = (row_bits >> (7 - col)) & 1
+                    bit = (data[row_start + (col >> 3)] >> (7 - (col & 7))) & 1
                     off = (row * font_w + col) * 2
                     if bit:
                         buf[off], buf[off + 1] = fg_hi, fg_lo
