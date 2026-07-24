@@ -665,19 +665,25 @@ class SignalEngine {
       return text;
     });
 
-    // Dos cosas DISTINTAS que antes se trataban igual:
-    // - backlight: prende/apaga la luz de fondo del panel
-    //   ENTERO (rectángulo + grilla de puntos), haya o no texto.
-    // - display_on: prende/apaga solo la salida de caracteres
-    //   -- el panel sigue tan iluminado como estaba, la DDRAM
-    //   sigue teniendo el contenido (por eso el HAL sigue
-    //   mandando la grilla completa igual).
-    this.simulator.renderer.setLcdBacklight(lcd, backlightOn !== false);
+    // ANTES: backlight y display_on se trataban como conceptos
+    // separados a propósito (fiel al HD44780 real -- display_off()
+    // solo oculta caracteres, el panel se ve igual de iluminado).
+    // Cambiado a pedido: visualmente esto confundía más de lo que
+    // ayudaba (el LCD paralelo ni siquiera expone backlight real --
+    // ver lcd16x2.hal.py, manda "backlight=1" fijo -- así que
+    // display_on era la ÚNICA señal de "prendido/apagado" que el
+    // usuario podía controlar, y quedaba invisible). Ahora ambas
+    // señales combinadas deciden si el panel se ve "iluminado" -- el
+    // contenido (DDRAM) no se pierde igual: el HAL manda la grilla
+    // completa en cada _emit() sin importar display_on, así que
+    // reactivar el display siempre muestra el texto correcto sin
+    // necesidad de un lcd.message() nuevo.
+    const displayOn = !cursorState || cursorState.displayOn !== false;
+    const effectivelyLit = backlightOn !== false && displayOn;
 
-    if (
-      backlightOn === false ||
-      (cursorState && cursorState.displayOn === false)
-    ) {
+    this.simulator.renderer.setLcdBacklight(lcd, effectivelyLit);
+
+    if (!effectivelyLit) {
       this.simulator.renderer.clearLcdText(lcd);
     } else {
       this.simulator.renderer.drawLcdText(lcd, textRows, cursorState);
