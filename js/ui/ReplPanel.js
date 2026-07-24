@@ -518,7 +518,29 @@ class ReplPanel {
     // reemplaza a SEND_CHUNK_SIZE/SEND_CHUNK_DELAY_MS, se suma.
     _wrapHalForIsolation(type, hal) {
 
-        const b64 = btoa(unescape(encodeURIComponent(hal)));
+        // Representación binaria (1 char = 1 byte UTF-8) del código
+        // fuente -- misma técnica que btoa(unescape(encodeURIComponent(...))),
+        // separada acá para poder calcular largo/checksum sobre los
+        // MISMOS bytes que va a producir a2b_base64() del otro lado,
+        // sin duplicar la codificación.
+        const binaryStr = unescape(encodeURIComponent(hal));
+        const b64 = btoa(binaryStr);
+
+        // Verificación de integridad -- ver el comentario grande de
+        // server.js/SEND_CHUNK_SIZE: la UART emulada de QEMU puede
+        // perder bytes sueltos en transmisiones largas incluso con el
+        // throttling. Sin esto, una corrupción parcial se ve como un
+        // UnicodeError/SyntaxError genérico e indistinguible de un
+        // bug real del HAL -- con el largo y un checksum simple
+        // calculados ACÁ (antes de que nada viaje) y verificados del
+        // otro lado después de decodificar, un HAL corrupto se
+        // reporta como tal, con la diferencia exacta de bytes, en vez
+        // de como una excepción críptica.
+        let checksum = 0;
+        for (let i = 0; i < binaryStr.length; i++) {
+            checksum = (checksum + binaryStr.charCodeAt(i)) % 65536;
+        }
+        const expectedLen = binaryStr.length;
 
         const width = ReplPanel.HAL_B64_LINE_WIDTH;
         const lines = [];
@@ -530,9 +552,13 @@ class ReplPanel {
             `# -- HAL: ${type} (aislado) --\n` +
             `try:\n` +
             `    import ubinascii as _ub_iso\n` +
-            `    exec(_ub_iso.a2b_base64(\n` +
+            `    _hal_bytes = _ub_iso.a2b_base64(\n` +
             lines.join("\n") + "\n" +
-            `    ).decode(), globals())\n` +
+            `    )\n` +
+            `    _hal_sum = sum(_hal_bytes) % 65536\n` +
+            `    if len(_hal_bytes) != ${expectedLen} or _hal_sum != ${checksum}:\n` +
+            `        raise ValueError("transmision corrupta: len=%d sum=%d (esperado len=${expectedLen} sum=${checksum})" % (len(_hal_bytes), _hal_sum))\n` +
+            `    exec(_hal_bytes.decode(), globals())\n` +
             `except Exception as _hal_err:\n` +
             `    print("HAL_ERROR:${type}: " + repr(_hal_err))\n`
         );

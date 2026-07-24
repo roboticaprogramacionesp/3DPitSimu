@@ -240,8 +240,20 @@ function startQemu(wss) {
 // primera vez que se cargan los HAL de una sesión de QEMU (se cachean
 // después, ver _halSentToFirmware) -- vale la pena a cambio de que
 // el código realmente llegue completo.
-const SEND_CHUNK_SIZE = 48;     // antes: 256 (y 32 antes de eso) // bytes por trozo
-const SEND_CHUNK_DELAY_MS = 10; // antes: 2 (y 8 antes de eso) // pausa entre trozos
+// SEGUNDA vuelta de este mismo ajuste -- 48/10ms (intento anterior)
+// ya CONTUVO la falla (el try/except de aislamiento sobrevivió
+// entero y capturó un HAL_ERROR limpio en vez de que la corrupción
+// tirara abajo TODO el paste), pero confirmado en la práctica que
+// todavía se pierden bytes sueltos dentro del base64 (el .decode()
+// UTF-8 fallaba con UnicodeError -- corrupción parcial, no total).
+// Bajado bastante más para dar más margen real. Si esto tampoco
+// alcanza, el próximo paso ya no es "bajar el número" sino agregar
+// una verificación de integridad (largo/checksum) del lado del
+// wrapper para poder DETECTAR corrupción con certeza en vez de
+// inferirla de un traceback -- ver la nota en
+// ReplPanel._wrapHalForIsolation() si se llega a ese punto.
+const SEND_CHUNK_SIZE = 16;     // antes: 48 (256, y 32 antes de eso) // bytes por trozo
+const SEND_CHUNK_DELAY_MS = 20; // antes: 10 (2, y 8 antes de eso) // pausa entre trozos
 
 // ============================================
 // Stripper de comentarios/líneas vacías para pegados de
