@@ -495,9 +495,17 @@ class Renderer {
 
     let pressedStack = [];
 
+    // ANTES: forzaba el fill a amarillo fijo (#ffe600) para TODAS las
+    // teclas al presionar -- tapaba el color propio de cada botón
+    // (magenta/verde/azul/oliva/amarillo en el SVG real). Cambiado a
+    // pedido: mismo patrón que ya usa bindKeypadMatrix (filtro de
+    // brillo + resplandor blanco, sin tocar el fill) -- se nota
+    // clarísimo que está presionado sin perder de vista de qué color
+    // es cada tecla.
     const setVisual = (el, isOn) => {
-      el.style.fill = isOn ? "#ffe600" : "";
-      el.style.filter = isOn ? "drop-shadow(0 0 4px #ffcc00)" : "none";
+      el.style.filter = isOn
+        ? "brightness(1.6) drop-shadow(0 0 4px #ffffff)"
+        : "none";
     };
 
     keys.forEach((el) => {
