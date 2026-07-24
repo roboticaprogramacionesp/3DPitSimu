@@ -1,10 +1,10 @@
 {
     "type": "pot_slider",
-    "name": "Potenciómetro Deslizante 10K x2",
+    "name": "Potenciómetro Deslizante 10K",
     "category": "Sensores",
 
     "width": 110,
-    "height": 64,
+    "height": 46,
 
     "svgPath": "components/pot_slider/pot_slider.svg",
 
@@ -12,14 +12,14 @@
     "pinSize": 2.6,
 
     "pins": [
-        { "id": "gnd",  "name": "GND",        "x": 16, "y": 57, "type": "ground", "signal": "ground" },
-        { "id": "vcc",  "name": "VCC",        "x": 40, "y": 57, "type": "power",  "signal": "power"  },
-        { "id": "out1", "name": "OUT1 (ADC)", "x": 64, "y": 57, "type": "signal" },
-        { "id": "out2", "name": "OUT2 (ADC)", "x": 88, "y": 57, "type": "signal", "optional": true }
+        { "id": "gnd",  "name": "GND",        "x": 16, "y": 39, "type": "ground", "signal": "ground" },
+        { "id": "vcc",  "name": "VCC",        "x": 40, "y": 39, "type": "power",  "signal": "power"  },
+        { "id": "out1", "name": "OUT1 (ADC)", "x": 64, "y": 39, "type": "signal" },
+        { "id": "out2", "name": "OUT2 (ADC)", "x": 88, "y": 39, "type": "signal", "optional": true }
     ],
 
     "properties": {
-        "modelo": "Potenciómetro deslizante lineal 10KΩ x2 (módulo con 2 rieles independientes, GND/VCC comunes, salida analógica propia por riel)",
-        "nota": "Arrastrá cada perilla en el canvas para simular su posición -- a diferencia del joystick, NO vuelven solas al centro al soltar: se quedan donde las dejaste, igual que el potenciómetro real. OUT2 es opcional: si tu módulo/código solo usa un riel, conectá únicamente OUT1."
+        "modelo": "Potenciómetro deslizante lineal 10KΩ (módulo con riel, salida analógica duplicada en 2 pines)",
+        "nota": "Arrastrá la perilla en el canvas para simular la posición -- a diferencia del joystick, NO vuelve sola al centro al soltar: se queda donde la dejaste, igual que el potenciómetro real. OUT1 y OUT2 son la MISMA señal (el módulo saca el wiper por 2 pines): conectá el que te resulte más cómodo, o ambos si tu proyecto los usa."
     }
 }

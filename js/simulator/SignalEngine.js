@@ -223,22 +223,24 @@ class SignalEngine {
   }
 
   // ====================================================
-  // Potenciómetro deslizante (pot_slider) -- DOS rieles
-  // independientes (out1/out2, ver pot_slider.json/.svg), cada uno
-  // con su propio eje, SIN resorte de centrado (a diferencia del
-  // joystick, acá Renderer.bindSlider no llama a esto al soltar el
-  // mouse, así que el valor se queda en lo último que se mandó).
+  // Potenciómetro deslizante (pot_slider) -- un solo eje, SIN
+  // resorte de centrado (a diferencia del joystick, acá
+  // Renderer.bindSlider no llama a esto al soltar el mouse, así
+  // que el valor se queda en lo último que se mandó).
+  //
+  // El módulo real tiene UN solo wiper pero lo saca por 2 pines
+  // (out1/out2, ver pot_slider.json) -- son la MISMA señal, así que
+  // un solo arrastre manda el mismo valor a ambos, sin importar
+  // cuál (o cuáles) esté cableado el usuario.
   // ====================================================
 
-  setSliderPosition(component, pinId, n01) {
+  setSliderPosition(component, n01) {
     const value = Math.round(Math.max(0, Math.min(1, n01)) * 65535);
 
-    component.sliderState = {
-      ...component.sliderState,
-      [pinId]: { n01, value },
-    };
+    component.sliderState = { n01, value };
 
-    this._notifyAdcToFirmware(component, pinId, value);
+    this._notifyAdcToFirmware(component, "out1", value);
+    this._notifyAdcToFirmware(component, "out2", value);
   }
 
   _notifyAdcToFirmware(component, pinId, value) {
