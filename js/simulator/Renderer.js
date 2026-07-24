@@ -1928,23 +1928,51 @@ class Renderer {
       const hi = bytes[i * 2] || 0;
       const lo = bytes[i * 2 + 1] || 0;
       const value = (hi << 8) | lo;
-
-      // RGB565 -> RGB888 (5 bits rojo, 6 bits verde, 5 bits azul,
-      // reescalados a 0-255 en vez de solo correr los bits, para
-      // no perder el brillo máximo -- ej. 0x1F (rojo a full) da
-      // 255, no 248).
-      const r5 = (value >> 11) & 0x1f;
-      const g6 = (value >> 5) & 0x3f;
-      const b5 = value & 0x1f;
+      const [r, g, b] = Renderer.rgb565to888(value);
 
       const idx = i * 4;
-      img.data[idx] = Math.round((r5 * 255) / 31);
-      img.data[idx + 1] = Math.round((g6 * 255) / 63);
-      img.data[idx + 2] = Math.round((b5 * 255) / 31);
+      img.data[idx] = r;
+      img.data[idx + 1] = g;
+      img.data[idx + 2] = b;
       img.data[idx + 3] = 255;
     }
 
     ctx.putImageData(img, x, y);
+  }
+
+  // RGB565 -> RGB888 (5 bits rojo, 6 bits verde, 5 bits azul,
+  // reescalados a 0-255 en vez de solo correr los bits, para no
+  // perder el brillo máximo -- ej. 0x1F (rojo a full) da 255, no
+  // 248). Factorizado para reusar entre drawTftRegion (pixel a
+  // pixel) y fillTftRegion (relleno sólido, ver más abajo).
+  static rgb565to888(value) {
+    const r5 = (value >> 11) & 0x1f;
+    const g6 = (value >> 5) & 0x3f;
+    const b5 = value & 0x1f;
+    return [
+      Math.round((r5 * 255) / 31),
+      Math.round((g6 * 255) / 63),
+      Math.round((b5 * 255) / 31),
+    ];
+  }
+
+  // Relleno sólido rápido: fill()/fill_rect() de pantalla completa
+  // (o de un área grande) llegan por un protocolo compacto propio
+  // (ver tft_st7789.hal.py:_send_solid y QemuBridge.js) en vez del
+  // hex pixel-por-pixel de drawTftRegion -- un fill(0) de 240x240
+  // son 57.600 píxeles idénticos, no hace falta reconstruir un
+  // ImageData pixel a pixel cuando un solo ctx.fillRect() pinta lo
+  // mismo mucho más rápido.
+  fillTftRegion(component, colorValue, x, y, width, height) {
+    if (!component.element) return;
+
+    const canvas = component.element.querySelector('[data-tft-role="screen"]');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    const [r, g, b] = Renderer.rgb565to888(colorValue);
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fillRect(x, y, width, height);
   }
 
   // Apagar/limpiar la pantalla entera (reset de la simulación, o

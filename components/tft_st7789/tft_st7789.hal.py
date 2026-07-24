@@ -316,15 +316,18 @@ class ST7789:
     def _send_solid(self, x, y, w, h, color):
         """Manda un rectángulo sólido (un único color repetido) --
         usado por fill_rect()/hline()/vline() y por las 4 franjas de
-        rect(). Arma la fila de hex UNA sola vez (todas las filas son
-        idénticas en un relleno sólido) y la ESCRIBE h veces directo
-        a stdout -- NO arma primero "row_hex * h" en un solo string
-        gigante: para un fill() de pantalla completa (240x240) eso
-        son 230.400 bytes de string temporal, la MISMA cantidad de
-        memoria que el framebuffer que sacamos, solo que efímera en
-        vez de persistente -- y el heap del ESP32 emulado tampoco
-        la tiene. Escribir fila por fila mantiene en memoria, en
-        todo momento, nomás una fila (unos pocos cientos de bytes)."""
+        rect(). A diferencia de mandar el hex pixel por pixel (lo que
+        hacía esta función antes), un relleno sólido es POR
+        DEFINICIÓN el mismo color en cada pixel de (w, h) -- no hace
+        falta repetirlo w*h veces para que el otro lado sepa pintar
+        el rectángulo entero. Formato compacto: "TFT:x:y:WxH:S<hex4>"
+        (el prefijo "S" lo distingue del hex pixel-por-pixel de
+        drawTftRegion en QemuBridge.js/Renderer.js). Para un fill()
+        de pantalla completa (240x240, ej. el negro que manda init())
+        esto son ~20 bytes en vez de 230.400 -- antes esa única
+        llamada (con 240 sys.stdout.write() de una fila cada una)
+        era, en la práctica, el cuello de botella entero de cualquier
+        dibujo de pantalla completa."""
         clipped = self._clip(x, y, w, h)
         if not clipped:
             return
@@ -332,12 +335,8 @@ class ST7789:
 
         hi = (color >> 8) & 0xFF
         lo = color & 0xFF
-        row_hex = ("%02x%02x" % (hi, lo)) * w
 
-        _sys.stdout.write("TFT:%d:%d:%dx%d:" % (x, y, w, h))
-        for _ in range(h):
-            _sys.stdout.write(row_hex)
-        _sys.stdout.write("\n")
+        _sys.stdout.write("TFT:%d:%d:%dx%d:S%02x%02x\n" % (x, y, w, h, hi, lo))
 
     # ── Primitivas de dibujo ─────────────────────────────────────
 

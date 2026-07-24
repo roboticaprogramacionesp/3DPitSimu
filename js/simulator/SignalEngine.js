@@ -726,16 +726,20 @@ class SignalEngine {
   // Ver el comentario largo en QemuBridge.parseLine para el motivo.)
   // ====================================================
 
-  applyTftRegion(hexString, x, y, width, height) {
-    // Misma simplificación que el resto de las pantallas: un solo
-    // TFT por canvas, sin direccionar por CS real.
+  // Busca el único TFT del canvas y valida que esté cableado -- misma
+  // lógica de guarda que necesitan tanto applyTftRegion (rectángulo
+  // pixel a pixel) como applyTftSolidFill (relleno sólido compacto,
+  // ver más abajo), factorizada para no duplicarla entre las dos.
+  // Devuelve null si no hay que dibujar nada (sin TFT en el canvas, o
+  // ya se apagó la pantalla por desconexión).
+  _resolveTftForDraw() {
     const tft = this.simulator.componentManager
       .getAll()
       .find((c) => c.type === "tft_st7789");
 
     if (!tft) {
       //console.warn("[SignalEngine] Llegó un rectángulo TFT pero no hay ningún TFT en el canvas",);
-      return;
+      return null;
     }
 
     // Ver el comentario largo en applyOledFramebuffer -- misma falla,
@@ -746,8 +750,15 @@ class SignalEngine {
     // rectángulo entrante hasta que vuelva a estar alimentado.
     if (!this.isFullyConnected(tft, "tft", { sck: "scl", mosi: "sda", rst: "res" })) {
       this.simulator.renderer.clearTftScreen(tft);
-      return;
+      return null;
     }
+
+    return tft;
+  }
+
+  applyTftRegion(hexString, x, y, width, height) {
+    const tft = this._resolveTftForDraw();
+    if (!tft) return;
 
     const byteCount = Math.ceil(hexString.length / 2);
     const bytes = new Uint8Array(byteCount);
@@ -757,6 +768,29 @@ class SignalEngine {
     }
 
     this.simulator.renderer.drawTftRegion(tft, bytes, x, y, width, height);
+
+    this.simulator.eventBus.emit("tft:updated", {
+      componentId: tft.id,
+      x,
+      y,
+      width,
+      height,
+    });
+  }
+
+  // Relleno sólido -- protocolo compacto "TFT:x:y:WxH:S<hex4>" (ver
+  // QemuBridge.js/tft_st7789.hal.py:_send_solid): un fill()/fill_rect()
+  // grande (ej. tft.init() limpiando los 240x240 en negro) es UN SOLO
+  // color repetido en cada pixel de la región -- mandarlo pixel por
+  // pixel como hex (lo que hacía antes _send_solid) son 230KB de texto
+  // para una pantalla completa, lentísimo de transmitir/parsear.
+  // Acá directamente coloreamos el rectángulo con ctx.fillRect en vez
+  // de reconstruir un ImageData de decenas de miles de píxeles.
+  applyTftSolidFill(colorValue, x, y, width, height) {
+    const tft = this._resolveTftForDraw();
+    if (!tft) return;
+
+    this.simulator.renderer.fillTftRegion(tft, colorValue, x, y, width, height);
 
     this.simulator.eventBus.emit("tft:updated", {
       componentId: tft.id,

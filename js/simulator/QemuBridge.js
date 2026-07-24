@@ -442,7 +442,21 @@ class QemuBridge {
                     const width  = parseInt(dims[1], 10);
                     const height = parseInt(dims[2], 10);
                     const hex    = parts.slice(4).join(":");
-                    this.simulator.signalEngine.applyTftRegion(hex, x, y, width, height);
+                    // Variante compacta "S<hex4>" (ver
+                    // tft_st7789.hal.py:_send_solid): TODO el rectángulo
+                    // es un único color repetido -- fill()/fill_rect()
+                    // grandes (ej. tft.init() limpiando 240x240) mandan
+                    // esto en vez de 2*ancho*alto caracteres hex
+                    // literales, que para una pantalla completa son
+                    // ~230KB de texto por UART para algo que es UN color.
+                    if (hex.startsWith("S")) {
+                        const colorValue = parseInt(hex.slice(1), 16);
+                        if (!isNaN(colorValue)) {
+                            this.simulator.signalEngine.applyTftSolidFill(colorValue, x, y, width, height);
+                        }
+                    } else {
+                        this.simulator.signalEngine.applyTftRegion(hex, x, y, width, height);
+                    }
                 }
             }
             return;
