@@ -12,100 +12,12 @@ class Renderer {
     return type === "led";
   }
 
-  // Servo SG90 (y compatibles): el eje/horn rota vía data-servo-role="shaft"
-  static isServo(type) {
-    return type === "sg90";
-  }
-
-  // OLED I2C (SSD1306 128x64): la pantalla se dibuja en un <canvas>
-  // inyectado dentro del SVG, alimentado por el framebuffer real
-  // que manda el firmware (ver oled_hal.py / QemuBridge "OLED:")
-  static isOled(type) {
-    return type === "oled";
-  }
-
-  // Display 7 segmentos: el .svg trae un path/polygon independiente
-  // por cada segmento (a,b,c,d,e,f,g) más un círculo para el punto
-  // decimal (ver DISPLAY7_SEGMENT_MAP / tagDisplay7Elements), así
-  // que cada uno se prende y apaga de forma real e independiente
-  // (ver applyDisplay7State).
-  static isDisplay7(type) {
-    return type === "display7";
-  }
-
-  // Motor DC (via L298N): no tiene hélice/rotor real que girar --
-  // se superpone un indicador de giro (anillo + flecha) sobre el
-  // eje del motor, animado con la Web Animations API según el
-  // estado que calcula SignalEngine.evaluateL298n().
-  static isMotor(type) {
-    return type === "motor";
-  }
-
-  // LCD 16x2 (con o sin backpack I2C): no tiene renderizado de
-  // texto real todavía (eso necesita el protocolo "LCD:" de
-  // QemuBridge, que no está implementado) -- por ahora solo se
-  // le puede cambiar el esquema de color (fondo + grilla de
-  // puntos) para elegir entre las variantes comerciales típicas.
-  static isLcd(type) {
-    return type === "lcd16x2" || type === "lcd_16x2_i2c";
-  }
-
-  // Matriz de NeoPixel (WS2812) de tamaño configurable (rows/cols):
-  // a diferencia del LCD/OLED (tamaño físico fijo), acá el bisel se
-  // genera por código (no depende de un .svg externo) para poder
-  // acomodarse a cualquier rows x cols que se elija desde el
-  // PropertyPanel -- ver tagNeopixelElements().
-  static isNeopixelMatrix(type) {
-    return type === "neopixel_matrix";
-  }
-
-  // Matriz MAX7219 (1 bit por LED, monocromática): mismo enfoque
-  // que la matriz de NeoPixel -- el bisel + la grilla de LEDs se
-  // generan por código (no depende de un .svg externo) para
-  // acomodarse a cualquier width x height encadenado (8x8, 16x8,
-  // 32x8, etc.) que se elija desde el PropertyPanel -- ver
-  // tagMax7219Elements().
-  static isMax7219(type) {
-    return type === "max7219";
-  }
-
-  // TM1637 (4 dígitos, 7 segmentos cada uno, protocolo CLK+DIO):
-  // igual criterio que Display7 -- el .svg ya trae cada segmento
-  // (a-g) de los 4 dígitos como polígono/polyline independiente,
-  // más dos círculos para los dos puntos ":" del medio, así que
-  // cada uno se prende/apaga de forma real (ver TM1637_DIGIT_MAP /
-  // tagTm1637Elements / applyTm1637Segments). A diferencia de
-  // Display7 (1 solo dígito, controlado directo por GPIO por
-  // segmento), acá el firmware manda los 4 bytes ya codificados
-  // por tm1637_hal.py (ver ese archivo) -- no simulamos el
-  // bit-banging real de CLK/DIO, mismo criterio que el I2C dummy
-  // de oled_hal.py.
-  static isTm1637(type) {
-    return type === "tm1637";
-  }
-
-  // TFT ST7789 SPI (240x240, color real): a diferencia del OLED/LCD
-  // (que reciben el framebuffer COMPLETO recién en cada .show()),
-  // acá el driver no buferiza -- cada primitiva de dibujo manda de
-  // inmediato solo su rectángulo afectado (ver tft_st7789_hal.py /
-  // QemuBridge "TFT:" / SignalEngine.applyTftRegion). El .svg solo
-  // trae el cuerpo del PCB + un rect marcado con data-role="screen"
-  // -- ahí se monta un <canvas> real vía <foreignObject>, igual
-  // mecanismo que el OLED pero identificado por atributo en vez de
-  // por color (ver tagTftElements).
-  static isTft(type) {
-    return type === "tft_st7789";
-  }
-
-  // Semáforo (3 LEDs, R/Y/G con GND común): igual criterio que
-  // Display7 (varios LEDs independientes que comparten un pin
-  // común), pero más simple -- el .svg es propio (no un export de
-  // Fritzing), así que los 3 focos ya vienen identificados en el
-  // archivo con data-semaforo-role="r"/"y"/"g" y no hace falta
-  // ningún paso de "tageo" por id como sí necesita tagDisplay7Elements.
-  static isSemaforo(type) {
-    return type === "semaforo";
-  }
+  // isServo/isOled/isDisplay7/isMotor/isLcd/isNeopixelMatrix/isMax7219/
+  // isTm1637/isTft/isSemaforo se borraron de acá -- esos 10 tipos ya
+  // migraron su lógica de render a components/<type>/<type>.behavior.js
+  // (ver ComponentBehaviorRegistry.js), y ninguna otra parte del código
+  // los llamaba ya. isLed sigue porque className/PropertyPanel todavía
+  // la usan fuera del dispatch de render.
 
   // Joystick KY-023: el único componente de este proyecto con una
   // entrada ANALÓGICA continua (X/Y), no solo digital -- ver

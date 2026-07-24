@@ -9,17 +9,70 @@ PitSimulator es un prototipo de simulador visual de componentes electrónicos pa
 - [css](css): estilos del tablero, cuadrícula, paneles y componentes.
 - [components](components): definiciones de componentes en formato JSON y archivos auxiliares de hardware.
 
-## Recomendaciones de mantenimiento
+## Cómo agregar un componente nuevo
 
-- Mantener la lógica de simulación separada de la UI para que agregar nuevas piezas no requiera tocar múltiples capas.
-- Conviene que cada componente nuevo tenga su propio JSON y, si aplica, su propio archivo de renderizado o lógica asociada.
-- Los cables deberían seguir un patrón de routing ortogonal y reutilizable para evitar que cada mejora introduzca inconsistencias visuales.
+El motor consulta `ComponentBehaviorRegistry` (ver
+[js/simulator/ComponentBehaviorRegistry.js](js/simulator/ComponentBehaviorRegistry.js))
+antes de decidir cómo evaluar la señal, dibujar el componente o armar su
+panel de propiedades. Esto significa que **agregar un componente nuevo no
+requiere editar `SignalEngine.js`, `Renderer.js` ni `PropertyPanel.js`**
+— solo se declaran archivos nuevos:
 
-## Próximos pasos sugeridos
+1. `components/<tipo>/<tipo>.json` — definición (pines, propiedades,
+   categoría). Obligatorio.
+2. `components/<tipo>/<tipo>.svg` — gráfico. Obligatorio, salvo que el
+   componente se dibuje por código (ver `usesCodeGraphic` más abajo,
+   como `neopixel_matrix`/`max7219`).
+3. `components/<tipo>/<tipo>.hal.py` — driver MicroPython que corre
+   dentro de QEMU y habla el protocolo por WebSocket (`GPIO:`, `OLED:`,
+   `PININFO:`, etc. — ver `QemuBridge.parseLine()`). Opcional: solo
+   hace falta si el componente necesita hardware simulado del lado del
+   firmware (sensor, display, bus I2C propio, etc.).
+4. `components/<tipo>/<tipo>.behavior.js` — **opcional**. Solo hace
+   falta si el componente necesita algo más que "dibujar el .svg tal
+   cual y mostrar el panel de propiedades genérico". Se auto-registra
+   llamando a `ComponentBehaviorRegistry.register(...)`, y `app.js` lo
+   carga solo (fetch dinámico basado en `manifest.json` — un 404 acá es
+   normal si el tipo no lo necesita). Forma:
 
-1. Centralizar el estado de los componentes en un modelo único y claro.
-2. Añadir pruebas básicas para el renderizado y el manejo de conexiones.
-3. Introducir una capa de estilos por tema para facilitar la evolución visual del proyecto.
+   ```js
+   ComponentBehaviorRegistry.register("mi_tipo", {
+     signal: {
+       evaluate(component, engine) { /* reemplaza evaluateXxx() */ },
+     },
+     render: {
+       usesCodeGraphic: false,                     // true = se dibuja por código, sin .svg
+       tag(component, graphic, renderer) { /* decorar el .svg recién cargado */ },
+       initialState(component, renderer) { /* estado apagado/default al crear */ },
+     },
+     propertyPanel: {
+       render(component, panel) { /* panel.content, panel.simulator, panel._renderCommonProperties(component) */ },
+     },
+   });
+   ```
+
+   Dos tipos que comparten EXACTAMENTE el mismo comportamiento (ej.
+   `lcd16x2`/`lcd_16x2_i2c`, `keypad3x4`/`keypad4x4`) pueden registrarse
+   juntos: `ComponentBehaviorRegistry.register(["tipoA", "tipoB"], behavior)`,
+   o incluso desde un solo archivo físico (ver
+   `components/keypad4x4/keypad4x4.behavior.js` — `keypad3x4` no tiene
+   archivo propio, comparte el registro del otro).
+
+5. Una línea nueva en `components/manifest.json` (`{ type, name,
+   category }`) para que aparezca en el Toolbox.
+
+La mayoría de los sensores/actuadores simples (que no necesitan
+decorar su SVG ni tener un panel especial) **no necesitan
+`.behavior.js` en absoluto** — el motor cae solo en el comportamiento
+genérico (sin `signal.evaluate` propio, `.svg` sin decorar, panel
+`_renderGeneric`).
+
+Otras recomendaciones:
+
+- Mantener la lógica de simulación separada de la UI.
+- Los cables deberían seguir un patrón de routing ortogonal y
+  reutilizable para evitar que cada mejora introduzca inconsistencias
+  visuales.
 
 
 # Tests de la lógica pura del simulador
