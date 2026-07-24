@@ -45,7 +45,15 @@ def _gpio_num(pin_obj):
         return None
     if isinstance(pin_obj, int):
         return pin_obj
-    for attr in ("id", "_id", "pin", "_pin", "num", "_num", "gpio", "_gpio"):
+    # "_pin_num" es el atributo REAL que usa la Pin de _base_hal.py
+    # (ver su __init__) -- faltaba en esta lista, así que _gpio_num()
+    # de un Pin(N) real de este proyecto SIEMPRE devolvía None (caía
+    # al fallback int(pin_obj), que tampoco funciona -- Pin no es
+    # convertible a int). Bug real: dejaba _adc_defaults/el registro
+    # de pin desalineados (clave None en vez del GPIO real), así que
+    # read()/read_u16() nunca encontraban el valor correcto que sí
+    # había llegado por "ADC:<gpio>:<valor>".
+    for attr in ("_pin_num", "id", "_id", "pin", "_pin", "num", "_num", "gpio", "_gpio"):
         val = getattr(pin_obj, attr, None)
         if isinstance(val, int):
             return val

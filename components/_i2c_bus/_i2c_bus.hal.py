@@ -90,7 +90,15 @@ def _gpio_num(pin_obj):
         return None
     if isinstance(pin_obj, int):
         return pin_obj
-    for attr in ("id", "_id", "pin", "_pin", "num", "_num", "gpio", "_gpio"):
+    # "_pin_num" es el atributo REAL que usa la Pin de _base_hal.py
+    # (ver su __init__) -- faltaba en esta lista, así que un Pin(N)
+    # real pasado a I2C(scl=Pin(N), sda=Pin(N)) nunca se resolvía acá
+    # (quedaba en None). El PININFO:i2c que depende de esto no se
+    # mandaba nunca en ese caso -- enmascarado hasta ahora porque
+    # isFullyConnected() cae a un chequeo genérico (isComponentPowered)
+    # cuando no hay PININFO, así que I2C seguía "andando" igual, solo
+    # sin la validación exacta de pin que se suponía que hacía.
+    for attr in ("_pin_num", "id", "_id", "pin", "_pin", "num", "_num", "gpio", "_gpio"):
         val = getattr(pin_obj, attr, None)
         if isinstance(val, int):
             return val
