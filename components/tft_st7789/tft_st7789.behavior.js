@@ -55,4 +55,40 @@ ComponentBehaviorRegistry.register("tft_st7789", {
 
     },
 
+    propertyPanel: {
+
+        // Migrado tal cual desde PropertyPanel._renderTft().
+        render(component, panel) {
+
+            panel.content.innerHTML = "";
+
+            const title = document.createElement("h4");
+            title.style.cssText = "margin-bottom: 12px; color: #fff;";
+            title.textContent = "TFT 1.54\" 240x240 (ST7789)";
+            panel.content.appendChild(title);
+
+            const note = document.createElement("div");
+            note.style.cssText = "font-size:12px; color:#888; margin-bottom:16px; line-height:1.5;";
+            note.textContent = "A diferencia del OLED/LCD, esta pantalla se actualiza en vivo, región por región, en cada primitiva de dibujo (pixel, línea, rect, etc.) -- no hace falta llamar a ningún show(). No tiene esquema de color elegible: el firmware manda el color real (RGB565) de cada pixel.";
+            panel.content.appendChild(note);
+
+            const btnClear = document.createElement("button");
+            btnClear.className = "property-flip-btn";
+            btnClear.style.cssText = "width:100%; margin-bottom:16px;";
+            btnClear.textContent = "Poner pantalla en negro";
+            btnClear.addEventListener("click", () => {
+                panel.simulator.renderer.clearTftScreen(component);
+            });
+            panel.content.appendChild(btnClear);
+
+            const sep = document.createElement("div");
+            sep.style.cssText = "border-top:1px solid #333; margin: 12px 0;";
+            panel.content.appendChild(sep);
+
+            panel._renderCommonProperties(component);
+
+        },
+
+    },
+
 });

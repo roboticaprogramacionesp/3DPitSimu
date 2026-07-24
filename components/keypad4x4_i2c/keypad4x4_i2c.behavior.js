@@ -61,4 +61,43 @@ ComponentBehaviorRegistry.register("keypad4x4_i2c", {
 
     },
 
+    propertyPanel: {
+
+        // Migrado tal cual desde PropertyPanel._renderKeypadI2c().
+        render(component, panel) {
+
+            panel.content.innerHTML = "";
+            component.properties = component.properties || {};
+
+            const title = document.createElement("h4");
+            title.style.cssText = "margin-bottom: 12px; color: #fff;";
+            title.textContent = "Teclado Matricial 4x4 (I2C)";
+            panel.content.appendChild(title);
+
+            // A diferencia de OLED/LCD, ACÁ este campo sí es funcional:
+            // evaluateKeypadI2c() en SignalEngine.js lee
+            // component.properties.address en cada evaluación -- cambiar
+            // este valor cambia de verdad a qué dirección responde el
+            // simulador (0x20 = default del PCF8574 si no se especifica
+            // nada distinto al construir Keypad4x4_I2C(...) en Python).
+            panel._appendEditableField("Dirección I2C", component.properties.address ?? "0x20", (val) => {
+                component.properties.address = val;
+                panel.simulator.signalEngine.evaluateAll();
+            });
+
+            const note = document.createElement("div");
+            note.style.cssText = "font-size:12px; color:#888; margin: 8px 0 16px; line-height:1.5;";
+            note.textContent = "Tiene que coincidir con la dirección que le pasás al construir Keypad4x4_I2C(...) en tu código MicroPython.";
+            panel.content.appendChild(note);
+
+            const sep = document.createElement("div");
+            sep.style.cssText = "border-top:1px solid #333; margin: 12px 0;";
+            panel.content.appendChild(sep);
+
+            panel._renderCommonProperties(component);
+
+        },
+
+    },
+
 });

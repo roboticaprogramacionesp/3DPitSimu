@@ -87,4 +87,72 @@ ComponentBehaviorRegistry.register("display7", {
 
     },
 
+    propertyPanel: {
+
+        // Migrado tal cual desde PropertyPanel._renderDisplay7().
+        render(component, panel) {
+
+            panel.content.innerHTML = "";
+
+            component.properties = component.properties || {};
+            if (!component.properties.commonType) component.properties.commonType = "cathode";
+
+            const title = document.createElement("h4");
+            title.style.cssText = "margin-bottom: 12px; color: #fff;";
+            title.textContent = "Display 7 Segmentos";
+            panel.content.appendChild(title);
+
+            const warn = document.createElement("div");
+            warn.style.cssText = "font-size:12px; color:#888; margin-bottom:16px; line-height:1.5; background:#1e1f22; border:1px solid #333; border-radius:6px; padding:8px 10px;";
+            warn.textContent = "El SVG no separa los 7 segmentos, así que el brillo del dígito completo representa cuántos segmentos deberían estar encendidos. El punto decimal sí se prende y apaga de forma real.";
+            panel.content.appendChild(warn);
+
+            const label = document.createElement("label");
+            label.style.cssText = "display:block; font-size:12px; color:#999; text-transform:uppercase; margin-bottom:8px;";
+            label.textContent = "Tipo de común";
+            panel.content.appendChild(label);
+
+            const group = document.createElement("div");
+            group.style.cssText = "display:flex; gap:8px; margin-bottom:8px;";
+
+            const makeBtn = (value, text) => {
+
+                const btn = document.createElement("button");
+                btn.className = "property-flip-btn";
+                btn.style.flex = "1";
+                btn.textContent = text;
+                if (component.properties.commonType === value) btn.classList.add("active");
+
+                btn.addEventListener("click", () => {
+                    if (component.properties.commonType === value) return;
+                    component.properties.commonType = value;
+                    panel.simulator.signalEngine.evaluateDisplay7(component);
+                    ComponentBehaviorRegistry.get(component.type).propertyPanel.render(component, panel); // re-pintar para reflejar el botón activo
+                });
+
+                return btn;
+
+            };
+
+            group.appendChild(makeBtn("cathode", "Cátodo común"));
+            group.appendChild(makeBtn("anode",  "Ánodo común"));
+            panel.content.appendChild(group);
+
+            const note = document.createElement("div");
+            note.style.cssText = "font-size:12px; color:#888; margin-bottom:16px; line-height:1.5;";
+            note.textContent = component.properties.commonType === "cathode"
+                ? "COM va a GND. Cada segmento se enciende con HIGH."
+                : "COM va a VCC/3V3. Cada segmento se enciende con LOW.";
+            panel.content.appendChild(note);
+
+            const sep = document.createElement("div");
+            sep.style.cssText = "border-top:1px solid #333; margin: 12px 0;";
+            panel.content.appendChild(sep);
+
+            panel._renderCommonProperties(component);
+
+        },
+
+    },
+
 });

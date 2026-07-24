@@ -103,4 +103,178 @@ ComponentBehaviorRegistry.register("max7219", {
 
     },
 
+    propertyPanel: {
+
+        // Migrado tal cual desde PropertyPanel._renderMax7219().
+        render(component, panel) {
+
+            panel.content.innerHTML = "";
+
+            component.properties = component.properties || {};
+            if (!component.properties.cols)  component.properties.cols  = 8;
+            if (!component.properties.rows)  component.properties.rows = 8;
+            if (!component.properties.shape) component.properties.shape = "circle";
+            if (!component.properties.color) component.properties.color = "#ff2222";
+
+            const title = document.createElement("h4");
+            title.style.cssText = "margin-bottom: 12px; color: #fff;";
+            title.textContent = "Matriz MAX7219";
+            panel.content.appendChild(title);
+
+            const label = document.createElement("label");
+            label.style.cssText = "display:block; font-size:12px; color:#999; text-transform:uppercase; margin-bottom:8px;";
+            label.textContent = "Tamaño de la matriz";
+            panel.content.appendChild(label);
+
+            const rebuildGrid = () => {
+                const graphic = component.element?.querySelector(".component-graphic");
+                if (graphic) panel.simulator.renderer.tagMax7219Elements(component, graphic);
+            };
+
+            const sizePresets = [
+                { cols: 8,  rows: 8, text: "8 x 8"  },
+                { cols: 16, rows: 8, text: "8 x 16" },
+                { cols: 32, rows: 8, text: "8 x 32" },
+            ];
+
+            const sizeGroup = document.createElement("div");
+            sizeGroup.style.cssText = "display:flex; gap:8px; margin-bottom:16px;";
+
+            sizePresets.forEach(({ cols, rows, text }) => {
+
+                const btn = document.createElement("button");
+                btn.className = "property-flip-btn";
+                btn.style.cssText = "flex:1; padding:8px 10px;";
+                if (component.properties.cols === cols && component.properties.rows === rows) {
+                    btn.classList.add("active");
+                }
+                btn.textContent = text;
+
+                btn.addEventListener("click", () => {
+
+                    if (component.properties.cols === cols && component.properties.rows === rows) return;
+                    component.properties.cols = cols;
+                    component.properties.rows = rows;
+
+                    rebuildGrid();
+
+                    ComponentBehaviorRegistry.get(component.type).propertyPanel.render(component, panel); // re-pintar para reflejar el botón activo
+
+                });
+
+                sizeGroup.appendChild(btn);
+
+            });
+
+            panel.content.appendChild(sizeGroup);
+
+            const shapeLabel = document.createElement("label");
+            shapeLabel.style.cssText = "display:block; font-size:12px; color:#999; text-transform:uppercase; margin-bottom:8px;";
+            shapeLabel.textContent = "Forma del LED";
+            panel.content.appendChild(shapeLabel);
+
+            const shapes = [
+                { value: "circle", text: "Círculo"  },
+                { value: "square", text: "Cuadrado" },
+            ];
+
+            const shapeGroup = document.createElement("div");
+            shapeGroup.style.cssText = "display:flex; gap:8px; margin-bottom:16px;";
+
+            const repaintCurrentFrame = () => {
+                if (component.lastMax7219Frame) {
+                    const { bytes, width, height } = component.lastMax7219Frame;
+                    panel.simulator.renderer.drawMax7219Framebuffer(component, bytes, width, height);
+                } else {
+                    panel.simulator.renderer.clearMax7219Grid(component);
+                }
+            };
+
+            shapes.forEach(({ value, text }) => {
+
+                const btn = document.createElement("button");
+                btn.className = "property-flip-btn";
+                btn.style.cssText = "flex:1; padding:8px 10px;";
+                if (component.properties.shape === value) btn.classList.add("active");
+                btn.textContent = text;
+
+                btn.addEventListener("click", () => {
+
+                    if (component.properties.shape === value) return;
+                    component.properties.shape = value;
+
+                    repaintCurrentFrame();
+
+                    ComponentBehaviorRegistry.get(component.type).propertyPanel.render(component, panel); // re-pintar para reflejar el botón activo
+
+                });
+
+                shapeGroup.appendChild(btn);
+
+            });
+
+            panel.content.appendChild(shapeGroup);
+
+            const colorLabel = document.createElement("label");
+            colorLabel.style.cssText = "display:block; font-size:12px; color:#999; text-transform:uppercase; margin-bottom:8px;";
+            colorLabel.textContent = "Color del LED";
+            panel.content.appendChild(colorLabel);
+
+            const colors = [
+                { value: "#ff2222", text: "Rojo"    },
+                { value: "#00e676", text: "Verde"   },
+                { value: "#2979ff", text: "Azul"    },
+                { value: "#ffea00", text: "Amarillo"},
+            ];
+
+            const colorGroup = document.createElement("div");
+            colorGroup.style.cssText = "display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;";
+
+            colors.forEach(({ value, text }) => {
+
+                const btn = document.createElement("button");
+                btn.className = "property-flip-btn";
+                btn.style.cssText = "display:flex; align-items:center; gap:8px; justify-content:flex-start; padding:8px 10px;";
+                if (component.properties.color === value) btn.classList.add("active");
+
+                const dot = document.createElement("span");
+                dot.style.cssText = `width:14px; height:14px; border-radius:50%; flex:none; background:${value}; border:1px solid rgba(255,255,255,0.25);`;
+                btn.appendChild(dot);
+
+                const span = document.createElement("span");
+                span.textContent = text;
+                btn.appendChild(span);
+
+                btn.addEventListener("click", () => {
+
+                    if (component.properties.color === value) return;
+                    component.properties.color = value;
+
+                    repaintCurrentFrame();
+
+                    ComponentBehaviorRegistry.get(component.type).propertyPanel.render(component, panel); // re-pintar para reflejar el botón activo
+
+                });
+
+                colorGroup.appendChild(btn);
+
+            });
+
+            panel.content.appendChild(colorGroup);
+
+            const note = document.createElement("div");
+            note.style.cssText = "font-size:12px; color:#888; margin-bottom:16px; line-height:1.5;";
+            note.textContent = "El tamaño real de la matriz lo define tu código MicroPython (Max7219(width, height, spi, cs)) -- estos valores son solo para que el panel se vea igual mientras probás. Si el firmware manda un frame de otro tamaño, el panel se reacomoda solo.";
+            panel.content.appendChild(note);
+
+            const sep2 = document.createElement("div");
+            sep2.style.cssText = "border-top:1px solid #333; margin: 12px 0;";
+            panel.content.appendChild(sep2);
+
+            panel._renderCommonProperties(component);
+
+        },
+
+    },
+
 });
