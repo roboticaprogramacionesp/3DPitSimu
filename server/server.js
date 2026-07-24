@@ -220,8 +220,28 @@ function startQemu(wss) {
 // una pausa entre uno y otro, para que MicroPython tenga tiempo
 // de drenar su lado antes de que llegue el próximo trozo.
 
-const SEND_CHUNK_SIZE = 256;   // antes: 32 // bytes por trozo
-const SEND_CHUNK_DELAY_MS = 2; // antes: 8 // pausa entre trozos
+// OJO -- bajado de nuevo a valores conservadores (256/2ms venía de
+// antes, corrupción real confirmada): desde que ReplPanel.js empezó
+// a envolver cada .hal.py de componente en un exec(a2b_base64("..."))
+// para aislar fallas entre componentes (ver _wrapHalForIsolation), el
+// payload que viaja acá cambió de forma -- pasó de muchas líneas
+// CORTAS (el código fuente normal, con un "\n" cada pocas decenas de
+// bytes, que le da a MicroPython un punto natural para drenar el
+// buffer) a UNA sola línea de base64 de varios KB sin ningún salto
+// de línea interno. Con 256 bytes/2ms confirmado en la práctica: la
+// transmisión se corrompe a mitad de esa línea larga (bytes
+// perdidos, sin ningún error visible salvo un SyntaxError río abajo
+// que ni el propio try/except de aislamiento puede atajar, porque el
+// wrapper en sí también viaja por el mismo canal sin garantías). Ver
+// el comentario grande más arriba sobre por qué la UART de QEMU no
+// tiene control de flujo real -- esto es el mismo problema,
+// simplemente más visible ahora que hay líneas mucho más largas sin
+// puntos de pausa naturales. Costo de esto: "Ejecutar" tarda más la
+// primera vez que se cargan los HAL de una sesión de QEMU (se cachean
+// después, ver _halSentToFirmware) -- vale la pena a cambio de que
+// el código realmente llegue completo.
+const SEND_CHUNK_SIZE = 48;     // antes: 256 (y 32 antes de eso) // bytes por trozo
+const SEND_CHUNK_DELAY_MS = 10; // antes: 2 (y 8 antes de eso) // pausa entre trozos
 
 // ============================================
 // Stripper de comentarios/líneas vacías para pegados de

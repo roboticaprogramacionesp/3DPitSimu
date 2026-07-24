@@ -491,15 +491,48 @@ class ReplPanel {
     // contenido original.
     // ====================================================
 
+    // Ancho de cada línea del base64 partido -- ver el comentario
+    // grande de abajo sobre por qué se parte en primer lugar. No hay
+    // nada mágico en 200: solo tiene que ser bastante menor a
+    // cualquier buffer de línea razonable del lado del firmware/UART,
+    // y bastante mayor a 1 para no explotar la cantidad de líneas por
+    // gusto.
+    static HAL_B64_LINE_WIDTH = 200;
+
+    // Envuelve un .hal.py ya cargado en un exec(base64) aislado por
+    // try/except (ver el comentario grande de más arriba, "Aislamiento
+    // de fallas entre componentes"). El base64 se parte acá en varias
+    // líneas cortas (concatenación implícita de strings de Python
+    // dentro de los paréntesis -- "a" "b" == "ab", válido en
+    // cualquier indentación mientras esté dentro de "(...)") en vez
+    // de mandarse como UNA sola línea gigante sin ningún salto.
+    //
+    // Por qué importa: se confirmó en la práctica (ver
+    // server.js/SEND_CHUNK_SIZE) que la UART emulada de QEMU pierde
+    // bytes en transmisiones largas sin puntos de pausa -- el código
+    // Python normal (muchas líneas cortas) sobrevive mejor que un
+    // base64 de varios KB en una sola línea, probablemente porque
+    // cada "\n" le da al lado receptor un punto natural para drenar
+    // antes de que siga llegando más. Esto es una segunda capa de
+    // defensa independiente del throttling de server.js -- no
+    // reemplaza a SEND_CHUNK_SIZE/SEND_CHUNK_DELAY_MS, se suma.
     _wrapHalForIsolation(type, hal) {
 
         const b64 = btoa(unescape(encodeURIComponent(hal)));
+
+        const width = ReplPanel.HAL_B64_LINE_WIDTH;
+        const lines = [];
+        for (let i = 0; i < b64.length; i += width) {
+            lines.push(`        "${b64.slice(i, i + width)}"`);
+        }
 
         return (
             `# -- HAL: ${type} (aislado) --\n` +
             `try:\n` +
             `    import ubinascii as _ub_iso\n` +
-            `    exec(_ub_iso.a2b_base64("${b64}").decode(), globals())\n` +
+            `    exec(_ub_iso.a2b_base64(\n` +
+            lines.join("\n") + "\n" +
+            `    ).decode(), globals())\n` +
             `except Exception as _hal_err:\n` +
             `    print("HAL_ERROR:${type}: " + repr(_hal_err))\n`
         );
