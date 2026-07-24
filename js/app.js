@@ -19,6 +19,14 @@
     // prendido desde el arranque).
     window.PIT_DEBUG = window.PIT_DEBUG || false;
 
+    // 0. Cargar el behavior custom (señal/render/panel) de cada
+    //    componente declarado en components/manifest.json, ANTES de
+    //    crear el Simulator -- SignalEngine/Renderer/PropertyPanel
+    //    consultan ComponentBehaviorRegistry durante su propio
+    //    arranque, así que el registro tiene que estar poblado antes.
+    //    Ver ComponentBehaviorRegistry.js.
+    await ComponentBehaviorRegistry.loadAll();
+
     // 1. Crear e inicializar el simulador (canvas, componentes, managers)
     const sim = new Simulator();
     await sim.start();

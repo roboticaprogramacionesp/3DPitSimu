@@ -795,6 +795,18 @@ class SignalEngine {
 
   evaluateAll() {
     this.simulator.componentManager.getAll().forEach((component) => {
+
+      // Primero consultamos el registro (ver ComponentBehaviorRegistry.js) --
+      // si el tipo ya migró ahí, su evaluate() reemplaza TODA la cadena
+      // legacy de abajo para ese componente. Si no tiene behavior
+      // registrado (la mayoría de los tipos, todavía), seguimos con el
+      // if/else de siempre sin ningún cambio de comportamiento.
+      const behavior = ComponentBehaviorRegistry.get(component.type);
+      if (behavior?.signal?.evaluate) {
+        behavior.signal.evaluate(component, this);
+        return;
+      }
+
       if (Renderer.isLed(component.type)) {
         this.evaluateLed(component);
       }

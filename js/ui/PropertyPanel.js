@@ -195,6 +195,17 @@ class PropertyPanel {
         // Abrir el panel si estaba colapsado
         this.layout?.classList.remove("props-collapsed");
 
+        // Primero consultamos el registro (ver ComponentBehaviorRegistry.js)
+        // -- si component.type ya migró ahí, su propertyPanel.render()
+        // reemplaza TODA la cadena legacy de abajo. Si no tiene behavior
+        // registrado (la mayoría de los tipos, todavía), seguimos con el
+        // if/else de siempre sin ningún cambio de comportamiento.
+        const behavior = ComponentBehaviorRegistry.get(component.type);
+        if (behavior?.propertyPanel?.render) {
+            behavior.propertyPanel.render(component, this);
+            return;
+        }
+
         // Despachar al renderer correcto según el tipo
         const tempSensors = ["ky_001", "dht11"];
 

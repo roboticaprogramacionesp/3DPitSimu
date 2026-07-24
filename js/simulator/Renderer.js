@@ -274,27 +274,30 @@ class Renderer {
     group.setAttribute("class", className);
     group.setAttribute("data-id", component.id);
 
-    if (Renderer.isNeopixelMatrix(component.type)) {
+    // Consultamos el registro UNA sola vez acá -- si component.type ya
+    // migró a ComponentBehaviorRegistry (ver ese archivo), sus ganchos
+    // render.* reemplazan las ramas legacy de abajo para este
+    // componente. Si no tiene behavior registrado (la mayoría de los
+    // tipos, todavía), el resto de renderComponent() sigue exactamente
+    // igual que antes.
+    const behavior = ComponentBehaviorRegistry.get(component.type);
+
+    if (behavior?.render?.usesCodeGraphic || Renderer.isNeopixelMatrix(component.type) || Renderer.isMax7219(component.type)) {
       // A diferencia de todo lo demás, esta no depende de ningún
-      // .svg externo -- el bisel + la grilla de LEDs se generan
-      // por código en tagNeopixelElements(), así se acomoda a
-      // cualquier rows x cols elegido desde el PropertyPanel sin
-      // tener que dibujar/exportar un .svg nuevo por cada tamaño.
+      // .svg externo -- el gráfico se genera por código (tag()), así
+      // se acomoda a cualquier configuración elegida desde el
+      // PropertyPanel sin tener que dibujar/exportar un .svg nuevo.
 
       const graphic = document.createElementNS(Utils.SVG_NS, "g");
       graphic.setAttribute("class", "component-graphic");
 
-      this.tagNeopixelElements(component, graphic);
-
-      group.appendChild(graphic);
-    } else if (Renderer.isMax7219(component.type)) {
-      // Mismo enfoque que la matriz de NeoPixel -- ver comentario
-      // en Renderer.isMax7219 más arriba.
-
-      const graphic = document.createElementNS(Utils.SVG_NS, "g");
-      graphic.setAttribute("class", "component-graphic");
-
-      this.tagMax7219Elements(component, graphic);
+      if (behavior?.render?.tag) {
+        behavior.render.tag(component, graphic, this);
+      } else if (Renderer.isNeopixelMatrix(component.type)) {
+        this.tagNeopixelElements(component, graphic);
+      } else if (Renderer.isMax7219(component.type)) {
+        this.tagMax7219Elements(component, graphic);
+      }
 
       group.appendChild(graphic);
     } else if (component.svgPath) {
@@ -317,36 +320,42 @@ class Renderer {
           this.tagColorTargets(component, graphic);
         }
 
-        if (Renderer.isLed(component.type)) {
-          this.tagLedElements(graphic);
-        }
+        if (behavior?.render?.tag) {
+          behavior.render.tag(component, graphic, this);
+        } else {
 
-        if (Renderer.isServo(component.type)) {
-          this.tagServoElements(graphic);
-        }
+          if (Renderer.isLed(component.type)) {
+            this.tagLedElements(graphic);
+          }
 
-        if (Renderer.isOled(component.type)) {
-          this.tagOledElements(component, graphic);
-        }
+          if (Renderer.isServo(component.type)) {
+            this.tagServoElements(graphic);
+          }
 
-        if (Renderer.isDisplay7(component.type)) {
-          this.tagDisplay7Elements(graphic);
-        }
+          if (Renderer.isOled(component.type)) {
+            this.tagOledElements(component, graphic);
+          }
 
-        if (Renderer.isTm1637(component.type)) {
-          this.tagTm1637Elements(graphic);
-        }
+          if (Renderer.isDisplay7(component.type)) {
+            this.tagDisplay7Elements(graphic);
+          }
 
-        if (Renderer.isMotor(component.type)) {
-          this.tagMotorElements(component, graphic);
-        }
+          if (Renderer.isTm1637(component.type)) {
+            this.tagTm1637Elements(graphic);
+          }
 
-        if (Renderer.isLcd(component.type)) {
-          this.tagLcdElements(component, graphic);
-        }
+          if (Renderer.isMotor(component.type)) {
+            this.tagMotorElements(component, graphic);
+          }
 
-        if (Renderer.isTft(component.type)) {
-          this.tagTftElements(component, graphic);
+          if (Renderer.isLcd(component.type)) {
+            this.tagLcdElements(component, graphic);
+          }
+
+          if (Renderer.isTft(component.type)) {
+            this.tagTftElements(component, graphic);
+          }
+
         }
 
         group.appendChild(graphic);
@@ -403,41 +412,47 @@ class Renderer {
     // pisarse (ver bindEncoder más abajo).
     this.bindEncoder(component, group);
 
-    // Estado inicial apagado
-    if (Renderer.isLed(component.type)) {
-      this.applyLedColor(component, false);
-    }
+    if (behavior?.render?.initialState) {
+      behavior.render.initialState(component, this);
+    } else {
 
-    // Ángulo inicial del servo (por defecto 90°, centro)
-    if (Renderer.isServo(component.type)) {
-      this.setServoAngle(component, component.properties?.angle ?? 90);
-    }
+      // Estado inicial apagado
+      if (Renderer.isLed(component.type)) {
+        this.applyLedColor(component, false);
+      }
 
-    // Estado inicial del display 7 segmentos: todo apagado
-    if (Renderer.isDisplay7(component.type)) {
-      this.applyDisplay7State(
-        component,
-        {
-          a: false,
-          b: false,
-          c: false,
-          d: false,
-          e: false,
-          f: false,
-          g: false,
-        },
-        false,
-      );
-    }
+      // Ángulo inicial del servo (por defecto 90°, centro)
+      if (Renderer.isServo(component.type)) {
+        this.setServoAngle(component, component.properties?.angle ?? 90);
+      }
 
-    // Estado inicial del semáforo: los 3 focos apagados
-    if (Renderer.isSemaforo(component.type)) {
-      this.applySemaforoState(component, { r: false, y: false, g: false });
-    }
+      // Estado inicial del display 7 segmentos: todo apagado
+      if (Renderer.isDisplay7(component.type)) {
+        this.applyDisplay7State(
+          component,
+          {
+            a: false,
+            b: false,
+            c: false,
+            d: false,
+            e: false,
+            f: false,
+            g: false,
+          },
+          false,
+        );
+      }
 
-    // Estado inicial del TM1637: los 4 dígitos y el colón apagados
-    if (Renderer.isTm1637(component.type)) {
-      this.applyTm1637Segments(component, [0, 0, 0, 0]);
+      // Estado inicial del semáforo: los 3 focos apagados
+      if (Renderer.isSemaforo(component.type)) {
+        this.applySemaforoState(component, { r: false, y: false, g: false });
+      }
+
+      // Estado inicial del TM1637: los 4 dígitos y el colón apagados
+      if (Renderer.isTm1637(component.type)) {
+        this.applyTm1637Segments(component, [0, 0, 0, 0]);
+      }
+
     }
 
     return group;
