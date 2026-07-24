@@ -274,15 +274,15 @@ class Renderer {
     group.setAttribute("class", className);
     group.setAttribute("data-id", component.id);
 
-    // Consultamos el registro UNA sola vez acá -- si component.type ya
-    // migró a ComponentBehaviorRegistry (ver ese archivo), sus ganchos
-    // render.* reemplazan las ramas legacy de abajo para este
-    // componente. Si no tiene behavior registrado (la mayoría de los
-    // tipos, todavía), el resto de renderComponent() sigue exactamente
-    // igual que antes.
+    // Consultamos el registro UNA sola vez acá -- todos los tipos que
+    // necesitan tag()/initialState() propios ya migraron a
+    // ComponentBehaviorRegistry (ver ese archivo). Un tipo NUEVO que
+    // solo necesite su .svg tal cual (sin decorar nada) no necesita
+    // registrar nada acá -- usesCodeGraphic/tag/initialState son todos
+    // opcionales.
     const behavior = ComponentBehaviorRegistry.get(component.type);
 
-    if (behavior?.render?.usesCodeGraphic || Renderer.isNeopixelMatrix(component.type) || Renderer.isMax7219(component.type)) {
+    if (behavior?.render?.usesCodeGraphic) {
       // A diferencia de todo lo demás, esta no depende de ningún
       // .svg externo -- el gráfico se genera por código (tag()), así
       // se acomoda a cualquier configuración elegida desde el
@@ -291,13 +291,7 @@ class Renderer {
       const graphic = document.createElementNS(Utils.SVG_NS, "g");
       graphic.setAttribute("class", "component-graphic");
 
-      if (behavior?.render?.tag) {
-        behavior.render.tag(component, graphic, this);
-      } else if (Renderer.isNeopixelMatrix(component.type)) {
-        this.tagNeopixelElements(component, graphic);
-      } else if (Renderer.isMax7219(component.type)) {
-        this.tagMax7219Elements(component, graphic);
-      }
+      behavior.render.tag?.(component, graphic, this);
 
       group.appendChild(graphic);
     } else if (component.svgPath) {
@@ -320,43 +314,7 @@ class Renderer {
           this.tagColorTargets(component, graphic);
         }
 
-        if (behavior?.render?.tag) {
-          behavior.render.tag(component, graphic, this);
-        } else {
-
-          if (Renderer.isLed(component.type)) {
-            this.tagLedElements(graphic);
-          }
-
-          if (Renderer.isServo(component.type)) {
-            this.tagServoElements(graphic);
-          }
-
-          if (Renderer.isOled(component.type)) {
-            this.tagOledElements(component, graphic);
-          }
-
-          if (Renderer.isDisplay7(component.type)) {
-            this.tagDisplay7Elements(graphic);
-          }
-
-          if (Renderer.isTm1637(component.type)) {
-            this.tagTm1637Elements(graphic);
-          }
-
-          if (Renderer.isMotor(component.type)) {
-            this.tagMotorElements(component, graphic);
-          }
-
-          if (Renderer.isLcd(component.type)) {
-            this.tagLcdElements(component, graphic);
-          }
-
-          if (Renderer.isTft(component.type)) {
-            this.tagTftElements(component, graphic);
-          }
-
-        }
+        behavior?.render?.tag?.(component, graphic, this);
 
         group.appendChild(graphic);
       } else {
@@ -412,48 +370,7 @@ class Renderer {
     // pisarse (ver bindEncoder más abajo).
     this.bindEncoder(component, group);
 
-    if (behavior?.render?.initialState) {
-      behavior.render.initialState(component, this);
-    } else {
-
-      // Estado inicial apagado
-      if (Renderer.isLed(component.type)) {
-        this.applyLedColor(component, false);
-      }
-
-      // Ángulo inicial del servo (por defecto 90°, centro)
-      if (Renderer.isServo(component.type)) {
-        this.setServoAngle(component, component.properties?.angle ?? 90);
-      }
-
-      // Estado inicial del display 7 segmentos: todo apagado
-      if (Renderer.isDisplay7(component.type)) {
-        this.applyDisplay7State(
-          component,
-          {
-            a: false,
-            b: false,
-            c: false,
-            d: false,
-            e: false,
-            f: false,
-            g: false,
-          },
-          false,
-        );
-      }
-
-      // Estado inicial del semáforo: los 3 focos apagados
-      if (Renderer.isSemaforo(component.type)) {
-        this.applySemaforoState(component, { r: false, y: false, g: false });
-      }
-
-      // Estado inicial del TM1637: los 4 dígitos y el colón apagados
-      if (Renderer.isTm1637(component.type)) {
-        this.applyTm1637Segments(component, [0, 0, 0, 0]);
-      }
-
-    }
+    behavior?.render?.initialState?.(component, this);
 
     return group;
   }
@@ -1224,33 +1141,10 @@ class Renderer {
   // instancias del mismo LED en el canvas.
   // ─────────────────────────────────────────────────────
 
-  tagLedElements(graphic) {
-    graphic.querySelectorAll("[id^='color_']").forEach((el) => {
-      el.setAttribute("data-led-role", "body");
-      el.setAttribute("data-led-original-id", el.getAttribute("id"));
-      el.removeAttribute("id");
-    });
-  }
-
-  // ─────────────────────────────────────────────────────
-  // Marcar el eje/horn del servo SG90.
-  // El SVG trae un <g id="eje"> con el brazo del servo. Le
-  // asignamos data-servo-role="shaft" y le quitamos el id
-  // (misma razón que con el LED: evitar colisiones si hay
-  // varios servos en el canvas).
-  // ─────────────────────────────────────────────────────
-
-  tagServoElements(graphic) {
-    const shaft = graphic.querySelector("#eje");
-    if (!shaft) {
-      console.warn("[Renderer] No se encontró #eje en el SVG del servo");
-      return;
-    }
-
-    shaft.setAttribute("data-servo-role", "shaft");
-    shaft.setAttribute("data-servo-original-id", "eje");
-    shaft.removeAttribute("id");
-  }
+  // tagLedElements()/tagServoElements() migraron a
+  // components/led/led.behavior.js y components/sg90/sg90.behavior.js
+  // (sin llamadores externos -- solo los usaba el dispatch de
+  // renderComponent(), ahora vía ComponentBehaviorRegistry).
 
   // Pivote por defecto del eje del SG90 (centro del disco/horn,
   // medido en el espacio LOCAL del propio <g id="eje">, es decir,
@@ -1272,119 +1166,8 @@ class Renderer {
     shaft.setAttribute("transform", `rotate(${angle}, ${pivot.x}, ${pivot.y})`);
   }
 
-  // ─────────────────────────────────────────────────────
-  // Motor DC (via L298N)
-  //
-  // motor.svg es un ícono plano tipo Fritzing -- no tiene una
-  // hélice/rotor separado que se pueda girar de forma realista
-  // (todo el cuerpo es una sola pieza). En vez de intentar girar
-  // el ícono entero (que no se vería como un giro real), se
-  // superpone un indicador propio (anillo punteado + flecha)
-  // centrado sobre "#eje_motor", y ESE es el que gira.
-  // ─────────────────────────────────────────────────────
-
-  tagMotorElements(component, graphic) {
-    const axle = graphic.querySelector("#eje_motor");
-    if (!axle) {
-      console.warn("[Renderer] No se encontró #eje_motor en el SVG del motor");
-      return;
-    }
-
-    const x = parseFloat(axle.getAttribute("x")) || 0;
-    const y = parseFloat(axle.getAttribute("y")) || 0;
-    const w = parseFloat(axle.getAttribute("width")) || 0;
-    const h = parseFloat(axle.getAttribute("height")) || 0;
-    const cx = x + w / 2;
-    const cy = y + h / 2;
-
-    axle.setAttribute("data-motor-role", "axle");
-    axle.removeAttribute("id");
-
-    const NS = Utils.SVG_NS;
-
-    // Wrapper fijo: solo posiciona el indicador sobre el centro
-    // del eje. Nunca se toca después -- lo que gira es el <g>
-    // de adentro, para no pisar este translate() con el CSS
-    // "transform" que aplica element.animate() (en SVG, el
-    // transform seteado por CSS reemplaza por completo al
-    // atributo transform, no se combinan).
-    const wrapper = document.createElementNS(NS, "g");
-    wrapper.setAttribute("transform", `translate(${cx}, ${cy})`);
-
-    const indicator = document.createElementNS(NS, "g");
-    indicator.setAttribute("data-motor-role", "spin-indicator");
-    indicator.style.transformOrigin = "0px 0px";
-    indicator.style.opacity = "0"; // oculto hasta que applyMotorState() diga lo contrario
-
-    // El rect "#eje_motor" es una franja angosta que cubre TODO el
-    // alto del ícono (no el tamaño real del eje visible), así que
-    // usar min(w,h) daba un radio minúsculo. Mejor: proporcional al
-    // alto del ícono completo, para que se vea como en Tinkercad
-    // (una hélice/rotor grande y clara, no un punto).
-    const r = Utils.clamp(h * 0.34, 16, h / 2 - 4);
-
-    // --- Disco de fondo: da contraste al indicador sobre
-    //     cualquier color de fondo del ícono (amarillo, etc.) ---
-    const backdrop = document.createElementNS(NS, "circle");
-    backdrop.setAttribute("data-motor-role", "backdrop");
-    backdrop.setAttribute("r", r * 0.92);
-    backdrop.setAttribute("fill", "#1a1a1a");
-    backdrop.setAttribute("fill-opacity", "0.28");
-    indicator.appendChild(backdrop);
-
-    // --- Rotor: grupo que SÍ gira (3 aspas tipo hélice + buje) ---
-    const rotor = document.createElementNS(NS, "g");
-    rotor.setAttribute("data-motor-role", "rotor");
-    rotor.style.transformOrigin = "0px 0px";
-
-    for (let i = 0; i < 3; i++) {
-      const blade = document.createElementNS(NS, "ellipse");
-      blade.setAttribute("data-motor-role", "blade");
-      blade.setAttribute("cx", r * 0.52);
-      blade.setAttribute("cy", 0);
-      blade.setAttribute("rx", r * 0.58);
-      blade.setAttribute("ry", r * 0.2);
-      blade.setAttribute("stroke", "#00000055");
-      blade.setAttribute("stroke-width", "0.6");
-      blade.setAttribute("transform", `rotate(${i * 120})`);
-      rotor.appendChild(blade);
-    }
-
-    const hub = document.createElementNS(NS, "circle");
-    hub.setAttribute("data-motor-role", "hub");
-    hub.setAttribute("r", r * 0.22);
-    hub.setAttribute("stroke", "#00000055");
-    hub.setAttribute("stroke-width", "0.6");
-    rotor.appendChild(hub);
-
-    // Marca en el borde del rotor: sin esto, una hélice de 3 aspas
-    // simétricas se ve "igual" en cualquier ángulo y no se percibe
-    // que gira si la anima se detiene en un frame -- la marca rompe
-    // la simetría y además funciona como flecha de sentido.
-    const tick = document.createElementNS(NS, "path");
-    tick.setAttribute("data-motor-role", "tick");
-    tick.setAttribute("d", `M ${r + 3},0 l -6,-3.6 l 0,7.2 z`);
-    tick.setAttribute("stroke", "#00000055");
-    tick.setAttribute("stroke-width", "0.6");
-    rotor.appendChild(tick);
-
-    indicator.appendChild(rotor);
-
-    // Anillo exterior fino de referencia (queda fijo, no gira) --
-    // ayuda a que el conjunto se lea como "eje circular", como en
-    // el visor de Tinkercad.
-    const ring = document.createElementNS(NS, "circle");
-    ring.setAttribute("data-motor-role", "ring");
-    ring.setAttribute("r", r * 0.98);
-    ring.setAttribute("fill", "none");
-    ring.setAttribute("stroke", "#000000");
-    ring.setAttribute("stroke-opacity", "0.25");
-    ring.setAttribute("stroke-width", "1");
-    indicator.appendChild(ring);
-
-    wrapper.appendChild(indicator);
-    graphic.appendChild(wrapper);
-  }
+  // tagMotorElements() migró a components/motor/motor.behavior.js
+  // (sin llamadores externos).
 
   // ─────────────────────────────────────────────────────
   // LCD 16x2 (con o sin backpack I2C)
@@ -1530,151 +1313,11 @@ class Renderer {
     return m;
   }
 
-  tagLcdElements(component, graphic) {
-    // Fondo de pantalla: el único path con relleno #87AD34 en el
-    // SVG original. Lo marcamos con data-lcd-role para poder
-    // encontrarlo después SIN depender del hex original (que
-    // deja de existir apenas se aplica el primer color).
-    const bg = Array.from(graphic.querySelectorAll("path")).find(
-      (p) => Utils.normalizeHex(p.getAttribute("fill") || "") === "#87ad34",
-    );
-
-    if (bg) {
-      bg.setAttribute("data-lcd-role", "screen-bg");
-    } else {
-      console.warn(
-        "[Renderer] No se encontró el fondo de pantalla del LCD (#87AD34)",
-      );
-    }
-
-    // Grilla de puntos: SOLO <polygon>, para no agarrar de paso
-    // ningún <path> oscuro del bisel que casualmente comparta el
-    // mismo #1A1A1A.
-    const dots = [];
-    graphic.querySelectorAll("polygon[fill]").forEach((poly) => {
-      if (Utils.normalizeHex(poly.getAttribute("fill")) === "#1a1a1a") {
-        poly.setAttribute("data-lcd-role", "dot");
-        dots.push(poly);
-      }
-    });
-
-    this.applyLcdColorScheme(component);
-
-    // ── Overlay de texto real (LCD:) ────────────────────────
-    //
-    // Usamos foreignObject+<canvas> (mismo patrón que ya usa el
-    // OLED con su framebuffer): el canvas tiene su PROPIA
-    // resolución interna en píxeles, independiente de las
-    // unidades del SVG, y se estira via CSS width:100%/height:100%
-    // -- eso evita el lío de unidades que tuvimos con <text> +
-    // font-size (unidades crudas del SVG vs. unidades CSS).
-    //
-    // Dentro del canvas dibujamos una matriz de puntos real
-    // (5 columnas x 7 filas por carácter, como el HD44780 físico)
-    // en vez de una fuente vectorial -- ver getLcdCharBitmap().
-    //
-    // Usamos el bounding box de la GRILLA DE PUNTOS (no el del
-    // path de fondo, que es un <path> con curvas -- parsear su
-    // "d" para sacar un bounding box sería mucho más frágil) --
-    // las 32 celdas ya cubren casi exacto el área visible de
-    // caracteres.
-    if (dots.length === 0) {
-      console.warn(
-        "[Renderer] No se encontró la grilla de puntos del LCD -- no se puede ubicar el overlay de texto",
-      );
-      return;
-    }
-
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-
-    dots.forEach((poly) => {
-      // Cada polígono puede estar envuelto en <g transform>
-      // ancestros distintos (ver el comentario grande sobre
-      // los helpers de matriz afín, arriba) -- se compone esa
-      // matriz UNA VEZ por polígono (no todos comparten
-      // necesariamente la misma cadena de <g>, aunque en la
-      // práctica sí) y se aplica a cada punto ANTES de
-      // acumular min/max. En lcd_16x2_i2c.svg, sin wrappers,
-      // esto da la matriz identidad y el resultado no cambia.
-      const m = this._getLocalTransformUpTo(poly, graphic);
-
-      const points = (poly.getAttribute("points") || "").trim().split(/\s+/);
-      points.forEach((pair) => {
-        const [rawX, rawY] = pair.split(",").map(Number);
-        if (Number.isNaN(rawX) || Number.isNaN(rawY)) return;
-        const { x: px, y: py } = this._applyMatrix(m, rawX, rawY);
-        if (px < minX) minX = px;
-        if (px > maxX) maxX = px;
-        if (py < minY) minY = py;
-        if (py > maxY) maxY = py;
-      });
-    });
-
-    const boxWidth = maxX - minX;
-    const boxHeight = maxY - minY;
-
-    const fo = document.createElementNS(Utils.SVG_NS, "foreignObject");
-    fo.setAttribute("data-lcd-role", "text-wrap");
-    fo.setAttribute("x", minX);
-    fo.setAttribute("y", minY);
-    fo.setAttribute("width", boxWidth);
-    fo.setAttribute("height", boxHeight);
-
-    const canvas = document.createElementNS(
-      "http://www.w3.org/1999/xhtml",
-      "canvas",
-    );
-    canvas.setAttribute("data-lcd-role", "screen-canvas");
-
-    // Resolución interna: mantenemos la proporción REAL del
-    // rectángulo (boxWidth/boxHeight) para no deformar nada,
-    // pero el tamaño en píxeles lo fijamos nosotros con un
-    // ancho objetivo -- NO lo atamos directo a las unidades
-    // crudas del .svg (boxWidth * constante), porque no sabemos
-    // en qué escala están esas unidades en cada archivo: si
-    // resultan mucho más grandes o más chicas de lo esperado,
-    // el canvas puede terminar gigante o casi degenerado (0/1
-    // px reales aunque se estire con CSS después), y el
-    // navegador no dibuja nada -- sin tirar ningún error, así
-    // que es un bug silencioso. Fijando el ancho en píxeles y
-    // derivando el alto a partir de la proporción real, el
-    // tamaño en píxeles queda siempre controlado, sea cual sea
-    // la escala interna de cada .svg.
-    if (!(boxWidth > 0) || !(boxHeight > 0)) {
-      console.warn(
-        `[Renderer] Bounding box de la grilla de puntos del LCD (${component.type}) ` +
-          `salió raro (boxWidth=${boxWidth}, boxHeight=${boxHeight}) -- ` +
-          `usando proporción ideal como respaldo.`,
-      );
-    }
-
-    const numLines = component.properties?.numLines || 2;
-    const numColumns = component.properties?.numColumns || 16;
-
-    const DOT_PX = 6;
-    const targetWidthPx = numColumns * (Renderer.LCD_CHAR_COLS + 1) * DOT_PX;
-
-    // Si por algún motivo el box salió degenerado (alto 0),
-    // usamos la proporción "ideal" como respaldo en vez de
-    // dividir por cero.
-    const aspect =
-      boxHeight > 0
-        ? boxWidth / boxHeight
-        : (numColumns * (Renderer.LCD_CHAR_COLS + 1)) /
-          (numLines * (Renderer.LCD_CHAR_ROWS + 2));
-
-    canvas.width = Math.max(1, Math.round(targetWidthPx));
-    canvas.height = Math.max(1, Math.round(targetWidthPx / aspect));
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
-    canvas.style.display = "block";
-
-    fo.appendChild(canvas);
-    graphic.appendChild(fo); // encima de la grilla de puntos de fondo
-  }
+  // tagLcdElements() migró a components/lcd16x2/lcd16x2.behavior.js
+  // (registrado para "lcd16x2" y "lcd_16x2_i2c", sin llamadores
+  // externos -- applyLcdColorScheme()/_getLocalTransformUpTo()/
+  // _applyMatrix() de abajo siguen viviendo acá, los llama vía
+  // "renderer").
 
   // Tamaño de la matriz de puntos por carácter -- estándar HD44780
   // (5 columnas x 7 filas de "pixel"; la 8va fila real del chip es
@@ -2198,52 +1841,9 @@ class Renderer {
   static OLED_ON_COLOR = Renderer.OLED_COLOR_SCHEMES.blue.on;
   static OLED_OFF_COLOR = Renderer.OLED_COLOR_SCHEMES.blue.off;
 
-  tagOledElements(component, graphic) {
-    const screenRect = Array.from(graphic.querySelectorAll("rect")).find(
-      (r) => {
-        const fill = r.getAttribute("fill") || "";
-        return Utils.normalizeHex(fill) === "#2e2d30";
-      },
-    );
-
-    if (!screenRect) {
-      console.warn(
-        "[Renderer] No se encontró el rectángulo de pantalla del OLED",
-      );
-      return;
-    }
-
-    const x = parseFloat(screenRect.getAttribute("x")) || 0;
-    const y = parseFloat(screenRect.getAttribute("y")) || 0;
-    const w = parseFloat(screenRect.getAttribute("width")) || 100;
-    const h = parseFloat(screenRect.getAttribute("height")) || 100;
-
-    const screenWidth = component.properties?.screenWidth || 128;
-    const screenHeight = component.properties?.screenHeight || 64;
-
-    const fo = document.createElementNS(Utils.SVG_NS, "foreignObject");
-    fo.setAttribute("x", x);
-    fo.setAttribute("y", y);
-    fo.setAttribute("width", w);
-    fo.setAttribute("height", h);
-    fo.setAttribute("data-oled-role", "screen-wrap");
-
-    const canvas = document.createElementNS(
-      "http://www.w3.org/1999/xhtml",
-      "canvas",
-    );
-    canvas.setAttribute("width", screenWidth);
-    canvas.setAttribute("height", screenHeight);
-    canvas.setAttribute("data-oled-role", "screen");
-    canvas.style.cssText =
-      "width:100%; height:100%; image-rendering:pixelated; display:block;";
-
-    fo.appendChild(canvas);
-    graphic.appendChild(fo); // se dibuja encima del rect de fondo
-
-    // Pantalla apagada por defecto
-    this.clearOledScreen(component);
-  }
+  // tagOledElements() migró a components/oled/oled.behavior.js (sin
+  // llamadores externos -- clearOledScreen() de abajo sigue viviendo
+  // acá, lo llama vía "renderer").
 
   // Pintar un framebuffer monocromo estilo SSD1306 (formato MONO_VLSB:
   // cada byte = 8 pixeles verticales de una columna, bit 0 = arriba).
@@ -2335,48 +1935,9 @@ class Renderer {
   // nadie cambie un fill más adelante.
   // ─────────────────────────────────────────────────────
 
-  tagTftElements(component, graphic) {
-    const screenRect = graphic.querySelector('[data-role="screen"]');
-
-    if (!screenRect) {
-      console.warn(
-        "[Renderer] No se encontró el rectángulo de pantalla del TFT",
-      );
-      return;
-    }
-
-    const x = parseFloat(screenRect.getAttribute("x")) || 0;
-    const y = parseFloat(screenRect.getAttribute("y")) || 0;
-    const w = parseFloat(screenRect.getAttribute("width")) || 100;
-    const h = parseFloat(screenRect.getAttribute("height")) || 100;
-
-    const screenWidth = component.properties?.screenWidth || 240;
-    const screenHeight = component.properties?.screenHeight || 240;
-
-    const fo = document.createElementNS(Utils.SVG_NS, "foreignObject");
-    fo.setAttribute("x", x);
-    fo.setAttribute("y", y);
-    fo.setAttribute("width", w);
-    fo.setAttribute("height", h);
-    fo.setAttribute("data-tft-role", "screen-wrap");
-
-    const canvas = document.createElementNS(
-      "http://www.w3.org/1999/xhtml",
-      "canvas",
-    );
-    canvas.setAttribute("width", screenWidth);
-    canvas.setAttribute("height", screenHeight);
-    canvas.setAttribute("data-tft-role", "screen");
-    canvas.style.cssText =
-      "width:100%; height:100%; image-rendering:pixelated; display:block;";
-
-    fo.appendChild(canvas);
-    graphic.appendChild(fo); // se dibuja encima del rect de fondo
-
-    // Pantalla apagada (negra) por defecto, como en un ST7789 real
-    // recién alimentado, antes de que el firmware llame a init().
-    this.clearTftScreen(component);
-  }
+  // tagTftElements() migró a components/tft_st7789/tft_st7789.behavior.js
+  // (sin llamadores externos -- clearTftScreen() de abajo sigue
+  // viviendo acá, lo llama vía "renderer").
 
   // Pinta SOLO el rectángulo (x,y,width,height) recibido -- no hace
   // falta mantener acá un framebuffer completo en JS: el <canvas>
@@ -2451,62 +2012,13 @@ class Renderer {
   // usuario ve dibujada en el panel.
   // ─────────────────────────────────────────────────────
 
+  // Wrapper delgado -- lógica real migrada a
+  // components/neopixel_matrix/neopixel_matrix.behavior.js. Queda como
+  // método real (no se borra) porque tiene llamadores externos
+  // directos: PropertyPanel.js (al cambiar rows/cols a mano) y
+  // drawNeopixelFrame() de abajo (cuando detecta un cambio de tamaño).
   tagNeopixelElements(component, graphic) {
-    const cols = component.properties?.cols || 8;
-    const rows = component.properties?.rows || 8;
-
-    // Guardamos el tamaño actual en el propio componente -- así
-    // drawNeopixelFrame() puede detectar si cambió (el usuario
-    // tocó Rows/Cols en el PropertyPanel a mitad de sesión, o
-    // llegó un frame con otro tamaño) y volver a armar el bisel
-    // + canvas antes de dibujar.
-    component.properties.cols = cols;
-    component.properties.rows = rows;
-
-    graphic.innerHTML = ""; // por si se está re-armando (cambio de tamaño)
-
-    const pad = 8; // margen del bisel alrededor de la grilla, en unidades del componente
-
-    const bezel = document.createElementNS(Utils.SVG_NS, "rect");
-    bezel.setAttribute("data-neo-role", "bezel");
-    bezel.setAttribute("x", 0);
-    bezel.setAttribute("y", 0);
-    bezel.setAttribute("width", component.width);
-    bezel.setAttribute("height", component.height);
-    bezel.setAttribute("rx", 6);
-    bezel.setAttribute("ry", 6);
-    bezel.setAttribute("fill", "#1a1a1a");
-    bezel.setAttribute("stroke", "#000");
-    bezel.setAttribute("stroke-width", "1");
-    graphic.appendChild(bezel);
-
-    const fo = document.createElementNS(Utils.SVG_NS, "foreignObject");
-    fo.setAttribute("data-neo-role", "grid-wrap");
-    fo.setAttribute("x", pad);
-    fo.setAttribute("y", pad);
-    fo.setAttribute("width", Math.max(1, component.width - pad * 2));
-    fo.setAttribute("height", Math.max(1, component.height - pad * 2));
-
-    const canvas = document.createElementNS(
-      "http://www.w3.org/1999/xhtml",
-      "canvas",
-    );
-    canvas.setAttribute("data-neo-role", "grid");
-    canvas.style.cssText = "width:100%; height:100%; display:block;";
-
-    // Resolución interna del canvas: una "celda" fija por LED, no
-    // atada a las unidades del componente en el SVG -- mismo
-    // motivo que el LCD (ver Renderer.tagLcdElements): controla
-    // el tamaño en píxeles reales sin importar la escala del
-    // canvas del simulador.
-    const CELL_PX = 24;
-    canvas.width = cols * CELL_PX;
-    canvas.height = rows * CELL_PX;
-
-    fo.appendChild(canvas);
-    graphic.appendChild(fo);
-
-    this.clearNeopixelGrid(component);
+    ComponentBehaviorRegistry.get(component.type)?.render?.tag?.(component, graphic, this);
   }
 
   // Pintar un frame completo de la matriz. rgbBytes es un
@@ -2624,112 +2136,13 @@ class Renderer {
   // mismo espacio en vez de una matriz físicamente más grande.
   static MAX7219_LED_UNIT_SIZE = 20;
 
+  // Wrapper delgado -- lógica real migrada a
+  // components/max7219/max7219.behavior.js. Queda como método real
+  // (no se borra) por los mismos motivos que tagNeopixelElements()
+  // más arriba: PropertyPanel.js y drawMax7219Framebuffer() de abajo
+  // lo llaman directo por nombre.
   tagMax7219Elements(component, graphic) {
-    const cols = component.properties?.cols || 8;
-    const rows = component.properties?.rows || 8;
-
-    // Igual que tagNeopixelElements(): guardamos el tamaño actual
-    // en el propio componente para que drawMax7219Framebuffer()
-    // pueda detectar si cambió y rearmar el bisel + canvas antes
-    // de dibujar.
-    component.properties.cols = cols;
-    component.properties.rows = rows;
-
-    graphic.innerHTML = "";
-
-    const pad = 8;
-
-    // El bisel ahora escala físicamente con cols/rows -- cada LED
-    // ocupa siempre MAX7219_LED_UNIT_SIZE unidades reales, en vez
-    // de quedar fijo mientras el canvas interno se reparte en más
-    // celdas.
-    const oldWidth = component.width;
-    const oldHeight = component.height;
-
-    const newWidth = cols * Renderer.MAX7219_LED_UNIT_SIZE + pad * 2;
-    const newHeight = rows * Renderer.MAX7219_LED_UNIT_SIZE + pad * 2;
-
-    // Reescalar los pines proporcionalmente ANTES de pisar
-    // component.width/height -- los pines (component.pins) tienen
-    // x/y absolutos guardados en el componente (ver Component.js),
-    // así que si no los movemos acá quedan flotando en el lugar
-    // viejo (ej. pegados cerca del borde de un 8x8 aunque la
-    // matriz ahora sea 8x32).
-    if (
-      Array.isArray(component.pins) &&
-      oldWidth &&
-      oldHeight &&
-      (newWidth !== oldWidth || newHeight !== oldHeight)
-    ) {
-      const scaleX = newWidth / oldWidth;
-      const scaleY = newHeight / oldHeight;
-
-      component.pins.forEach((pin) => {
-        pin.x = pin.x * scaleX;
-        pin.y = pin.y * scaleY;
-      });
-    }
-
-    component.width = newWidth;
-    component.height = newHeight;
-
-    const bezel = document.createElementNS(Utils.SVG_NS, "rect");
-    bezel.setAttribute("data-max-role", "bezel");
-    bezel.setAttribute("x", 0);
-    bezel.setAttribute("y", 0);
-    bezel.setAttribute("width", component.width);
-    bezel.setAttribute("height", component.height);
-    bezel.setAttribute("rx", 4);
-    bezel.setAttribute("ry", 4);
-    bezel.setAttribute("fill", "#111");
-    bezel.setAttribute("stroke", "#000");
-    bezel.setAttribute("stroke-width", "1");
-    graphic.appendChild(bezel);
-
-    const fo = document.createElementNS(Utils.SVG_NS, "foreignObject");
-    fo.setAttribute("data-max-role", "grid-wrap");
-    fo.setAttribute("x", pad);
-    fo.setAttribute("y", pad);
-    fo.setAttribute("width", Math.max(1, component.width - pad * 2));
-    fo.setAttribute("height", Math.max(1, component.height - pad * 2));
-
-    const canvas = document.createElementNS(
-      "http://www.w3.org/1999/xhtml",
-      "canvas",
-    );
-    canvas.setAttribute("data-max-role", "grid");
-    canvas.style.cssText = "width:100%; height:100%; display:block;";
-
-    const CELL_PX = Renderer.MAX7219_LED_UNIT_SIZE;
-    canvas.width = cols * CELL_PX;
-    canvas.height = rows * CELL_PX;
-
-    fo.appendChild(canvas);
-    graphic.appendChild(fo);
-
-    // Los pines viven como elementos <g class="pin"> hermanos de
-    // .component-graphic (ver renderPins más abajo), no dentro de
-    // graphic -- así que reconstruir SOLO el contenido de graphic
-    // (arriba) no los toca. Si el componente ya está montado en el
-    // canvas, hay que volver a pintarlos acá para que el DOM
-    // refleje las nuevas coordenadas reescaladas.
-    if (component.element) {
-      component.element
-        .querySelectorAll(":scope > .pin")
-        .forEach((p) => p.remove());
-      this.renderPins(component, component.element);
-
-      // El marco de selección punteado (SelectionManager) también
-      // se dibuja a partir de component.width/height -- si el
-      // componente está seleccionado en este momento, hay que
-      // refrescarlo o queda con el tamaño viejo hasta el próximo
-      // click.
-      if (component.selected) {
-        this.simulator?.selectionManager?.renderHighlight();
-      }
-    }
-
-    this.clearMax7219Grid(component);
+    ComponentBehaviorRegistry.get(component.type)?.render?.tag?.(component, graphic, this);
   }
 
   // Pintar un frame completo. bytes es un Uint8Array de 1 bit por
@@ -2852,30 +2265,8 @@ class Renderer {
   static DISPLAY7_ON_COLOR = "#ff0033";
   static DISPLAY7_OFF_COLOR = "#3a0a10";
 
-  tagDisplay7Elements(graphic) {
-    Object.entries(Renderer.DISPLAY7_SEGMENT_MAP).forEach(
-      ([originalId, role]) => {
-        const el = graphic.querySelector(`#${originalId}`);
-
-        if (!el) {
-          console.warn(
-            `[Renderer] Display7: no se encontró #${originalId} (segmento "${role}")`,
-          );
-          return;
-        }
-
-        el.setAttribute("data-display7-role", role);
-        el.setAttribute("data-display7-original-id", originalId);
-        el.removeAttribute("id");
-
-        // El .svg trae un style="fill:#000000" (o #1a1a1a) fijo por
-        // segmento, herencia del export de Fritzing, que taparía
-        // cualquier color que le asignemos después por JS. Se limpia
-        // una sola vez aquí para que el fill lo controle applyDisplay7State.
-        el.style.removeProperty("fill");
-      },
-    );
-  }
+  // tagDisplay7Elements() migró a components/display7/display7.behavior.js
+  // (sin llamadores externos).
 
   applyDisplay7State(component, segments, dp) {
     if (!component.element) return;
@@ -3010,49 +2401,8 @@ class Renderer {
   static TM1637_ON_COLOR = "#ff0033";
   static TM1637_OFF_COLOR = "#3a0a10";
 
-  tagTm1637Elements(graphic) {
-    Renderer.TM1637_DIGIT_MAP.forEach((segmentIds, digitIndex) => {
-      Object.entries(segmentIds).forEach(([role, originalId]) => {
-        const el = graphic.querySelector(`#${originalId}`);
-
-        if (!el) {
-          console.warn(
-            `[Renderer] TM1637: no se encontró #${originalId} (dígito ${digitIndex}, segmento "${role}")`,
-          );
-          return;
-        }
-
-        el.setAttribute("data-tm1637-digit", digitIndex);
-        el.setAttribute("data-tm1637-role", role);
-        el.removeAttribute("id");
-
-        // A diferencia de Display7 (que traía el fill fijo en
-        // "style"), este .svg lo trae como atributo "fill"
-        // directo (fill="#ef1818" prendido / "#c7c7c7" apagado,
-        // estado estático baqueado por Fritzing) -- hay que
-        // sacar las dos formas o applyTm1637Segments() no
-        // puede pisar el color por CSS.
-        el.style.removeProperty("fill");
-        if (el.hasAttribute("fill")) el.removeAttribute("fill");
-      });
-    });
-
-    Renderer.TM1637_COLON_IDS.forEach((originalId) => {
-      const el = graphic.querySelector(`#${originalId}`);
-
-      if (!el) {
-        console.warn(
-          `[Renderer] TM1637: no se encontró #${originalId} (colón)`,
-        );
-        return;
-      }
-
-      el.setAttribute("data-tm1637-role", "colon");
-      el.removeAttribute("id");
-      el.style.removeProperty("fill");
-      if (el.hasAttribute("fill")) el.removeAttribute("fill");
-    });
-  }
+  // tagTm1637Elements() migró a components/tm1637/tm1637.behavior.js
+  // (sin llamadores externos).
 
   // bytes: array de 4 enteros (uno por dígito), tal cual los manda
   // tm1637_hal.py -- ya codificados bit a bit (a=bit0 ... g=bit6),

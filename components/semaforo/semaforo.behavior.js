@@ -29,4 +29,15 @@ ComponentBehaviorRegistry.register("semaforo", {
 
     },
 
+    render: {
+
+        // El semáforo no necesita "tag()" -- applySemaforoState() ya
+        // encuentra sus elementos por id fijo, sin data-role dinámico
+        // (a diferencia del LED/Display7). Solo migra el estado inicial.
+        initialState(component, renderer) {
+            renderer.applySemaforoState(component, { r: false, y: false, g: false });
+        },
+
+    },
+
 });
