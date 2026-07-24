@@ -1,0 +1,136 @@
+/* ==========================================================
+   PitSimulator — project-drawer.css
+   Botón deslizador de Proyecto (junto al logo) + panel
+   desplegable: Nuevo / Guardar / Guardar como / Abrir /
+   Recargar / Exportar / Importar / Validar.
+   Mismo lenguaje visual que .context-menu (ver simulator.css).
+========================================================== */
+
+/* --------------------------------------------------------
+   Botón que abre/cierra el deslizador
+   -------------------------------------------------------- */
+
+.btn-project-toggle {
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 34px;
+    height: 34px;
+
+    background: #444;
+    color: white;
+
+    border: none;
+    border-radius: 6px;
+
+    cursor: pointer;
+    font-size: 16px;
+
+    transition: background .15s;
+
+}
+
+.btn-project-toggle:hover {
+    background: #666;
+}
+
+.btn-project-toggle.active {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* .logo necesita position:relative para anclar el drawer debajo */
+.logo {
+    position: relative;
+}
+
+/* --------------------------------------------------------
+   Panel deslizable
+   -------------------------------------------------------- */
+
+.project-drawer {
+
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+
+    z-index: 1000;
+
+    min-width: 260px;
+    max-width: 320px;
+
+    background: #2b2d31;
+    border: 1px solid #444;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+
+    padding: 6px 0;
+
+    font-size: 14px;
+
+    user-select: none;
+
+    /* Animación sutil al abrir, coherente con el resto de paneles */
+    transform-origin: top left;
+    animation: projectDrawerOpen .12s ease-out;
+
+}
+
+.project-drawer.hidden {
+    display: none;
+}
+
+@keyframes projectDrawerOpen {
+    from { opacity: 0; transform: scale(.97) translateY(-4px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.project-drawer-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.project-drawer-separator {
+    height: 1px;
+    background: #444;
+    margin: 6px 0;
+}
+
+.project-drawer-label {
+    padding: 6px 14px 4px;
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+/* --------------------------------------------------------
+   Items tipo botón (Nuevo / Guardar / Exportar / Validar...)
+   -------------------------------------------------------- */
+
+.project-drawer-item {
+
+    display: flex;
+    align-items: center;
+
+    width: 100%;
+
+    background: none;
+    border: none;
+
+    padding: 8px 14px;
+
+    color: #e6e6e6;
+    font-size: 14px;
+    text-align: left;
+
+    cursor: pointer;
+    white-space: nowrap;
+
+}
+
+.project-drawer-item:hover {
+    background: #3a3c42;
+}

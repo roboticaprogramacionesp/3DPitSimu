@@ -1,0 +1,21 @@
+from matrix8x8 import Max8x8
+from machine import Pin, SPI
+from max import Max7219
+
+# Reemplaza el método init() buggy por una versión que pasa
+# sck/mosi como enteros crudos, no envueltos en Pin(...)
+def init_fixed(self, sck=2, mosi=13, cs=15, w=8, h=8, s=False):
+    self.spi = SPI(1,
+        baudrate=10000000,
+        polarity=1,
+        phase=0,
+        sck=sck,
+        mosi=mosi)
+    self.cs = Pin(cs, Pin.OUT)
+    self.display = Max7219(w, h, self.spi, self.cs, s)
+
+Max8x8.init = init_fixed
+
+# Ahora sí, tu código de siempre:
+matrix8x8 = Max8x8(sck=14, mosi=13, cs=5, w=8, h=8)
+matrix8x8.text('Hola')

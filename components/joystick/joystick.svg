@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 62">
+
+  <!--
+    Icono plano (no es la vista de Fritzing): mismo criterio que
+    tft_st7789.svg / semaforo.svg. El SVG de Fritzing que suele
+    circular para el KY-023 es un breadboard-view muy pesado y sin
+    ningún gancho para animar el arrastre del stick, así que se
+    arma de cero.
+
+    Piezas con rol especial (ver Renderer.bindJoystick):
+      [data-role="joystick-area"]   circulo que define el radio
+                                     maximo de recorrido del stick
+      [data-joystick-role="knob"]   el cabezal que se arrastra con
+                                     el mouse para simular X/Y
+      [data-role="button-cap"]      MISMO elemento que el knob: al
+                                     hacer click (sin arrastrar
+                                     mucho) tambien puentea SW-GND,
+                                     igual mecanismo generico que
+                                     ya usan los botones momentaneos
+                                     (ver Renderer.bindPressButton,
+                                     component.pressPins en el JSON)
+
+    Coordenadas en las mismas unidades que "width"/"height" del JSON
+    (50x62), igual que el resto de los componentes propios.
+  -->
+
+  <!-- Cuerpo del modulo (PCB) -->
+  <rect x="2" y="2" width="46" height="58" rx="5" fill="#132042" stroke="#05070f" stroke-width="1"/>
+
+  <!-- Limite de recorrido del stick, puramente visual/de referencia -->
+  <circle data-role="joystick-area" cx="25" cy="23" r="15" fill="none" stroke="#3a4a7a" stroke-width="1" stroke-dasharray="2,2"/>
+
+  <!-- Base fija del stick (no se mueve) -->
+  <circle cx="25" cy="23" r="10" fill="#2a2a2a" stroke="#050505" stroke-width="0.8"/>
+
+  <!-- Cabezal del stick: se arrastra (X/Y) y tambien actua como
+       boton (click = SW), ver comentario de arriba -->
+  <circle data-joystick-role="knob" data-role="button-cap" cx="25" cy="23" r="7" fill="#c0392b" stroke="#7a1f14" stroke-width="0.8"/>
+
+  <!-- Serigrafia -->
+  <text x="25" y="43" text-anchor="middle" fill="#ffffff" font-family="DroidSans, sans-serif" font-size="4">KY-023</text>
+
+  <!-- Franja del conector, donde van los 5 pines -->
+  <rect x="4" y="46" width="42" height="13" rx="3" fill="#0c1730"/>
+
+  <!-- Anillos de pad de cada pin, puramente cosmeticos: el cuadrado
+       clickeable real lo dibuja Renderer.renderPins() encima, en las
+       mismas coordenadas que vienen del JSON. Orden: GND, VCC, VRX,
+       VRY, SW (mismo orden impreso en el modulo real). -->
+  <circle cx="9"  cy="52.5" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
+  <circle cx="18" cy="52.5" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
+  <circle cx="27" cy="52.5" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
+  <circle cx="36" cy="52.5" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
+  <circle cx="45" cy="52.5" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
+
+</svg>

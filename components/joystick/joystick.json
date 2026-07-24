@@ -1,0 +1,27 @@
+{
+    "type": "joystick",
+    "name": "Joystick KY-023",
+    "category": "Sensores",
+
+    "width": 50,
+    "height": 62,
+
+    "svgPath": "components/joystick/joystick.svg",
+
+    "pinShape": "square",
+    "pinSize": 2.6,
+
+    "pins": [
+        { "id": "gnd", "name": "GND",        "x": 9,  "y": 52.5, "type": "ground", "signal": "ground" },
+        { "id": "vcc", "name": "VCC (+5V)",  "x": 18, "y": 52.5, "type": "power",  "signal": "power"  },
+        { "id": "vrx", "name": "VRx (ADC)",  "x": 27, "y": 52.5, "type": "signal" },
+        { "id": "vry", "name": "VRy (ADC)",  "x": 36, "y": 52.5, "type": "signal" },
+        { "id": "sw",  "name": "SW (botón)", "x": 45, "y": 52.5, "type": "signal" }
+    ],
+
+    "pressPins": ["sw", "gnd"],
+
+    "properties": {
+        "modelo": "Joystick KY-023 (X/Y analógico + botón, resorte de centrado)"
+    }
+}

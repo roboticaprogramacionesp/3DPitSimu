@@ -1,0 +1,1259 @@
+/* ==========================================================
+   PitSimulator v0.1
+   Tema General
+========================================================== */
+
+:root{
+    --canvas-bg:#f4f7fb;
+    --grid-line:rgba(15, 23, 42, 0.08);
+    --panel-bg:#25262b;
+    --panel-border:rgba(255,255,255,0.08);
+    --accent:#4da3ff;
+    --accent-strong:#2f80ed;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html,
+body{
+
+    width:100%;
+    height:100%;
+
+    overflow:hidden;
+
+    font-family:Segoe UI,Arial,sans-serif;
+
+    background:var(--canvas-bg);
+
+    color:white;
+
+}
+
+
+/* ==========================================================
+   Toolbar
+========================================================== */
+
+#toolbar{
+
+    height:60px;
+
+    background:#2b2d31;
+
+    border-bottom:1px solid #444;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    padding:0 15px;
+
+}
+
+.logo{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+}
+
+.logo h2{
+
+    font-size:24px;
+
+}
+
+.logo span{
+
+    background:#444;
+
+    padding:3px 8px;
+
+    border-radius:6px;
+
+    font-size:12px;
+
+}
+
+.toolbar-buttons{
+
+    display:flex;
+
+    gap:10px;
+
+}
+
+.toolbar-buttons button{
+
+    cursor:pointer;
+
+    padding:8px 15px;
+
+    border:none;
+
+    border-radius:6px;
+
+    background:#444;
+
+    color:white;
+
+    transition:.2s;
+
+    font-size:13px;
+
+}
+
+.toolbar-buttons button:hover{
+
+    background:#666;
+
+}
+
+.toolbar-buttons button.active{
+
+    background:#4da3ff;
+
+    color:#fff;
+
+}
+
+/* Selector de tamaño de cuadrícula (mismo look que los btn-toolbar) */
+
+.grid-select-label{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:6px;
+
+    padding:0 4px 0 12px;
+
+    background:#444;
+
+    border-radius:6px;
+
+}
+
+.grid-select-icon{
+
+    font-size:13px;
+
+    color:#aaa;
+
+    pointer-events:none;
+
+}
+
+.grid-select{
+
+    cursor:pointer;
+
+    padding:8px 8px 8px 0;
+
+    border:none;
+
+    border-radius:6px;
+
+    background:transparent;
+
+    color:white;
+
+    font-size:13px;
+
+    outline:none;
+
+}
+
+.grid-select option{
+
+    background:#2a2a2a;
+
+    color:white;
+
+}
+
+.btn-sim-toggle{
+
+    background:#2ecc71 !important;
+
+    margin-left:auto;
+
+}
+
+.btn-sim-toggle:hover{
+
+    background:#27ae60 !important;
+
+}
+
+.btn-sim-toggle.running{
+
+    background:#e74c3c !important;
+
+}
+
+
+/* ==========================================================
+   Layout Principal
+========================================================== */
+
+#mainLayout{
+
+    position:relative;
+
+    width:100%;
+
+    /* Antes: calc(100vh - 90px) -- 60px del header + 30px del footer
+       fijo de abajo (#statusBar). Ese footer ahora es una etiqueta
+       flotante DENTRO del workspace (ver #statusBar más abajo), así
+       que ya no hace falta reservarle una tira propia: el layout
+       completo aprovecha todo el alto que antes le regalaba al pie
+       de página. */
+    height:calc(100vh - 60px);
+
+    display:grid;
+
+    grid-template-columns:260px 1fr 280px;
+
+    transition:grid-template-columns .2s ease;
+
+}
+
+/* Panel de propiedades colapsado: más espacio para el canvas */
+#mainLayout.props-collapsed{
+
+    grid-template-columns:260px 1fr 0px;
+
+}
+
+#mainLayout.props-collapsed #propertyPanel{
+
+    overflow:hidden;
+
+    padding:0;
+
+    border-left:none;
+
+}
+
+
+/* ==========================================================
+   Toolbox
+========================================================== */
+
+#toolbox{
+
+    background:#25262b;
+
+    border-right:1px solid #444;
+
+    overflow:auto;
+
+}
+
+#toolbox h3{
+
+    padding:15px;
+
+    border-bottom:1px solid #444;
+
+}
+
+#componentList{
+
+    padding:10px;
+
+    display:grid;
+
+    grid-template-columns:repeat(4, 1fr);
+
+    gap:8px;
+
+}
+
+
+/* ==========================================================
+   Workspace
+========================================================== */
+
+#workspace{
+
+    position:relative;
+
+    overflow:hidden;
+
+    background:linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+
+}
+
+#simulatorCanvas{
+
+    width:100%;
+
+    height:100%;
+
+    user-select:none;
+
+    -webkit-user-select:none;
+
+}
+
+
+/* ==========================================================
+   Panel Derecho
+========================================================== */
+
+#propertyPanel{
+
+    background:#25262b;
+
+    border-left:1px solid #444;
+
+    overflow:auto;
+
+}
+
+#propertyPanel h3{
+
+    padding:15px;
+
+    border-bottom:1px solid #444;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+}
+
+.panel-pin-btn{
+
+    background:none;
+
+    border:1px solid #444;
+
+    border-radius:4px;
+
+    color:#999;
+
+    cursor:pointer;
+
+    font-size:13px;
+
+    padding:2px 6px;
+
+    line-height:1;
+
+}
+
+.panel-pin-btn:hover{
+
+    border-color:#4da3ff;
+
+    color:#fff;
+
+}
+
+.panel-pin-btn.active{
+
+    background:#4da3ff;
+
+    border-color:#4da3ff;
+
+    color:#fff;
+
+}
+
+/* Pestaña para reabrir el panel colapsado */
+#propsReopenTab{
+
+    position:absolute;
+
+    right:0;
+
+    top:50%;
+
+    transform:translateY(-50%);
+
+    display:none;
+
+    background:#2b2d31;
+
+    border:1px solid #444;
+
+    border-right:none;
+
+    border-radius:6px 0 0 6px;
+
+    color:#ccc;
+
+    cursor:pointer;
+
+    padding:10px 8px;
+
+    font-size:12px;
+
+    writing-mode:vertical-rl;
+
+    z-index:5;
+
+}
+
+#propsReopenTab:hover{
+
+    color:#fff;
+
+    border-color:#4da3ff;
+
+}
+
+#mainLayout.props-collapsed #propsReopenTab{
+
+    display:block;
+
+}
+
+#propertyContent{
+
+    padding:15px;
+
+}
+
+
+/* ==========================================================
+   Etiqueta de estado (flotante, dentro del canvas)
+   Antes era un <footer> fijo abajo de toda la ventana (30px
+   robados siempre) -- ahora vive DENTRO de #workspace como una
+   pequeña "píldora" flotante en la esquina, para que el canvas
+   aproveche toda la altura disponible.
+========================================================== */
+
+#statusBar{
+
+    position:absolute;
+
+    top:12px;
+    left:12px;
+
+    z-index:150;
+
+    display:flex;
+
+    align-items:center;
+
+    background:rgba(43,45,49,.85);
+
+    backdrop-filter:blur(4px);
+    -webkit-backdrop-filter:blur(4px);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    border-radius:20px;
+
+    padding:6px 14px;
+
+    font-size:12.5px;
+
+    color:#ccc;
+
+    box-shadow:0 4px 14px rgba(0,0,0,.3);
+
+    /* No debe robarle clicks al canvas que tiene debajo (paneo,
+       selección, etc.) -- es puramente informativo. */
+    pointer-events:none;
+
+}
+
+
+/* ==========================================================
+   Componentes (selección y arrastre)
+========================================================== */
+
+.component{
+
+    cursor:grab;
+
+    transition:transform .15s ease, filter .15s ease;
+
+}
+
+.component:hover .component-graphic,
+.component:hover .component-placeholder{
+
+    filter:drop-shadow(0 4px 12px rgba(31, 41, 55, 0.16));
+
+}
+
+.component.dragging{
+
+    cursor:grabbing;
+
+    opacity:0.85;
+
+}
+
+.component.selected .component-graphic,
+.component.selected .component-placeholder{
+
+    filter:drop-shadow(0 0 6px rgba(77, 163, 255, 0.8));
+
+}
+
+
+/* ==========================================================
+   Pines
+========================================================== */
+
+.pin-hit{
+
+    fill:transparent;
+
+}
+
+.pin-visible{
+
+    fill:#ffcf40;
+
+    stroke:#1e1f22;
+
+    stroke-width:1;
+
+}
+
+.pin:hover .pin-visible{
+
+    fill:#4da3ff;
+
+}
+
+.pin{
+
+    cursor:crosshair;
+
+}
+
+
+/* ==========================================================
+   Pines activos (HIGH) -- retroalimentación visual del
+   SignalEngine, mientras no haya firmware real corriendo
+========================================================== */
+
+.pin.pin-active .pin-visible{
+
+    fill:#2ecc71;
+
+    filter:drop-shadow(0 0 4px #2ecc71);
+
+}
+
+
+/* ==========================================================
+   LEDs: apagado (opaco/gris) vs encendido (brillante + glow)
+========================================================== */
+
+.component.led-off .component-graphic{
+
+    /* Sin atenuar: el color del LED debe verse completo en reposo,
+       igual que en Fritzing. Lo "apagado" se nota por la ausencia
+       de glow, no por perder saturación/brillo. */
+    filter:none;
+
+}
+
+.component.led-on .component-graphic{
+
+    filter:brightness(1.5) saturate(1.3) drop-shadow(0 0 10px #fff3b0);
+
+    transition:filter .15s ease;
+
+}
+
+
+/* ==========================================================
+   Marco de selección
+========================================================== */
+
+.selection-outline{
+
+    fill:none;
+
+    stroke:#4da3ff;
+
+    stroke-width:2;
+
+    stroke-dasharray:4 2;
+
+    pointer-events:none;
+
+}
+
+
+/* ==========================================================
+   Cables
+========================================================== */
+
+/* Zona de click invisible (un poco más ancha que el trazo real,
+   para que sea fácil hacer click/doble-click sobre el cable, pero
+   SIN pasarse -- varios componentes (ej. ESP32) tienen pines a solo
+   ~10 unidades de distancia, y una zona de click muy ancha les puede
+   "robar" el click ya que wireLayer se pinta encima de componentLayer).
+   El color y grosor visibles del cable los pinta .wire-visual */
+.wire-segment{
+
+    stroke:transparent;
+
+    stroke-width:6;
+
+    fill:none;
+
+    cursor:crosshair;
+
+}
+
+/* Trazo visual real del cable: UN solo <path> por cable (no un
+   <line> por segmento), para que stroke-linejoin/linecap puedan
+   redondear las esquinas -- eso solo funciona cuando los segmentos
+   forman parte de un mismo path. Estilo tipo Wokwi. */
+.wire-visual{
+
+    fill:none;
+
+    stroke-width:2.3;
+
+    stroke-linejoin:round;
+
+    stroke-linecap:round;
+
+    pointer-events:none;
+
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,0.15));
+
+}
+
+.wire-visual.selected{
+
+    stroke-width:3.2;
+
+    filter:drop-shadow(0 0 5px rgba(255,255,255,0.7));
+
+}
+
+.wire-visual.wire-locked{
+
+    opacity:.55;
+
+}
+
+/* Vista previa mientras se dibuja el cable -- ancho propio (NO
+   hereda el stroke-width:6 de .wire-segment) y color dinámico
+   (lo pone WireManager según el pin de origen, por eso no hay
+   "stroke" fijo acá ni !important) */
+.wire-temp{
+
+    stroke-width:2.7;
+
+    stroke-dasharray:5 3;
+
+    stroke-linejoin:round;
+
+    stroke-linecap:round;
+
+    fill:none;
+
+    pointer-events:none;
+
+}
+
+.wire-handle{
+
+    stroke:#1e1f22;
+
+    stroke-width:1;
+
+    cursor:grab;
+
+    opacity:0.9;
+
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+
+}
+
+.wire-handle:hover{
+
+    opacity:1;
+
+    r:7;
+
+}
+
+.wire-handle.selected{
+
+    stroke:#4da3ff;
+
+    stroke-width:2;
+
+    opacity:1;
+
+}
+
+.wire-seg-handle{
+    pointer-events:all;
+    fill:#9c27b0;
+    stroke:#9c27b0;
+    cursor:row-resize;
+    opacity:.6;
+    z-index:10;
+}
+
+/* ==========================================================
+   Efecto "corriente circulando" (estilo Wokwi) sobre el cable
+   seleccionado -- ver WireManager.renderAll(), <path class="wire-flow">
+   ========================================================== */
+
+.wire-flow{
+
+    fill:none;
+
+    stroke:#ffffff;
+
+    stroke-width:2;
+
+    stroke-linecap:round;
+
+    stroke-linejoin:round;
+
+    stroke-dasharray:5 9;
+
+    opacity:.85;
+
+    pointer-events:none;
+
+    animation:wireCurrentFlow .6s linear infinite;
+
+}
+
+@keyframes wireCurrentFlow{
+
+    to{ stroke-dashoffset:-14; }
+
+}
+
+
+/* ==========================================================
+   Toolbox: tarjetas de componentes arrastrables
+========================================================== */
+
+.toolbox-item{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    aspect-ratio:1 / 1;
+
+    padding:6px;
+
+    background:#2f3136;
+
+    border:1px solid #444;
+
+    border-radius:6px;
+
+    cursor:grab;
+
+    transition:.15s;
+
+}
+
+.toolbox-thumb{
+
+    width:100%;
+
+    height:100%;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    background:#1e1f22;
+
+    border-radius:4px;
+
+    overflow:hidden;
+
+}
+
+.toolbox-thumb svg{
+
+    width:100%;
+
+    height:100%;
+
+    display:block;
+
+}
+
+.toolbox-item:hover{
+
+    background:#3a3c42;
+
+    border-color:#4da3ff;
+
+}
+
+.toolbox-item.dragging{
+
+    opacity:0.4;
+
+}
+
+
+/* ==========================================================
+   PropertyPanel: campos de propiedades del componente
+========================================================== */
+
+.property-field{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:4px;
+
+    margin-bottom:12px;
+
+}
+
+.property-field label{
+
+    font-size:12px;
+
+    color:#999;
+
+    text-transform:uppercase;
+
+    letter-spacing:.03em;
+
+}
+
+.property-field input[type="text"],
+.property-field input[type="number"]{
+
+    background:#1e1f22;
+
+    border:1px solid #444;
+
+    border-radius:4px;
+
+    color:#fff;
+
+    padding:6px 8px;
+
+    font-size:14px;
+
+    width:100%;
+
+}
+
+.property-field input[type="text"]:focus,
+.property-field input[type="number"]:focus{
+
+    outline:none;
+
+    border-color:#4da3ff;
+
+}
+
+.property-field input[type="color"]{
+
+    width:100%;
+
+    height:32px;
+
+    border:1px solid #444;
+
+    border-radius:4px;
+
+    background:none;
+
+    padding:2px;
+
+    cursor:pointer;
+
+}
+
+.property-static{
+
+    font-size:14px;
+
+    color:#ccc;
+
+}
+
+.property-row{
+
+    display:flex;
+
+    gap:10px;
+
+}
+
+.property-row .property-field{
+
+    flex:1;
+
+}
+
+.property-delete-btn{
+
+    width:100%;
+
+    padding:10px;
+
+    margin-top:8px;
+
+    background:#8b3a3a;
+
+    color:#fff;
+
+    border:none;
+
+    border-radius:6px;
+
+    cursor:pointer;
+
+    font-size:14px;
+
+}
+
+.property-delete-btn:hover{
+
+    background:#b04848;
+
+}
+
+/* ==========================================================
+   Toolbox — categorías y items
+   Agrega esto al final de tu css/simulator.css
+   ========================================================== */
+
+.toolbox-category {
+    grid-column: 1 / -1;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #555;
+    padding: 10px 10px 4px 10px;
+    margin-top: 4px;
+    border-top: 1px solid #2a2a2a;
+}
+
+.toolbox-category:first-child {
+    border-top: none;
+    margin-top: 0;
+}
+/* ==========================================================
+   Componente bloqueado (clic derecho -> Bloquear componente)
+   ========================================================== */
+
+.component.locked{
+
+    cursor:not-allowed;
+
+}
+
+.component.locked .component-graphic,
+.component.locked .component-placeholder{
+
+    opacity:0.75;
+
+}
+
+/* ==========================================================
+   Etiqueta de nombre del componente (clic derecho -> Mostrar nombre)
+   ========================================================== */
+
+.component-name-label{
+
+    display:none;
+
+    font-size:10px;
+
+    fill:#333;
+
+    font-family:Segoe UI, Arial, sans-serif;
+
+    pointer-events:none;
+
+}
+
+.component.show-name .component-name-label{
+
+    display:block;
+
+}
+
+/* ==========================================================
+   Botón de espejo (junto a Rotación en el PropertyPanel)
+   ========================================================== */
+
+.property-flip-btn{
+
+    background:#1e1f22;
+
+    border:1px solid #444;
+
+    border-radius:4px;
+
+    color:#fff;
+
+    padding:6px 8px;
+
+    font-size:14px;
+
+    cursor:pointer;
+
+    width:100%;
+
+}
+
+.property-flip-btn:hover{
+
+    border-color:#4da3ff;
+
+}
+
+.property-flip-btn.active{
+
+    background:#4da3ff;
+
+    border-color:#4da3ff;
+
+}
+
+/* ==========================================================
+   Paleta de color del LED (estilo Fritzing) + color personalizado
+   ========================================================== */
+
+.led-palette{
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:8px;
+
+    align-items:center;
+
+}
+
+.led-swatch{
+
+    width:26px;
+
+    height:26px;
+
+    border-radius:50%;
+
+    border:2px solid #444;
+
+    cursor:pointer;
+
+    padding:0;
+
+    transition:.15s;
+
+}
+
+.led-swatch:hover{
+
+    transform:scale(1.1);
+
+}
+
+.led-swatch.active{
+
+    border-color:#4da3ff;
+
+    box-shadow:0 0 0 2px rgba(77,163,255,.4);
+
+}
+
+.led-swatch-custom{
+
+    width:30px;
+
+    height:30px;
+
+    border-radius:50%;
+
+    border:2px dashed #666;
+
+    background:none;
+
+    padding:0;
+
+    cursor:pointer;
+
+}
+
+/* ==========================================================
+   Menú contextual (clic derecho)
+   ========================================================== */
+
+.context-menu{
+
+    position:fixed;
+
+    z-index:1000;
+
+    min-width:220px;
+
+    background:#2b2d31;
+
+    border:1px solid #444;
+
+    border-radius:8px;
+
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
+
+    padding:6px 0;
+
+    font-size:14px;
+
+    user-select:none;
+
+}
+
+.context-menu-item{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    gap:16px;
+
+    padding:8px 14px;
+
+    color:#e6e6e6;
+
+    cursor:pointer;
+
+    white-space:nowrap;
+
+}
+
+.context-menu-item:hover{
+
+    background:#3a3c42;
+
+}
+
+.context-menu-item.disabled{
+
+    color:#666;
+
+    cursor:default;
+
+}
+
+.context-menu-shortcut{
+
+    color:#888;
+
+    font-size:12px;
+
+}
+
+.context-menu-arrow{
+
+    color:#888;
+
+    font-size:11px;
+
+}
+
+.context-menu-separator{
+
+    height:1px;
+
+    background:#444;
+
+    margin:6px 0;
+
+}
+
+/* ==========================================================
+   Botón ▶ Simular / ⏹ Detener
+   ========================================================== */
+
+.btn-sim-toggle{
+
+    background:#2e7d32;
+
+    font-weight:600;
+
+}
+
+.btn-sim-toggle:hover{
+
+    background:#37944b;
+
+}
+
+.btn-sim-toggle.running{
+
+    background:#8b3a3a;
+
+}
+
+.btn-sim-toggle.running:hover{
+
+    background:#b04848;
+
+}
+
+.btn-sim-toggle:disabled{
+
+    opacity:.6;
+
+    cursor:default;
+
+}
+
+/* ==========================================================
+   Botón momentáneo (pushbutton) -- data-role="button-cap"
+   ========================================================== */
+
+.button-cap{
+
+    cursor:pointer;
+
+}
+
+.component.pressed .button-cap{
+
+    /* El feedback visual ahora es el color rojo que Renderer.js
+       aplica directamente al [data-role="button-indicator"] --
+       ya no achicamos/deformamos el dibujo del botón. */
+
+}

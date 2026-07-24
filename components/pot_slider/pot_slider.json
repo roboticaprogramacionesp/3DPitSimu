@@ -1,0 +1,24 @@
+{
+    "type": "pot_slider",
+    "name": "Potenciómetro Deslizante 10K",
+    "category": "Sensores",
+
+    "width": 90,
+    "height": 46,
+
+    "svgPath": "components/pot_slider/pot_slider.svg",
+
+    "pinShape": "square",
+    "pinSize": 2.6,
+
+    "pins": [
+        { "id": "gnd", "name": "GND",       "x": 16, "y": 39, "type": "ground", "signal": "ground" },
+        { "id": "vcc", "name": "VCC",       "x": 45, "y": 39, "type": "power",  "signal": "power"  },
+        { "id": "out", "name": "OUT (ADC)", "x": 74, "y": 39, "type": "signal" }
+    ],
+
+    "properties": {
+        "modelo": "Potenciómetro deslizante lineal 10KΩ (módulo con riel, salida analógica)",
+        "nota": "Arrastrá la perilla en el canvas para simular la posición -- a diferencia del joystick, NO vuelve sola al centro al soltar: se queda donde la dejaste, igual que el potenciómetro real."
+    }
+}

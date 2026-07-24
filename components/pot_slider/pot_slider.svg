@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 46">
+
+  <!--
+    Icono plano propio, mismo criterio que el resto de los
+    componentes de este proyecto.
+
+    Piezas con rol especial (ver Renderer.bindSlider):
+      [data-role="slider-track"]  el riel: de sus extremos (x +
+                                   width) se calcula el recorrido
+                                   máximo de la perilla
+      [data-slider-role="knob"]   la perilla que se arrastra en UN
+                                   SOLO eje (horizontal) para simular
+                                   el valor analógico
+
+    A diferencia del joystick, ACÁ NO hay resorte de centrado: al
+    soltar el mouse la perilla se queda donde quedó (igual que un
+    potenciómetro deslizante real, que no vuelve solo al centro), y
+    tampoco hay botón (no hay pin SW en este módulo).
+
+    Coordenadas en las mismas unidades que "width"/"height" del JSON
+    (90x46).
+  -->
+
+  <!-- Cuerpo del modulo (PCB) -->
+  <rect x="2" y="2" width="86" height="42" rx="4" fill="#132042" stroke="#05070f" stroke-width="1"/>
+
+  <!-- Riel de recorrido -->
+  <rect data-role="slider-track" x="12" y="16" width="66" height="6" rx="3" fill="#0c1730" stroke="#3a4a7a" stroke-width="1"/>
+
+  <!-- Perilla arrastrable -->
+  <circle data-slider-role="knob" cx="45" cy="19" r="9" fill="#c0392b" stroke="#7a1f14" stroke-width="0.8"/>
+
+  <!-- Serigrafia -->
+  <text x="45" y="30" text-anchor="middle" fill="#ffffff" font-family="DroidSans, sans-serif" font-size="4">10K SLIDE</text>
+
+  <!-- Franja del conector, donde van los 3 pines (GND, VCC, OUT) -->
+  <rect x="4" y="34" width="82" height="10" rx="3" fill="#0c1730"/>
+
+  <!-- Anillos de pad de cada pin, puramente cosmeticos: el cuadrado
+       clickeable real lo dibuja Renderer.renderPins() encima, en las
+       mismas coordenadas que vienen del JSON. -->
+  <circle cx="16" cy="39" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
+  <circle cx="45" cy="39" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
+  <circle cx="74" cy="39" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
+
+</svg>

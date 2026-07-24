@@ -1,0 +1,16 @@
+import sys
+from machine import Pin as _RealPin
+
+class Pin(_RealPin):
+    def __init__(self, pin, mode=-1, pull=-1, **kw):
+        super().__init__(pin, mode, pull, **kw)
+        self._pin_num = pin
+    def on(self):
+        super().on()
+        sys.stdout.write("GPIO:{}:1\n".format(self._pin_num))
+    def off(self):
+        super().off()
+        sys.stdout.write("GPIO:{}:0\n".format(self._pin_num))
+
+led = Pin(2, Pin.OUT)
+led.on()

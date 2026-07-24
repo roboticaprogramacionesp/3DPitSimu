@@ -1,0 +1,36 @@
+{
+    "type": "mpu6050",
+    "name": "MPU6050 Acelerómetro + Giroscopio",
+    "category": "Sensores",
+
+    "width": 53.15,
+    "height": 74.41,
+
+    "svgPath": "components/mpu6050/mpu6050.svg",
+
+    "pinShape": "square",
+    "pinSize": 4,
+
+    "pins": [
+        { "id": "vcc", "name": "VCC",  "x": 43.7, "y": 6.73,  "type": "power",  "signal": "power", "voltage": 3.3 },
+        { "id": "gnd", "name": "GND",  "x": 43.7, "y": 14.64, "type": "ground", "signal": "ground" },
+        { "id": "scl", "name": "SCL",  "x": 43.7, "y": 26.0,  "type": "input",  "signal": "i2c" },
+        { "id": "sda", "name": "SDA",  "x": 43.7, "y": 33.33, "type": "input",  "signal": "i2c" },
+        { "id": "xda", "name": "XDA",  "x": 43.7, "y": 42.32, "type": "signal" },
+        { "id": "xcl", "name": "XCL",  "x": 43.7, "y": 51.31, "type": "signal" },
+        { "id": "ad0", "name": "AD0",  "x": 43.7, "y": 57.86, "type": "signal" },
+        { "id": "int", "name": "INT",  "x": 43.7, "y": 72.98, "type": "signal" }
+    ],
+
+    "properties": {
+        "modelo": "MPU6050 (GY-521): acelerómetro + giroscopio de 3 ejes + temperatura, I2C",
+        "i2cAddress": "0x68",
+        "accelX": 0.0,
+        "accelY": 0.0,
+        "accelZ": 1.0,
+        "gyroX": 0.0,
+        "gyroY": 0.0,
+        "gyroZ": 0.0,
+        "temperature": 24.0
+    }
+}

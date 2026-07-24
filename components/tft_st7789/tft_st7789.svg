@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 100">
+
+  <!--
+    Icono plano (no es la vista de breadboard de Fritzing), mismo
+    criterio que oled.svg / lcd_16x2_i2c.svg: un cuerpo de PCB simple
+    mas el area de pantalla, para que Renderer.tagTftElements() le
+    superponga un canvas real via foreignObject (ver Renderer.js).
+
+    El rectangulo de pantalla se identifica por data-role="screen"
+    (no por color, a diferencia del truco que usa el OLED) para que
+    la busqueda no dependa de que nadie cambie el fill mas adelante.
+
+    Coordenadas en las mismas unidades que "width"/"height" del JSON
+    (90x100), asi los pines del JSON (x/y) caen exactamente donde
+    corresponde sin tener que calcular ningun factor de escala extra.
+
+    IMPORTANTE: los comentarios XML no pueden contener dos guiones
+    consecutivos en ningun lugar del texto (unicamente estan
+    permitidos justo antes del cierre del comentario). Usar guion
+    guion como separador es un habito comun en comentarios de JS,
+    pero rompe el parseo XML estricto que usa DOMParser con mime
+    image svg mas xml. Por eso este archivo evita esa secuencia en
+    todos los comentarios de aca abajo.
+  -->
+
+  <!-- Cuerpo del PCB -->
+  <rect x="0" y="0" width="90" height="100" rx="6" fill="#132042" stroke="#05070f" stroke-width="1"/>
+
+  <!-- Franja superior donde van los 8 pines del header -->
+  <rect x="3" y="0" width="84" height="14" rx="3" fill="#0c1730"/>
+
+  <!-- Anillos de pad de cada pin, puramente cosmeticos. El cuadrado
+       clickeable real lo dibuja Renderer.renderPins() encima, en las
+       mismas coordenadas que vienen del JSON. -->
+  <circle cx="7.0"  cy="4.55" r="4" fill="none" stroke="#c9a227" stroke-width="1.1"/>
+  <circle cx="17.9" cy="4.55" r="4" fill="none" stroke="#c9a227" stroke-width="1.1"/>
+  <circle cx="28.7" cy="4.55" r="4" fill="none" stroke="#c9a227" stroke-width="1.1"/>
+  <circle cx="39.6" cy="4.55" r="4" fill="none" stroke="#c9a227" stroke-width="1.1"/>
+  <circle cx="50.4" cy="4.55" r="4" fill="none" stroke="#c9a227" stroke-width="1.1"/>
+  <circle cx="61.3" cy="4.55" r="4" fill="none" stroke="#c9a227" stroke-width="1.1"/>
+  <circle cx="72.1" cy="4.55" r="4" fill="none" stroke="#c9a227" stroke-width="1.1"/>
+  <circle cx="83.0" cy="4.55" r="4" fill="none" stroke="#c9a227" stroke-width="1.1"/>
+
+  <!-- Bisel negro de la pantalla -->
+  <rect x="7" y="20" width="76" height="76" rx="3" fill="#000000"/>
+
+  <!-- Area de pantalla real: aca se monta el canvas del framebuffer -->
+  <rect x="10" y="23" width="70" height="70" fill="#050505" data-role="screen"/>
+
+  <!-- Serigrafia -->
+  <text x="45" y="93" text-anchor="middle" fill="#ffffff" font-family="DroidSans, sans-serif" font-size="6">ST7789 240x240</text>
+
+</svg>

@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 70 50"
+   version="1.1"
+   id="svg8"
+   sodipodi:docname="adkey.svg"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs8" />
+  <sodipodi:namedview
+     id="namedview8"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:zoom="5.39"
+     inkscape:cx="20.222634"
+     inkscape:cy="29.962894"
+     inkscape:window-width="1366"
+     inkscape:window-height="697"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg8" />
+  <!--
+    Icono plano (no es la vista de Fritzing): mismo criterio que el
+    resto de los componentes propios de este proyecto.
+
+    A DIFERENCIA del joystick, acá NO hay un pin por tecla: las 5
+    teclas (up/left/right/down/sel) comparten una única salida
+    analógica ("OUT"), armada con un divisor resistivo: cada tecla,
+    al apretarse, deja pasar un nivel de voltaje distinto por ese
+    mismo pin. Por eso el JSON de este componente solo declara 3
+    pines fisicos (out, vcc, gnd): las 5 teclas son puramente
+    virtuales, existen solo acá en el SVG y en
+    Renderer.bindAdKey()/SignalEngine.setAdKeyState(), nunca como
+    pines del JSON.
+
+    Cada tecla se identifica con data-adkey-role="up|down|left|right|sel",
+    ver Renderer.bindAdKey(), que las engancha directo por ese
+    atributo (no hace falta ningún paso de "tageo" por id, como sí
+    necesita Display7 con su SVG de Fritzing).
+
+    Coordenadas en las mismas unidades que "width"/"height" del JSON
+    (70x50), igual que el resto de los componentes propios.
+  -->
+  <!-- Cuerpo del modulo (PCB) -->
+  <rect
+     x="2"
+     y="2"
+     width="66"
+     height="46"
+     rx="4"
+     fill="#132042"
+     stroke="#05070f"
+     stroke-width="1"
+     id="rect1"
+     style="fill:#ff0000;fill-opacity:1" />
+  <!-- D-pad: 4 teclas -->
+  <circle
+     data-adkey-role="up"
+     cx="21.5"
+     cy="9.5"
+     r="5.5"
+     fill="#5a4d0c"
+     stroke="#050505"
+     stroke-width="0.6"
+     id="circle1"
+     style="fill:#00ff00;fill-opacity:1" />
+  <circle
+     data-adkey-role="left"
+     cx="9"
+     cy="16.5"
+     r="5.5"
+     fill="#5a4d0c"
+     stroke="#050505"
+     stroke-width="0.6"
+     id="circle2"
+     style="fill:#ff58ff;fill-opacity:1" />
+  <circle
+     data-adkey-role="right"
+     cx="34.5"
+     cy="16.5"
+     r="5.5"
+     fill="#5a4d0c"
+     stroke="#050505"
+     stroke-width="0.6"
+     id="circle3"
+     style="fill:#0000ff;fill-opacity:1" />
+  <circle
+     data-adkey-role="down"
+     cx="21.5"
+     cy="24.5"
+     r="5.5"
+     fill="#5a4d0c"
+     stroke="#050505"
+     stroke-width="0.6"
+     id="circle4"
+     style="fill:#999999;fill-opacity:1" />
+  <!-- 5ta tecla, separada del D-pad -->
+  <circle
+     data-adkey-role="sel"
+     cx="57"
+     cy="16.5"
+     r="6.5"
+     fill="#5a4d0c"
+     stroke="#050505"
+     stroke-width="0.6"
+     id="circle5"
+     style="fill:#ffff0c;fill-opacity:1" />
+  <!-- Serigrafia -->
+  <text
+     x="21.5"
+     y="34"
+     text-anchor="middle"
+     fill="#ffffff"
+     font-family="DroidSans, sans-serif"
+     font-size="4"
+     id="text5">D-PAD</text>
+  <text
+     x="57"
+     y="34"
+     text-anchor="middle"
+     fill="#ffffff"
+     font-family="DroidSans, sans-serif"
+     font-size="4"
+     id="text6">SEL</text>
+  <!-- Franja del conector, donde van los 3 pines (OUT, VCC, GND) -->
+  <rect
+     x="4"
+     y="36"
+     width="62"
+     height="10"
+     rx="3"
+     fill="#0c1730"
+     id="rect6" />
+  <!-- Anillos de pad de cada pin, puramente cosmeticos: el cuadrado
+       clickeable real lo dibuja Renderer.renderPins() encima, en las
+       mismas coordenadas que vienen del JSON. -->
+  <circle
+     cx="15"
+     cy="41"
+     r="2.6"
+     fill="none"
+     stroke="#c9a227"
+     stroke-width="0.8"
+     id="circle6" />
+  <circle
+     cx="35"
+     cy="41"
+     r="2.6"
+     fill="none"
+     stroke="#c9a227"
+     stroke-width="0.8"
+     id="circle7" />
+  <circle
+     cx="55"
+     cy="41"
+     r="2.6"
+     fill="none"
+     stroke="#c9a227"
+     stroke-width="0.8"
+     id="circle8" />
+</svg>

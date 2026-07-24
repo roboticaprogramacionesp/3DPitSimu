@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="3DPit.ico" />
+    <title>3DPitSimulator</title>
+
+    <link rel="stylesheet" href="css/simulator.css">
+    <link rel="stylesheet" href="css/grid.css">
+    <link rel="stylesheet" href="css/repl-panel.css">
+    <link rel="stylesheet" href="css/led-colors.css">
+    <link rel="stylesheet" href="css/simulation-lock.css">
+    <link rel="stylesheet" href="css/project-drawer.css">
+
+</head>
+
+<body>
+
+    <!-- ====================================================== -->
+    <!-- BARRA SUPERIOR                                         -->
+    <!-- ====================================================== -->
+
+    <header id="toolbar">
+
+        <div class="logo">
+
+            <button id="btnProjectMenu" class="btn-project-toggle" title="Proyecto: nuevo, guardar, abrir...">
+                <span class="project-toggle-icon">☰</span>
+            </button>
+
+            <h2>3DPitSimulator</h2>
+            <span>v0.1</span>
+
+            <div id="projectDrawer" class="project-drawer hidden">
+
+                <div class="project-drawer-section">
+                    <button class="project-drawer-item" id="pdNewProject">🆕 Nuevo proyecto</button>
+                    <button class="project-drawer-item" id="pdSaveProject" title="Ctrl+S">💾 Guardar</button>
+                    <button class="project-drawer-item" id="pdOpenProject">📂 Abrir</button>
+                </div>
+
+                <div class="project-drawer-separator"></div>
+
+                <div class="project-drawer-section">
+                    <button class="project-drawer-item" id="pdImportFile">⬆ Abrir desde archivo…</button>
+                    <button class="project-drawer-item" id="pdExportFile" title="Ctrl+S / Guardar también actualizará este mismo archivo de ahora en más (Chrome/Edge)">⬇ Guardar como archivo…</button>
+                </div>
+
+                <div class="project-drawer-separator"></div>
+
+                <button class="project-drawer-item" id="pdValidate" title="Validar circuito (F12)">✓ Validar circuito</button>
+
+            </div>
+
+        </div>
+
+        <div class="toolbar-buttons">
+            <label class="grid-select-label" title="Tamaño de la cuadrícula (afecta componentes y cables)">
+                <span class="grid-select-icon">▦</span>
+                <select id="gridSelect" class="btn-toolbar grid-select">
+                    <option value="0" selected>Hoja en blanco</option>
+                    <option value="5">5 px</option>
+                    <option value="10">10 px</option>
+                    <option value="20">20 px</option>
+                    <option value="40">40 px</option>
+                </select>
+            </label>
+            <button id="btnSimToggle" class="btn-sim-toggle">▶ Simular</button>
+        </div>
+
+    </header>
+
+
+    <!-- ====================================================== -->
+    <!-- CONTENIDO                                              -->
+    <!-- ====================================================== -->
+
+    <main id="mainLayout">
+
+        <!-- =========================================== -->
+        <!-- TOOLBOX                                     -->
+        <!-- =========================================== -->
+
+        <aside id="toolbox">
+
+            <h3>Componentes</h3>
+
+            <div id="componentList">
+                <!-- Se cargará automáticamente -->
+            </div>
+
+        </aside>
+
+
+        <!-- =========================================== -->
+        <!-- CANVAS                                      -->
+        <!-- =========================================== -->
+
+        <section id="workspace">
+
+            <!-- Antes vivía como <footer> fijo abajo de TODA la ventana
+                 (30px robados siempre, aunque no hubiera nada urgente
+                 que avisar). Ahora es una etiqueta flotante dentro del
+                 propio canvas -- el workspace recupera esos 30px de
+                 alto y el mensaje de estado sigue estando visible,
+                 solo que ya no le cuesta espacio permanente a nadie. -->
+            <div id="statusBar">
+                <span id="statusText">Listo</span>
+            </div>
+
+            <svg id="simulatorCanvas">
+
+                <!-- Cuadrícula -->
+                <g id="gridLayer"></g>
+
+                <!-- Vista (zoom / paneo) -->
+                <g id="viewport">
+
+                    <!-- Componentes -->
+                    <g id="componentLayer"></g>
+
+                    <!-- Cables -->
+                    <g id="wireLayer"></g>
+
+                    <!-- Selección -->
+                    <g id="selectionLayer"></g>
+
+                </g>
+
+            </svg>
+
+        </section>
+
+
+        <!-- =========================================== -->
+        <!-- PANEL DERECHO                               -->
+        <!-- =========================================== -->
+
+        <aside id="propertyPanel">
+
+            <h3>
+                Propiedades
+                <button id="btnPinPanel" class="panel-pin-btn" title="Fijar panel">📌</button>
+            </h3>
+
+            <div id="propertyContent">
+                Ningún componente seleccionado.
+            </div>
+
+        </aside>
+
+        <!-- Pestaña para reabrir el panel cuando está colapsado -->
+        <button id="propsReopenTab" title="Mostrar propiedades">◀ Propiedades</button>
+
+    </main>
+
+
+    <!-- ====================================================== -->
+    <!-- LIBRERÍAS DEL MOTOR                                    -->
+    <!-- ====================================================== -->
+
+    <script src="js/simulator/Utils.js"></script>
+    <script src="js/simulator/EventBus.js"></script>
+    <script src="js/simulator/Component.js"></script>
+    <script src="js/simulator/ComponentManager.js"></script>
+    <script src="js/simulator/SelectionManager.js"></script>
+    <script src="js/simulator/DragManager.js"></script>
+    <script src="js/simulator/WireManager.js"></script>
+    <script src="js/simulator/SignalEngine.js"></script>
+    <script src="js/simulator/QemuBridge.js"></script>
+    <script src="js/simulator/Renderer.js"></script>
+    <script src="js/simulator/HistoryManager.js"></script>
+    <script src="js/simulator/ProjectManager.js"></script>
+    <script src="js/simulator/ValidationEngine.js"></script>
+    <script src="js/simulator/Simulator.js"></script>
+
+
+    <!-- ====================================================== -->
+    <!-- INTERFAZ                                               -->
+    <!-- ====================================================== -->
+
+    <script src="js/ui/Toolbar.js"></script>
+    <script src="js/ui/Toolbox.js"></script>
+    <script src="js/ui/PropertyPanel.js"></script>
+    <script src="js/ui/ReplPanel.js"></script>
+    <script src="js/ui/ContextMenu.js"></script>
+
+
+    <!-- ====================================================== -->
+    <!-- APP                                                    -->
+    <!-- ====================================================== -->
+
+    <script src="js/app.js"></script>
+
+</body>
+
+</html>

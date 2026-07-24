@@ -1,0 +1,234 @@
+/* ==========================================================
+   PitSimulator — repl-panel.css
+   ========================================================== */
+
+#replPanel {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    background: #1a1a2e;
+    border-top: 2px solid #2d2d4e;
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    font-size: 13px;
+    transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    /* Sombra hacia arriba para separarlo visualmente del canvas que
+       queda tapado detrás, ya que ahora no ocupa todo el ancho de
+       la pantalla y su borde izquierdo/derecho cae dentro del canvas. */
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, .35);
+}
+
+#replPanel.repl-closed { height: 32px; }
+#replPanel.repl-open   { height: 320px; }
+
+/* ---- Cabecera ---- */
+
+.repl-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    height: 32px;
+    min-height: 32px;
+    background: #16213e;
+    border-bottom: 1px solid #2d2d4e;
+    cursor: pointer;
+    user-select: none;
+}
+
+.repl-header-left  { display: flex; align-items: center; gap: 8px; }
+.repl-header-right { display: flex; align-items: center; gap: 4px; }
+
+.repl-icon  { font-size: 14px; }
+.repl-title { color: #a9b1d6; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; }
+
+.repl-status {
+    font-size: 11px;
+    color: #666;
+    padding: 1px 8px;
+    background: #0d0d1a;
+    border-radius: 10px;
+    border: 1px solid #2d2d4e;
+    transition: color 0.3s;
+}
+
+/* ---- Tabs ---- */
+
+.repl-tabbar {
+    display: flex;
+    background: #0d0f1a;
+    border-bottom: 1px solid #2d2d4e;
+    padding: 0 8px;
+    gap: 2px;
+}
+
+.repl-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #555;
+    padding: 4px 14px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.repl-tab:hover        { color: #a9b1d6; }
+.repl-tab-active       { color: #00ff88 !important; border-bottom-color: #00ff88; }
+
+/* ---- Botones ---- */
+
+.repl-btn {
+    background: transparent;
+    border: 1px solid #2d2d4e;
+    color: #a9b1d6;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+}
+.repl-btn:hover    { background: #2d2d4e; color: #fff; }
+.repl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.repl-btn-send {
+    background: #0a84ff; border-color: #0a84ff;
+    color: #fff; padding: 3px 12px; font-size: 12px;
+}
+.repl-btn-send:hover { background: #3a9fff; border-color: #3a9fff; }
+
+.repl-btn-run {
+    background: #00c853; border-color: #00c853;
+    color: #000; padding: 3px 14px; font-size: 12px; font-weight: 600;
+}
+.repl-btn-run:hover { background: #69f0ae; border-color: #69f0ae; }
+
+/* ---- Cuerpo ---- */
+
+.repl-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+/* ---- Panes ---- */
+
+.repl-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.repl-pane-hidden { display: none; }
+
+/* ---- Output REPL ---- */
+
+.repl-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 12px;
+    color: #00ff88;
+    background: #0d0f1a;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.5;
+    font-size: 12.5px;
+}
+
+.repl-output::-webkit-scrollbar       { width: 6px; }
+.repl-output::-webkit-scrollbar-track { background: #0d0f1a; }
+.repl-output::-webkit-scrollbar-thumb { background: #2d2d4e; border-radius: 3px; }
+
+.repl-cmd   { color: #e2e8f0; }
+.repl-info  { color: #4da3ff; }
+.repl-error { color: #ff5252; }
+.repl-ctrl  { color: #f2c94c; }
+.repl-gpio  { color: #bb86fc; }
+
+/* ---- Input row ---- */
+
+.repl-input-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: #16213e;
+    border-top: 1px solid #2d2d4e;
+    min-height: 36px;
+}
+
+.repl-prompt {
+    color: #00ff88;
+    font-weight: bold;
+    font-size: 13px;
+    flex-shrink: 0;
+    transition: color 0.3s;
+}
+
+.repl-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #e2e8f0;
+    font-family: inherit;
+    font-size: 13px;
+    caret-color: #00ff88;
+}
+.repl-input::placeholder { color: #3a3a5e; }
+
+/* ---- Editor ---- */
+
+.repl-editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 10px;
+    background: #16213e;
+    border-bottom: 1px solid #2d2d4e;
+    min-height: 32px;
+}
+
+.repl-editor-label {
+    color: #555;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+}
+
+.repl-editor-actions { display: flex; gap: 6px; align-items: center; }
+
+.repl-editor {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    background: #0d0f1a;
+    color: #e2e8f0;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 10px 14px;
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    caret-color: #00ff88;
+    tab-size: 4;
+    box-sizing: border-box;
+}
+
+.repl-editor::-webkit-scrollbar       { width: 6px; }
+.repl-editor::-webkit-scrollbar-track { background: #0d0f1a; }
+.repl-editor::-webkit-scrollbar-thumb { background: #2d2d4e; border-radius: 3px; }
+
+.repl-editor::placeholder { color: #2a2a4a; }
+
+@media (max-height: 600px) {
+    #replPanel.repl-open { height: 220px; }
+}

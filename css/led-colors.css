@@ -1,0 +1,65 @@
+/* ==========================================================
+   PitSimulator — led-colors.css
+   Estilos visuales para LEDs encendidos y apagados.
+   Funciona con el sistema data-led-role del Renderer.js
+   ========================================================== */
+
+/* --------------------------------------------------------
+   Transición suave en todos los elementos del cuerpo del LED
+   -------------------------------------------------------- */
+
+[data-led-role="body"],
+[data-led-role="glow"] {
+    transition: fill 0.12s ease, opacity 0.12s ease, filter 0.12s ease;
+}
+
+/* --------------------------------------------------------
+   LED apagado — oscurecer el cuerpo
+   (el color real lo aplica Renderer.applyLedColor en JS,
+    esto es solo el fallback / transición CSS)
+   -------------------------------------------------------- */
+
+/* La opacidad de cada capa del cuerpo del LED la define el propio SVG
+   (Fritzing usa valores distintos por capa a propósito, para dejar ver
+   las patitas internas a través del plástico). No forzamos nada acá. */
+
+.led-off [data-led-role="glow"] {
+    filter: none !important;
+}
+
+/* --------------------------------------------------------
+   LED encendido — brillo
+   -------------------------------------------------------- */
+
+.led-on [data-led-role="body"] {
+    opacity: 1;
+}
+
+/* El glow se aplica inline desde Renderer.applyLedColor
+   usando drop-shadow con el color exacto de cada LED */
+
+/* --------------------------------------------------------
+   Animación de parpadeo (disponible para usar desde código)
+   Uso: component.element.classList.add("led-blink")
+   -------------------------------------------------------- */
+
+@keyframes ledBlink {
+    0%,  100% { opacity: 1; }
+    50%        { opacity: 0.15; }
+}
+
+.led-blink [data-led-role="body"] {
+    animation: ledBlink 0.5s step-end infinite;
+}
+
+/* --------------------------------------------------------
+   Colores base por tipo de LED
+   (referencia visual — el Renderer los aplica en JS)
+
+   led_red    → #ff1a1a
+   led_green  → #00e676
+   led_blue   → #2979ff
+   led_yellow → #ffea00
+   led_white  → #ffffff
+   led_orange → #ff6d00
+   -------------------------------------------------------- */

@@ -1,0 +1,27 @@
+/* ==========================================================
+   PitSimulator — simulation-lock.css
+   Agrega al final de simulator.css
+   ========================================================== */
+
+/* Canvas bloqueado: cursor "no" sobre pines */
+.sim-locked .pin { cursor: not-allowed !important; }
+.sim-locked .wire-segment { cursor: default !important; }
+
+/* Cables en modo locked: no se pueden arrastrar */
+.wire-locked { pointer-events: none; }
+
+/* Punto parpadeante en el status bar */
+.sim-running-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: #00ff88;
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 1s infinite;
+    vertical-align: middle;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.7); }
+}

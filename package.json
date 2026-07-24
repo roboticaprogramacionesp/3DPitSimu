@@ -1,0 +1,9 @@
+{
+  "name": "pitsimulator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tests unitarios de la lógica pura del motor (SignalEngine, Utils, Component) -- sin navegador, sin QEMU, sin dependencias externas.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

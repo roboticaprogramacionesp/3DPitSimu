@@ -1,0 +1,139 @@
+{
+    "components": [
+        {
+            "type": "esp32_wroom",
+            "name": "ESP32 WeMos D1",
+            "category": "Microcontroladores"
+        },
+        {
+            "type": "led",
+            "name": "LED",
+            "category": "LEDs"
+        },
+        {
+            "type": "display7",
+            "name": "Display 7 Segmentos",
+            "category": "LEDs"
+        },
+        {
+            "type": "neopixel_matrix",
+            "name": "Matriz NeoPixel",
+            "category": "LEDs"
+        },
+        {
+            "type": "max7219",
+            "name": "Matriz MAX7219",
+            "category": "LEDs"
+        },
+        {
+            "type": "ky_001",
+            "name": "KY-001 Temp",
+            "category": "Sensores"
+        },
+        {
+            "type": "ky_004",
+            "name": "KY-004 Botón",
+            "category": "Sensores"
+        },
+        {
+            "type": "dht11",
+            "name": "DHT11 Temp+Humedad",
+            "category": "Sensores"
+        },
+        {
+            "type": "hcsr04",
+            "name": "HC-SR04 Ultrasónico",
+            "category": "Sensores"
+        },
+        {
+            "type": "sg90",
+            "name": "Servo SG90",
+            "category": "Actuadores"
+        },
+        {
+            "type": "motor",
+            "name": "Motor DC (reductora)",
+            "category": "Actuadores"
+        },
+        {
+            "type": "oled",
+            "name": "OLED 128x64 I2C",
+            "category": "Pantallas"
+        },
+        {
+            "type": "tm1637",
+            "name": "TM1637 4 Dígitos",
+            "category": "Pantallas"
+        },
+        {
+            "type": "l298n",
+            "name": "L298N Motor",
+            "category": "Actuadores"
+        },
+        {
+            "type": "lcd_16x2_i2c",
+            "name": "LCD 16x2 I2C",
+            "category": "Pantallas"
+        },
+        {
+            "type": "lcd16x2",
+            "name": "LCD 16x2 (paralelo)",
+            "category": "Pantallas"
+        },
+        {
+            "type": "tft_st7789",
+            "name": "TFT 1.54\" 240x240 (ST7789)",
+            "category": "Pantallas"
+        },
+        {
+            "type": "semaforo",
+            "name": "Semáforo (3 LEDs)",
+            "category": "LEDs"
+        },
+        {
+            "type": "joystick",
+            "name": "Joystick KY-023",
+            "category": "Sensores"
+        },
+        {
+            "type": "ky040",
+            "name": "KY-040 Encoder Rotativo",
+            "category": "Sensores"
+        },
+        {
+            "type": "adkey",
+            "name": "Teclado analógico ADKEY (5 botones)",
+            "category": "Sensores"
+        },
+        {
+            "type": "keypad4x4",
+            "name": "Teclado matricial 4x4",
+            "category": "Sensores"
+        },
+        {
+            "type": "keypad3x4",
+            "name": "Teclado matricial 3x4",
+            "category": "Sensores"
+        },
+        {
+            "type": "keypad4x4_i2c",
+            "name": "Teclado matricial 4x4 (I2C, PCF8574)",
+            "category": "Sensores"
+        },
+        {
+            "type": "pot_slider",
+            "name": "Potenciómetro Deslizante 10K",
+            "category": "Sensores"
+        },
+        {
+            "type": "mpu6050",
+            "name": "MPU6050 Acelerómetro + Giroscopio",
+            "category": "Sensores"
+        },
+        {
+            "type": "buzzer",
+            "name": "Buzzer Piezo Pasivo (KY-006)",
+            "category": "Actuadores"
+        }
+    ]
+}

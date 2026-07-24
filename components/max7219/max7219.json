@@ -1,0 +1,26 @@
+{
+    "type": "max7219",
+    "name": "Matriz MAX7219",
+
+    "width": 176,
+    "height": 176,
+
+    "pinShape": "square",
+    "pinSize": 6,
+
+    "properties": {
+        "cols": 8,
+        "rows": 8,
+        "shape": "circle",
+        "color": "#ff2222"
+    },
+
+    "pins": [
+        { "id": "vcc",  "name": "VCC",  "x": 20,  "y": 176, "type": "power",  "signal": "power", "voltage": 5 },
+        { "id": "gnd",  "name": "GND",  "x": 58,  "y": 176, "type": "ground", "signal": "ground" },
+        { "id": "din",  "name": "DIN",  "x": 96,  "y": 176, "type": "signal", "signal": "spi" },
+        { "id": "cs",   "name": "CS",   "x": 118, "y": 176, "type": "signal", "signal": "spi" },
+        { "id": "clk",  "name": "CLK",  "x": 140, "y": 176, "type": "signal", "signal": "spi" },
+        { "id": "dout", "name": "DOUT", "x": 160, "y": 176, "type": "signal", "signal": "spi" }
+    ]
+}
