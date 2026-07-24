@@ -266,6 +266,7 @@ class QemuBridge {
         const trimmed = line.trim();
         return trimmed.startsWith("GPIO:")   ||
                trimmed.startsWith("OLED:")   ||
+               trimmed.startsWith("OLEDC:")  ||
                trimmed.startsWith("LCD:")    ||
                trimmed.startsWith("MAX:")    ||
                trimmed.startsWith("TM1637:") ||
@@ -340,6 +341,19 @@ class QemuBridge {
                     const hex    = parts.slice(2).join(":");
                     this.simulator.signalEngine.applyOledFramebuffer(hex, width, height);
                 }
+            }
+            return;
+        }
+
+        if (line.startsWith("OLEDC:")) {
+            // Formato: OLEDC:<contraste 0-255> -- lo manda oled_hal.py
+            // cada vez que el firmware llama a display.contrast(v).
+            // Solo afecta el brillo de los píxeles PRENDIDOS (mismo
+            // comportamiento que un SSD1306 real -- los apagados
+            // siguen negros sin importar el contraste).
+            const value = parseInt(line.slice("OLEDC:".length), 10);
+            if (!isNaN(value)) {
+                this.simulator.signalEngine.applyOledContrast(value);
             }
             return;
         }

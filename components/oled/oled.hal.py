@@ -220,10 +220,14 @@ class SSD1306:
     def blit(self, fbuf, x, y, key=-1, palette=None):
         self.framebuf.blit(fbuf, x, y, key, palette)
 
-    # ── Comandos "de hardware" -- no hacen nada real en la simulación ────
+    # ── Comandos "de hardware" ────────────────────────────────────────────
 
+    # Contraste real del SSD1306 (0-255) -- afecta el brillo de los
+    # píxeles PRENDIDOS del panel (ver Renderer.drawOledFramebuffer/
+    # setOledContrast). Los demás comandos de abajo siguen sin efecto
+    # real en la simulación.
     def contrast(self, contrast):
-        pass
+        print("OLEDC:%d" % contrast)
 
     def invert(self, invert):
         pass

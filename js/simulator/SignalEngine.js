@@ -516,6 +516,22 @@ class SignalEngine {
     });
   }
 
+  // Llamado desde QemuBridge al recibir "OLEDC:" (oled_hal.py cada
+  // vez que el firmware llama a display.contrast(v), 0-255). Antes
+  // era un no-op total en el HAL -- ahora sí afecta el brillo de los
+  // píxeles prendidos en el panel (ver Renderer.setOledContrast).
+  applyOledContrast(value) {
+    const oled = this.simulator.componentManager
+      .getAll()
+      .find((c) => c.type === "oled");
+
+    if (!oled) return;
+    if (!this.isFullyConnected(oled, "i2c")) return;
+
+    const clamped = Math.max(0, Math.min(255, value));
+    this.simulator.renderer.setOledContrast(oled, clamped);
+  }
+
   // ====================================================
   // Matriz MAX7219 — llamado desde QemuBridge al recibir "MAX:"
   // (max7219_hal.py manda el framebuffer completo cada vez que

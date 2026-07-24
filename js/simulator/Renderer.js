@@ -1768,11 +1768,33 @@ class Renderer {
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
 
+    // Se cachea para poder redibujar solo por un cambio de contraste
+    // (ver setOledContrast) sin esperar al próximo display.show().
+    component._oledLastBytes = bytes;
+    component._oledLastWidth = width;
+    component._oledLastHeight = height;
+
     const ctx = canvas.getContext("2d");
     const img = ctx.createImageData(width, height);
     const pages = Math.ceil(height / 8);
 
     const scheme = Renderer.getOledScheme(component);
+
+    // Contraste real del SSD1306: 0-255, default 255 (máximo brillo)
+    // -- solo escala los píxeles PRENDIDOS, igual que el hardware
+    // real (los apagados son negro sin importar el contraste). Se
+    // precalculan acá afuera del loop de píxeles (splitRow puede
+    // necesitar los dos esquemas, top y bottom).
+    const contrastFactor = (component._oledContrast ?? 255) / 255;
+    const scaleOn = (on) => [
+      Math.round(on[0] * contrastFactor),
+      Math.round(on[1] * contrastFactor),
+      Math.round(on[2] * contrastFactor),
+      on[3],
+    ];
+    const scaledOn = scheme.splitRow !== undefined
+      ? { top: scaleOn(scheme.top.on), bottom: scaleOn(scheme.bottom.on) }
+      : scaleOn(scheme.on);
 
     for (let page = 0; page < pages; page++) {
       for (let x = 0; x < width; x++) {
@@ -1786,15 +1808,18 @@ class Renderer {
           // franja física (arriba/abajo); los demás
           // esquemas son un único par on/off para toda
           // la pantalla.
-          const colors =
+          const isTop = scheme.splitRow !== undefined && py < scheme.splitRow;
+          const offColor =
             scheme.splitRow !== undefined
-              ? py < scheme.splitRow
-                ? scheme.top
-                : scheme.bottom
-              : scheme;
+              ? (isTop ? scheme.top.off : scheme.bottom.off)
+              : scheme.off;
+          const onColor =
+            scheme.splitRow !== undefined
+              ? (isTop ? scaledOn.top : scaledOn.bottom)
+              : scaledOn;
 
           const on = (byte >> bit) & 1;
-          const color = on ? colors.on : colors.off;
+          const color = on ? onColor : offColor;
           const idx = (py * width + x) * 4;
 
           img.data[idx] = color[0];
@@ -1806,6 +1831,25 @@ class Renderer {
     }
 
     ctx.putImageData(img, 0, 0);
+  }
+
+  // Llamado desde SignalEngine.applyOledContrast() (protocolo
+  // "OLEDC:", ver oled_hal.py / display.contrast(v)). Redibuja al
+  // toque con el último framebuffer conocido para que el cambio se
+  // note sin esperar el próximo display.show().
+  setOledContrast(component, value) {
+    if (!component.element) return;
+
+    component._oledContrast = value;
+
+    if (component._oledLastBytes) {
+      this.drawOledFramebuffer(
+        component,
+        component._oledLastBytes,
+        component._oledLastWidth,
+        component._oledLastHeight,
+      );
+    }
   }
 
   // Apagar/limpiar la pantalla (reset de la simulación)
