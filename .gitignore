@@ -1,5 +1,6 @@
 .claude/settings.local.json
 node_modules/
+__pycache__/
 
 # server/: binarios grandes (firmware/ELF con símbolos de debug) --
 # no son código fuente, no tiene sentido versionarlos. Se regeneran
