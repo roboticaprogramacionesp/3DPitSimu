@@ -223,18 +223,22 @@ class SignalEngine {
   }
 
   // ====================================================
-  // Potenciómetro deslizante (pot_slider) -- un solo eje, SIN
-  // resorte de centrado (a diferencia del joystick, acá
-  // Renderer.bindSlider no llama a esto al soltar el mouse, así
-  // que el valor se queda en lo último que se mandó).
+  // Potenciómetro deslizante (pot_slider) -- DOS rieles
+  // independientes (out1/out2, ver pot_slider.json/.svg), cada uno
+  // con su propio eje, SIN resorte de centrado (a diferencia del
+  // joystick, acá Renderer.bindSlider no llama a esto al soltar el
+  // mouse, así que el valor se queda en lo último que se mandó).
   // ====================================================
 
-  setSliderPosition(component, n01) {
+  setSliderPosition(component, pinId, n01) {
     const value = Math.round(Math.max(0, Math.min(1, n01)) * 65535);
 
-    component.sliderState = { n01, value };
+    component.sliderState = {
+      ...component.sliderState,
+      [pinId]: { n01, value },
+    };
 
-    this._notifyAdcToFirmware(component, "out", value);
+    this._notifyAdcToFirmware(component, pinId, value);
   }
 
   _notifyAdcToFirmware(component, pinId, value) {
@@ -1372,7 +1376,9 @@ class SignalEngine {
     //
     // Un pin puntual se puede eximir de esta exigencia marcándolo con
     // "optional": true en su definición .json (pensado para pines de
-    // expansión que casi nadie cablea) -- hoy ningún componente lo usa.
+    // expansión que casi nadie cablea, ej. v0/rw/d0-d3 del LCD
+    // paralelo, ena/enb del L298N, out2 del pot_slider si el usuario
+    // solo usa un riel).
     const dataPins = pins.filter(
       (p) =>
         p.type !== "power" &&

@@ -714,92 +714,104 @@ class Renderer {
 
   // ─────────────────────────────────────────────────────
   // Potenciómetro deslizante: arrastre en UN SOLO eje
-  // (horizontal), a diferencia de bindJoystick (2 ejes + resorte).
-  // Acá NO hay resorte: al soltar el mouse, la perilla se queda
-  // donde quedó -- simplemente no se llama a applyOffset(0,0) ni
-  // se manda ningún valor extra en el pointerup, a diferencia de
-  // bindJoystick.
+  // (horizontal) por perilla, a diferencia de bindJoystick (2 ejes
+  // + resorte). Acá NO hay resorte: al soltar el mouse, la perilla
+  // se queda donde quedó -- simplemente no se llama a
+  // applyOffset(0,0) ni se manda ningún valor extra en el
+  // pointerup, a diferencia de bindJoystick.
   //
-  // El recorrido se calcula de [data-role="slider-track"] (sus
-  // extremos x/x+width) y el radio de la perilla, igual criterio
-  // que bindJoystick usa el radio de [data-role="joystick-area"].
+  // pot_slider trae DOS rieles independientes (out1/out2, ver
+  // pot_slider.json) -- cada [data-slider-role="knob"] se empareja
+  // con su [data-role="slider-track"] por el atributo compartido
+  // data-slider-pin (ej. "out1"), que además es el id del pin del
+  // JSON al que SignalEngine.setSliderPosition() le manda el valor.
+  // Antes esto usaba querySelector (singular) asumiendo una sola
+  // perilla -- se generalizó a querySelectorAll para soportar N
+  // rieles sin tocar este método de nuevo si algún día se suma un
+  // tercero.
   // ─────────────────────────────────────────────────────
 
   bindSlider(component, group) {
     if (!Renderer.isSlider(component.type)) return;
 
-    const knob = group.querySelector('[data-slider-role="knob"]');
-    const track = group.querySelector('[data-role="slider-track"]');
-    if (!knob || !track) return;
+    const knobs = group.querySelectorAll('[data-slider-role="knob"]');
 
-    const cy = parseFloat(knob.getAttribute("cy"));
-    const knobR = parseFloat(knob.getAttribute("r"));
-    const trackX = parseFloat(track.getAttribute("x"));
-    const trackW = parseFloat(track.getAttribute("width"));
+    knobs.forEach((knob) => {
+      const pinId = knob.getAttribute("data-slider-pin") || "out1";
+      const track = group.querySelector(
+        `[data-role="slider-track"][data-slider-pin="${pinId}"]`,
+      );
+      if (!track) return;
 
-    const minX = trackX + knobR;
-    const maxX = trackX + trackW - knobR;
-    const span = Math.max(1, maxX - minX);
+      const cy = parseFloat(knob.getAttribute("cy"));
+      const knobR = parseFloat(knob.getAttribute("r"));
+      const trackX = parseFloat(track.getAttribute("x"));
+      const trackW = parseFloat(track.getAttribute("width"));
 
-    let dragging = false;
+      const minX = trackX + knobR;
+      const maxX = trackX + trackW - knobR;
+      const span = Math.max(1, maxX - minX);
 
-    const toLocalPoint = (e) => {
-      const svg = knob.ownerSVGElement;
-      const pt = svg.createSVGPoint();
-      pt.x = e.clientX;
-      pt.y = e.clientY;
-      const ctm = knob.getScreenCTM();
-      if (!ctm) return { x: parseFloat(knob.getAttribute("cx")) };
-      return pt.matrixTransform(ctm.inverse());
-    };
+      let dragging = false;
 
-    const start = (e) => {
-      if (component.locked) return;
-      // Mismo fix que bindJoystick: sin esto, el pointerdown
-      // se filtraba hacia arriba y disparaba también el
-      // arrastre del componente entero (DragManager), que se
-      // quedaba "pegado" siguiendo el mouse después de soltar
-      // porque el pointerup quedaba capturado acá y nunca le
-      // llegaba a DragManager.
-      e.stopPropagation();
-      e.preventDefault();
-      dragging = true;
-      try {
-        knob.setPointerCapture(e.pointerId);
-      } catch (err) {}
-    };
+      const toLocalPoint = (e) => {
+        const svg = knob.ownerSVGElement;
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const ctm = knob.getScreenCTM();
+        if (!ctm) return { x: parseFloat(knob.getAttribute("cx")) };
+        return pt.matrixTransform(ctm.inverse());
+      };
 
-    const move = (e) => {
-      if (!dragging || component.locked) return;
-      e.stopPropagation();
+      const start = (e) => {
+        if (component.locked) return;
+        // Mismo fix que bindJoystick: sin esto, el pointerdown
+        // se filtraba hacia arriba y disparaba también el
+        // arrastre del componente entero (DragManager), que se
+        // quedaba "pegado" siguiendo el mouse después de soltar
+        // porque el pointerup quedaba capturado acá y nunca le
+        // llegaba a DragManager.
+        e.stopPropagation();
+        e.preventDefault();
+        dragging = true;
+        try {
+          knob.setPointerCapture(e.pointerId);
+        } catch (err) {}
+      };
 
-      const p = toLocalPoint(e);
-      const clampedX = Math.max(minX, Math.min(maxX, p.x));
+      const move = (e) => {
+        if (!dragging || component.locked) return;
+        e.stopPropagation();
 
-      knob.setAttribute("cx", clampedX);
-      knob.setAttribute("cy", cy);
+        const p = toLocalPoint(e);
+        const clampedX = Math.max(minX, Math.min(maxX, p.x));
 
-      const n01 = (clampedX - minX) / span;
+        knob.setAttribute("cx", clampedX);
+        knob.setAttribute("cy", cy);
 
-      this.simulator.signalEngine.setSliderPosition(component, n01);
-    };
+        const n01 = (clampedX - minX) / span;
 
-    const end = (e) => {
-      if (!dragging) return;
-      e.stopPropagation();
-      dragging = false;
-      // SIN resorte: la perilla se queda donde quedó, no se
-      // manda ningún valor extra acá (a diferencia de
-      // bindJoystick, que sí vuelve al centro).
-      try {
-        knob.releasePointerCapture(e.pointerId);
-      } catch (err) {}
-    };
+        this.simulator.signalEngine.setSliderPosition(component, pinId, n01);
+      };
 
-    knob.addEventListener("pointerdown", start);
-    knob.addEventListener("pointermove", move);
-    knob.addEventListener("pointerup", end);
-    knob.addEventListener("pointercancel", end);
+      const end = (e) => {
+        if (!dragging) return;
+        e.stopPropagation();
+        dragging = false;
+        // SIN resorte: la perilla se queda donde quedó, no se
+        // manda ningún valor extra acá (a diferencia de
+        // bindJoystick, que sí vuelve al centro).
+        try {
+          knob.releasePointerCapture(e.pointerId);
+        } catch (err) {}
+      };
+
+      knob.addEventListener("pointerdown", start);
+      knob.addEventListener("pointermove", move);
+      knob.addEventListener("pointerup", end);
+      knob.addEventListener("pointercancel", end);
+    });
   }
 
   // ─────────────────────────────────────────────────────

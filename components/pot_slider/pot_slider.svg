@@ -1,46 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 46">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 64">
 
   <!--
     Icono plano propio, mismo criterio que el resto de los
     componentes de este proyecto.
 
+    Módulo con DOS rieles independientes (deslizadorA / deslizadorB
+    en la nomenclatura típica de estos módulos), cada uno con su
+    propio pin de salida analógica (OUT1/OUT2); GND/VCC son
+    comunes a ambos rieles.
+
     Piezas con rol especial (ver Renderer.bindSlider):
-      [data-role="slider-track"]  el riel: de sus extremos (x +
-                                   width) se calcula el recorrido
-                                   máximo de la perilla
-      [data-slider-role="knob"]   la perilla que se arrastra en UN
-                                   SOLO eje (horizontal) para simular
-                                   el valor analógico
+      [data-role="slider-track"][data-slider-pin="out1"|"out2"]
+                                   el riel de cada eje: de sus
+                                   extremos (x + width) se calcula
+                                   el recorrido máximo de esa perilla
+      [data-slider-role="knob"][data-slider-pin="out1"|"out2"]
+                                   la perilla que se arrastra en UN
+                                   SOLO eje (horizontal); el
+                                   atributo data-slider-pin empareja
+                                   cada knob con su track y con el
+                                   pin del JSON al que manda el valor
 
     A diferencia del joystick, ACÁ NO hay resorte de centrado: al
-    soltar el mouse la perilla se queda donde quedó (igual que un
+    soltar el mouse cada perilla se queda donde quedó (igual que un
     potenciómetro deslizante real, que no vuelve solo al centro), y
     tampoco hay botón (no hay pin SW en este módulo).
 
     Coordenadas en las mismas unidades que "width"/"height" del JSON
-    (90x46).
+    (110x64).
   -->
 
   <!-- Cuerpo del modulo (PCB) -->
-  <rect x="2" y="2" width="86" height="42" rx="4" fill="#132042" stroke="#05070f" stroke-width="1"/>
+  <rect x="2" y="2" width="106" height="50" rx="4" fill="#132042" stroke="#05070f" stroke-width="1"/>
 
-  <!-- Riel de recorrido -->
-  <rect data-role="slider-track" x="12" y="16" width="66" height="6" rx="3" fill="#0c1730" stroke="#3a4a7a" stroke-width="1"/>
+  <!-- Riel de recorrido A (OUT1) -->
+  <rect data-role="slider-track" data-slider-pin="out1" x="12" y="12" width="86" height="6" rx="3" fill="#0c1730" stroke="#3a4a7a" stroke-width="1"/>
+  <!-- Perilla arrastrable A -->
+  <circle data-slider-role="knob" data-slider-pin="out1" cx="55" cy="15" r="8" fill="#c0392b" stroke="#7a1f14" stroke-width="0.8"/>
 
-  <!-- Perilla arrastrable -->
-  <circle data-slider-role="knob" cx="45" cy="19" r="9" fill="#c0392b" stroke="#7a1f14" stroke-width="0.8"/>
+  <!-- Riel de recorrido B (OUT2) -->
+  <rect data-role="slider-track" data-slider-pin="out2" x="12" y="28" width="86" height="6" rx="3" fill="#0c1730" stroke="#3a4a7a" stroke-width="1"/>
+  <!-- Perilla arrastrable B -->
+  <circle data-slider-role="knob" data-slider-pin="out2" cx="55" cy="31" r="8" fill="#2c74c9" stroke="#154272" stroke-width="0.8"/>
 
   <!-- Serigrafia -->
-  <text x="45" y="30" text-anchor="middle" fill="#ffffff" font-family="DroidSans, sans-serif" font-size="4">10K SLIDE</text>
+  <text x="55" y="45" text-anchor="middle" fill="#ffffff" font-family="DroidSans, sans-serif" font-size="4">10K SLIDE x2</text>
 
-  <!-- Franja del conector, donde van los 3 pines (GND, VCC, OUT) -->
-  <rect x="4" y="34" width="82" height="10" rx="3" fill="#0c1730"/>
+  <!-- Franja del conector, donde van los 4 pines (GND, VCC, OUT1, OUT2) -->
+  <rect x="4" y="52" width="102" height="10" rx="3" fill="#0c1730"/>
 
   <!-- Anillos de pad de cada pin, puramente cosmeticos: el cuadrado
        clickeable real lo dibuja Renderer.renderPins() encima, en las
        mismas coordenadas que vienen del JSON. -->
-  <circle cx="16" cy="39" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
-  <circle cx="45" cy="39" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
-  <circle cx="74" cy="39" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
+  <circle cx="16" cy="57" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
+  <circle cx="40" cy="57" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
+  <circle cx="64" cy="57" r="2.6" fill="none" stroke="#c0392b" stroke-width="0.8"/>
+  <circle cx="88" cy="57" r="2.6" fill="none" stroke="#2c74c9" stroke-width="0.8"/>
 
 </svg>
