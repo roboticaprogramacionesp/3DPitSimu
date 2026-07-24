@@ -793,51 +793,28 @@ class SignalEngine {
   // Evaluar LEDs
   // ====================================================
 
+  // Todos los tipos que este loop manejaba (led, l298n, display7,
+  // semaforo, keypad4x4_i2c, keypad3x4/keypad4x4, buzzer) ya migraron
+  // a ComponentBehaviorRegistry (ver ese archivo) -- un tipo NUEVO
+  // que quiera "evaluarse" en cada cambio de red solo necesita
+  // registrar signal.evaluate en su propio components/<type>/<type>.behavior.js,
+  // sin tocar este método.
   evaluateAll() {
     this.simulator.componentManager.getAll().forEach((component) => {
-
-      // Primero consultamos el registro (ver ComponentBehaviorRegistry.js) --
-      // si el tipo ya migró ahí, su evaluate() reemplaza TODA la cadena
-      // legacy de abajo para ese componente. Si no tiene behavior
-      // registrado (la mayoría de los tipos, todavía), seguimos con el
-      // if/else de siempre sin ningún cambio de comportamiento.
       const behavior = ComponentBehaviorRegistry.get(component.type);
       if (behavior?.signal?.evaluate) {
         behavior.signal.evaluate(component, this);
-        return;
-      }
-
-      if (Renderer.isLed(component.type)) {
-        this.evaluateLed(component);
-      }
-      if (component.type === "l298n") {
-        this.evaluateL298n(component);
-      }
-      if (component.type === "display7") {
-        this.evaluateDisplay7(component);
-      }
-      if (component.type === "semaforo") {
-        this.evaluateSemaforo(component);
-      }
-      if (component.type === "keypad4x4_i2c") {
-        this.evaluateKeypadI2c(component);
-      } else if (Renderer.isKeypadMatrix(component.type)) {
-        this.evaluateKeypadMatrix(component);
-      }
-      if (Renderer.isBuzzer(component.type)) {
-        this.evaluateBuzzer(component);
       }
     });
   }
 
+  // Lógica real migrada a components/led/led.behavior.js (ver
+  // ComponentBehaviorRegistry.js) -- este método queda como wrapper
+  // delgado porque tiene llamadores externos directos (tests,
+  // PropertyPanel en otros tipos con el mismo patrón) que esperan
+  // poder invocar evaluateLed(component) por su nombre.
   evaluateLed(component) {
-    const anodoHigh = this.isKeyConnectedToHighDriver(`${component.id}:anodo`);
-    const catodoGnd = this.isKeyConnectedToGnd(`${component.id}:catodo`);
-    const isOn = anodoHigh && catodoGnd;
-
-    //console.log(`[SignalEngine] LED ${component.id}: anodoHigh=${anodoHigh} catodoGnd=${catodoGnd} → ${isOn ? "ON" : "OFF"}`,);
-
-    this.simulator.renderer.applyLedState(component, isOn);
+    ComponentBehaviorRegistry.get(component.type)?.signal?.evaluate(component, this);
   }
 
   // ====================================================
@@ -857,58 +834,13 @@ class SignalEngine {
   // depende de si el pin ENA/ENB está cableado a un driver en HIGH.
   // ====================================================
 
+  // Lógica real migrada a components/l298n/l298n.behavior.js -- los
+  // helpers privados de abajo (_findMotorOnOutputs,
+  // _computeL298nMotorState) y getL298nState() SIGUEN acá porque
+  // getL298nState() tiene un llamador externo (PropertyPanel.js).
+  // Ver el comentario de evaluateLed() más arriba sobre el wrapper.
   evaluateL298n(component) {
-    if (!this.isComponentPowered(component)) {
-      const off = { state: "deshabilitado", enabled: false, in_a: false, in_b: false };
-
-      const motorAComponent = this._findMotorOnOutputs(component, "out1", "out2");
-      if (motorAComponent) this.simulator.renderer.applyMotorState(motorAComponent, off);
-
-      const motorBComponent = this._findMotorOnOutputs(component, "out3", "out4");
-      if (motorBComponent) this.simulator.renderer.applyMotorState(motorBComponent, off);
-
-      this.simulator.eventBus.emit("motor:changed", {
-        componentId: component.id,
-        motorA: off,
-        motorB: off,
-      });
-      return;
-    }
-
-    const motorA = this._computeL298nMotorState(
-      component,
-      "in1",
-      "in2",
-      "ena",
-      "jumperEnaInstalled",
-    );
-    const motorB = this._computeL298nMotorState(
-      component,
-      "in3",
-      "in4",
-      "enb",
-      "jumperEnbInstalled",
-    );
-
-    //console.log(`[SignalEngine] L298N ${component.id}: Motor A=${motorA.state} (en=${motorA.enabled})  Motor B=${motorB.state} (en=${motorB.enabled})`,);
-
-    // Si hay un motor.svg cableado a las salidas OUT1/OUT2 (o
-    // OUT3/OUT4), lo animamos según el estado que acabamos de
-    // calcular. NOTA: asumo que el .json del L298N nombra sus
-    // pines de salida "out1".."out4" -- si usa otros ids, ajustar acá.
-    const motorAComponent = this._findMotorOnOutputs(component, "out1", "out2");
-    if (motorAComponent)
-      this.simulator.renderer.applyMotorState(motorAComponent, motorA);
-
-    const motorBComponent = this._findMotorOnOutputs(component, "out3", "out4");
-    if (motorBComponent)
-      this.simulator.renderer.applyMotorState(motorBComponent, motorB);
-
-    this.simulator.eventBus.emit("motor:changed", {
-      componentId: component.id,
-      motorA,
-      motorB,
-    });
+    ComponentBehaviorRegistry.get(component.type)?.signal?.evaluate(component, this);
   }
 
   // Busca, entre los dos cables que salen de un par OUTx/OUTy del
@@ -985,36 +917,12 @@ class SignalEngine {
   // La lógica eléctrica de abajo sí es exacta segmento por segmento.)
   // ====================================================
 
+  // Lógica real migrada a components/display7/display7.behavior.js --
+  // ver el comentario de evaluateLed() más arriba sobre por qué queda
+  // un wrapper delgado acá (PropertyPanel también llama a este método
+  // por nombre al tocar el switch cátodo/ánodo común).
   evaluateDisplay7(component) {
-    const isCathode =
-      (component.properties?.commonType || "cathode") === "cathode";
-
-    const commonOk = isCathode
-      ? this.isKeyConnectedToGnd(`${component.id}:com1`) ||
-        this.isKeyConnectedToGnd(`${component.id}:com2`)
-      : this.isKeyConnectedToHighDriver(`${component.id}:com1`) ||
-        this.isKeyConnectedToHighDriver(`${component.id}:com2`);
-
-    const segmentIds = ["a", "b", "c", "d", "e", "f", "g"];
-    const segments = {};
-
-    segmentIds.forEach((id) => {
-      segments[id] =
-        commonOk &&
-        (isCathode
-          ? this.isKeyConnectedToHighDriver(`${component.id}:${id}`)
-          : this.isKeyConnectedToGnd(`${component.id}:${id}`));
-    });
-
-    const dp =
-      commonOk &&
-      (isCathode
-        ? this.isKeyConnectedToHighDriver(`${component.id}:dp`)
-        : this.isKeyConnectedToGnd(`${component.id}:dp`));
-
-    //console.log(`[SignalEngine] Display7 ${component.id}: común=${isCathode ? "cátodo" : "ánodo"} ok=${commonOk} segmentos=${JSON.stringify(segments)} dp=${dp}`,);
-
-    this.simulator.renderer.applyDisplay7State(component, segments, dp);
+    ComponentBehaviorRegistry.get(component.type)?.signal?.evaluate(component, this);
   }
 
   // ====================================================
@@ -1029,20 +937,11 @@ class SignalEngine {
   // efectivamente conectado a tierra.
   // ====================================================
 
+  // Lógica real migrada a components/semaforo/semaforo.behavior.js --
+  // ver el comentario de evaluateLed() más arriba sobre por qué queda
+  // un wrapper delgado acá.
   evaluateSemaforo(component) {
-    const gndOk =
-      this.isComponentPowered(component) &&
-      this.isKeyConnectedToGnd(`${component.id}:gnd`);
-
-    const lights = {
-      r: gndOk && this.isKeyConnectedToHighDriver(`${component.id}:r`),
-      y: gndOk && this.isKeyConnectedToHighDriver(`${component.id}:y`),
-      g: gndOk && this.isKeyConnectedToHighDriver(`${component.id}:g`),
-    };
-
-    //console.log(`[SignalEngine] Semaforo ${component.id}: gndOk=${gndOk} luces=${JSON.stringify(lights)}`, );
-
-    this.simulator.renderer.applySemaforoState(component, lights);
+    ComponentBehaviorRegistry.get(component.type)?.signal?.evaluate(component, this);
   }
 
   // ====================================================
@@ -1081,21 +980,6 @@ class SignalEngine {
   // este simulador, no algo nuevo de este componente.
   // ====================================================
 
-  // Ordena pines tipo "r3"/"c12" por su número, no alfabéticamente
-  // (alfabético pondría "r10" antes que "r2") -- no hace diferencia
-  // funcional (el orden de recorrido no afecta el resultado), pero
-  // mantiene los logs prolijos y predecibles.
-  _sortedKeypadPinIds(component, prefix) {
-    return component.pins
-      .map((p) => p.id)
-      .filter((id) => new RegExp(`^${prefix}\\d+$`).test(id))
-      .sort(
-        (a, b) =>
-          parseInt(a.slice(prefix.length), 10) -
-          parseInt(b.slice(prefix.length), 10),
-      );
-  }
-
   setKeypadKeyPressed(component, rowIndex, colIndex, pressed) {
     if (!component.keypadPressed) component.keypadPressed = new Set();
 
@@ -1114,82 +998,12 @@ class SignalEngine {
     this.evaluateAll();
   }
 
+  // Lógica real (+ sus 3 helpers privados de antes) migrada a
+  // components/keypad4x4/keypad4x4.behavior.js -- ver el comentario
+  // de evaluateLed() más arriba sobre por qué queda un wrapper
+  // delgado acá.
   evaluateKeypadMatrix(component) {
-    const rows = this._sortedKeypadPinIds(component, "r");
-
-    const cols = this._sortedKeypadPinIds(component, "c");
-
-    const pressed = component.keypadPressed || new Set();
-
-    const colLevel = cols.map((colId) =>
-      this._getDrivenLevelOnPin(component, colId),
-    );
-
-    // LOG: una vez por escaneo, qué columnas están LOW y qué teclas están presionadas
-
-    this._dbg(`[scan] cols=${JSON.stringify(colLevel)} pressedSet=${JSON.stringify([...pressed])}`);
-
-    rows.forEach((rowId, rowIndex) => {
-      let rowValue = 1;
-
-      cols.forEach((colId, colIndex) => {
-        if (
-          colLevel[colIndex] === 0 &&
-          pressed.has(`${rowIndex},${colIndex}`)
-        ) {
-          rowValue = 0;
-        }
-      });
-
-      if (rowValue === 0) {
-        this._dbg(`[scan] → Fila r${rowIndex} lee 0 (tecla detectada)`);
-      }
-
-      this._notifyRowToFirmware(component, rowId, rowValue);
-    });
-  }
-
-  // Busca si algún pin del ESP32 conectado a este pin (por cable)
-  // está manejando un valor AHORA MISMO -- a diferencia de
-  // isKeyConnectedToHighDriver (que solo dice sí/no para "alto"),
-  // acá hace falta el nivel real (0 o 1) para saber si la columna
-  // está activa (bajo) o no.
-  _getDrivenLevelOnPin(component, pinId) {
-    const net = this.getNet(`${component.id}:${pinId}`);
-    for (const key of net) {
-      if (Object.prototype.hasOwnProperty.call(this.driverStates, key)) {
-        return this.driverStates[key];
-      }
-    }
-    return null;
-  }
-
-  // Mismo patrón que _notifyButtonToFirmware/_notifyAdcToFirmware
-  // (buscar a qué GPIO del ESP32 está cableado este pin), pero acá
-  // el protocolo es "IN:" (digital), no "ADC:" -- las filas del
-  // teclado son pines digitales comunes con pull-up, cubiertos
-  // enteramente por _base_hal.py, sin ningún HAL nuevo.
-  _notifyRowToFirmware(component, pinId, value) {
-    if (!this.isComponentPowered(component)) return;
-
-    const esp32 = this.simulator.componentManager
-      .getAll()
-      .find((c) => c.type.startsWith("esp32"));
-    if (!esp32) return;
-
-    const net = this.getNet(`${component.id}:${pinId}`);
-
-    for (const key of net) {
-      const [cId, pId] = key.split(":");
-      if (cId !== esp32.id) continue;
-      const match = pId.match(/^io(\d+)$/);
-      if (!match) continue;
-      const gpioNumber = parseInt(match[1], 10);
-      if (this.simulator.qemuBridge?.connected) {
-        this.simulator.qemuBridge.sendData(`IN:${gpioNumber}:${value}`);
-      }
-      return;
-    }
+    ComponentBehaviorRegistry.get(component.type)?.signal?.evaluate(component, this);
   }
 
   // ====================================================
@@ -1218,60 +1032,17 @@ class SignalEngine {
   // firmware), acá se asume la convención por default. Si tu
   // proyecto usa rows=/cols= distintos al construir
   // Keypad4x4_I2C(...), avisá y se ajusta.
-  _getKeypadI2cAddress(component) {
-    const raw = component.properties?.address;
-    if (raw === undefined || raw === null || raw === "") return 0x20;
-    const parsed =
-      typeof raw === "string"
-        ? parseInt(raw, raw.trim().toLowerCase().startsWith("0x") ? 16 : 10)
-        : raw;
-    return Number.isFinite(parsed) ? parsed : 0x20;
-  }
-
   setI2cWrittenByte(address, value) {
     this.i2cOutputBytes[address] = value & 0xff;
     this.evaluateAll();
   }
 
+  // Lógica real (+ su helper privado de antes) migrada a
+  // components/keypad4x4_i2c/keypad4x4_i2c.behavior.js -- ver el
+  // comentario de evaluateLed() más arriba sobre por qué queda un
+  // wrapper delgado acá.
   evaluateKeypadI2c(component) {
-    const address = this._getKeypadI2cAddress(component);
-
-    if (!this.isFullyConnected(component, "i2c")) return;
-
-    // 0xFF = reposo (nadie escribió nada todavía, todas las
-    // filas "altas" -- mismo default que trae readfrom() en
-    // keypad4x4_i2c_hal.py).
-    const outputByte =
-      this.i2cOutputBytes[address] !== undefined
-        ? this.i2cOutputBytes[address]
-        : 0xff;
-
-    const pressed = component.keypadPressed || new Set();
-
-    // Arranca desde lo que el firmware escribió: los bits de
-    // fila SIEMPRE se leen de vuelta tal cual se escribieron
-    // (un expansor que maneja un pin en bajo lo lee en bajo,
-    // sin importar nada externo). Las columnas (bits 4-7) se
-    // bajan SOLO si la fila correspondiente está activa (bit en
-    // bajo) Y hay una tecla apretada en esa intersección.
-    let readByte = outputByte;
-
-    for (let row = 0; row < 4; row++) {
-      const rowIsLow = ((outputByte >> row) & 1) === 0;
-      if (!rowIsLow) continue;
-
-      for (let col = 0; col < 4; col++) {
-        if (pressed.has(`${row},${col}`)) {
-          readByte &= ~(1 << (4 + col));
-        }
-      }
-    }
-
-    readByte &= 0xff;
-
-    if (this.simulator.qemuBridge?.connected) {
-      this.simulator.qemuBridge.sendData(`I2CR:${address}:${readByte}`);
-    }
+    ComponentBehaviorRegistry.get(component.type)?.signal?.evaluate(component, this);
   }
 
   // ====================================================
@@ -1482,28 +1253,11 @@ class SignalEngine {
     this.evaluateAll();
   }
 
+  // Lógica real migrada a components/buzzer/buzzer.behavior.js -- ver
+  // el comentario de evaluateLed() más arriba sobre por qué queda un
+  // wrapper delgado acá en vez de borrarse del todo.
   evaluateBuzzer(component) {
-    const net = this.getNet(`${component.id}:s`);
-
-    let active = null;
-    for (const key of net) {
-      if (this.pwmStates[key]) {
-        active = this.pwmStates[key];
-        break;
-      }
-    }
-
-    // Sin VCC/GND cableados, el buzzer no debe sonar aunque el
-    // firmware siga mandando PWM por el pin de señal.
-    if (active && !this.isComponentPowered(component)) {
-      active = null;
-    }
-
-    if (active) {
-      this.simulator.renderer.playBuzzerTone(component, active.freq);
-    } else {
-      this.simulator.renderer.stopBuzzerTone(component);
-    }
+    ComponentBehaviorRegistry.get(component.type)?.signal?.evaluate(component, this);
   }
 
   isKeyConnectedToHighDriver(startKey) {

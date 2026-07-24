@@ -8,6 +8,17 @@ const assert = require("node:assert/strict");
 // que el navegador provee automáticamente.
 global.window = global.window || { PIT_DEBUG: false };
 
+// Mismo shim que "window" de arriba: ComponentBehaviorRegistry.js espera
+// existir como global (así es como lo consume SignalEngine.js -- ver su
+// evaluateLed()/evaluateAll()), pero en Node no hay <script> tags que lo
+// carguen solos, así que lo asignamos a mano ANTES de requerir SignalEngine.
+// led.behavior.js se requiere también acá: es el archivo REAL que el
+// navegador cargaría dinámicamente (ver ComponentBehaviorRegistry.loadAll())
+// -- se auto-registra al ser requerido, así los tests de evaluateLed() de
+// abajo ejercitan exactamente la misma lógica que corre en producción.
+global.ComponentBehaviorRegistry = require("../simulator/ComponentBehaviorRegistry");
+require("../../components/led/led.behavior.js");
+
 const SignalEngineCore = require("../simulator/SignalEngine"); // <- archivo REAL del proyecto, ya no la copia congelada
 const { makeSimulator, wire, makeLed, makeDriver, makeButton, makeI2cModule } = require("./fixtures");
 
