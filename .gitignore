@@ -1,2 +1,9 @@
 .claude/settings.local.json
 node_modules/
+
+# server/: binarios grandes (firmware/ELF con símbolos de debug) --
+# no son código fuente, no tiene sentido versionarlos. Se regeneran
+# compilando MicroPython/QEMU o se copian a mano -- ver server/README.md.
+server/*.bin
+server/*.elf
+server/node_modules/

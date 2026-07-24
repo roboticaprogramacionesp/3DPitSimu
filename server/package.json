@@ -1,0 +1,12 @@
+{
+    "name": "pitsimulator-qemu-bridge",
+    "version": "0.1.0",
+    "description": "Puente entre QEMU (firmware ESP32 real) y PitSimulator, vía GDB Remote Serial Protocol y WebSocket.",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "ws": "^8.21.0"
+    }
+}

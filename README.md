@@ -8,6 +8,7 @@ PitSimulator es un prototipo de simulador visual de componentes electrónicos pa
 - [js/simulator](js/simulator): lógica principal del motor de simulación, renderizado, gestión de componentes y cables.
 - [css](css): estilos del tablero, cuadrícula, paneles y componentes.
 - [components](components): definiciones de componentes en formato JSON y archivos auxiliares de hardware.
+- [server](server): puente QEMU (proceso Node aparte) -- lanza el firmware MicroPython real bajo emulación y lo conecta al frontend por WebSocket. Ver [server/README.md](server/README.md).
 
 ## Cómo agregar un componente nuevo
 
