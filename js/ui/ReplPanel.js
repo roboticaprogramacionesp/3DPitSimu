@@ -501,21 +501,41 @@ class ReplPanel {
 
     // Envuelve un .hal.py ya cargado en un exec(base64) aislado por
     // try/except (ver el comentario grande de más arriba, "Aislamiento
-    // de fallas entre componentes"). El base64 se parte acá en varias
-    // líneas cortas (concatenación implícita de strings de Python
-    // dentro de los paréntesis -- "a" "b" == "ab", válido en
-    // cualquier indentación mientras esté dentro de "(...)") en vez
-    // de mandarse como UNA sola línea gigante sin ningún salto.
+    // de fallas entre componentes"). El base64 se parte en líneas
+    // cortas (mismo motivo de siempre: cada "\n" le da al lado
+    // receptor un punto natural para drenar, ver server.js/
+    // SEND_CHUNK_SIZE) pero TODAS esas líneas van DENTRO de un único
+    // string triple-comillado ("""..."""), no como N strings
+    // separados concatenados implícitamente ("a" "b" == "ab").
     //
-    // Por qué importa: se confirmó en la práctica (ver
-    // server.js/SEND_CHUNK_SIZE) que la UART emulada de QEMU pierde
-    // bytes en transmisiones largas sin puntos de pausa -- el código
-    // Python normal (muchas líneas cortas) sobrevive mejor que un
-    // base64 de varios KB en una sola línea, probablemente porque
-    // cada "\n" le da al lado receptor un punto natural para drenar
-    // antes de que siga llegando más. Esto es una segunda capa de
-    // defensa independiente del throttling de server.js -- no
-    // reemplaza a SEND_CHUNK_SIZE/SEND_CHUNK_DELAY_MS, se suma.
+    // Por qué el cambio (bug real, reproducible, reportado por el
+    // usuario con ky_001): con N strings separados hacían falta 2*N
+    // comillas dobles en TODA la transmisión (una de apertura y una
+    // de cierre por línea) -- si el UART emulado de QEMU pierde UN
+    // solo byte y ese byte resulta ser una de esas comillas, el
+    // tokenizer de Python no tiene forma de saber dónde termina el
+    // string roto: seguí leyendo caracteres (de las líneas
+    // SIGUIENTES, sin importar qué contengan) hasta encontrar la
+    // PRÓXIMA comilla suelta en cualquier lado del archivo. Eso
+    // produce un SyntaxError CRUDO a mitad del paste completo (no
+    // solo del HAL de este componente) -- ni siquiera llega a
+    // ejecutarse el try/except de acá abajo, que es justamente lo
+    // que existe para volver una corrupción "manejable". Confirmado
+    // con logs reales: mismo componente, dos pastes distintos,
+    // corrupción en un punto ligeramente distinto cada vez (timing,
+    // no un bug determinístico de este HAL en particular) pero
+    // siempre con el mismo síntoma (SyntaxError crudo).
+    //
+    // Con UN SOLO string triple-comillado para TODO el base64 (las
+    // líneas de adentro son contenido, no sintaxis -- un "\n" ahí no
+    // termina nada), la cantidad de comillas vulnerables en toda la
+    // transmisión baja de 2*N a solo 6 (3 de apertura + 3 de cierre),
+    // sin importar cuántas líneas tenga el base64 -- y aunque se
+    // pierda alguna, el checksum de acá abajo (que si llega a
+    // ejecutarse) sigue cubriendo cualquier corrupción DENTRO del
+    // contenido. Los saltos de línea internos no son base64 válido,
+    // así que se filtran con "".join(...split()) antes de decodificar
+    // (ubinascii.a2b_base64 no promete tolerar whitespace embebido).
     _wrapHalForIsolation(type, hal) {
 
         // Representación binaria (1 char = 1 byte UTF-8) del código
@@ -543,18 +563,23 @@ class ReplPanel {
         const expectedLen = binaryStr.length;
 
         const width = ReplPanel.HAL_B64_LINE_WIDTH;
-        const lines = [];
+        const rawLines = [];
         for (let i = 0; i < b64.length; i += width) {
-            lines.push(`        "${b64.slice(i, i + width)}"`);
+            rawLines.push(b64.slice(i, i + width));
         }
+        // Sin indentación en las líneas de adentro: son CONTENIDO del
+        // string triple-comillado, no sintaxis -- un espacio de más
+        // acá viajaría como parte del payload (después filtrado igual
+        // por el ''.join(...split()) del otro lado, pero es más
+        // prolijo no depender de eso).
+        const rawBlock = rawLines.join("\n");
 
         return (
             `# -- HAL: ${type} (aislado) --\n` +
             `try:\n` +
             `    import ubinascii as _ub_iso\n` +
-            `    _hal_bytes = _ub_iso.a2b_base64(\n` +
-            lines.join("\n") + "\n" +
-            `    )\n` +
+            `    _hal_raw = """` + rawBlock + `"""\n` +
+            `    _hal_bytes = _ub_iso.a2b_base64("".join(_hal_raw.split()))\n` +
             `    _hal_sum = sum(_hal_bytes) % 65536\n` +
             `    if len(_hal_bytes) != ${expectedLen} or _hal_sum != ${checksum}:\n` +
             `        raise ValueError("transmision corrupta: len=%d sum=%d (esperado len=${expectedLen} sum=${checksum})" % (len(_hal_bytes), _hal_sum))\n` +
