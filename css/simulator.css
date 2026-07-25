@@ -752,6 +752,44 @@ body{
 
 
 /* ==========================================================
+   Buzzer: ondas de sonido latiendo mientras suena -- ver
+   Renderer.playBuzzerTone/stopBuzzerTone, que agregan/sacan
+   "buzzer-wave-active" en los 3 [data-buzzer-role^="wave"] del
+   .svg (buzzer.svg). Delay escalonado por onda para que se vea
+   como que salen del disco hacia afuera, no las 3 prendiendo y
+   apagando juntas.
+   ========================================================== */
+
+[data-buzzer-role^="wave"]{
+
+    transform-box:fill-box;
+
+    transform-origin:center;
+
+}
+
+[data-buzzer-role^="wave"].buzzer-wave-active{
+
+    animation:buzzerWavePulse .9s ease-in-out infinite;
+
+}
+
+[data-buzzer-role="wave2"].buzzer-wave-active{ animation-delay:.15s; }
+
+[data-buzzer-role="wave3"].buzzer-wave-active{ animation-delay:.3s; }
+
+@keyframes buzzerWavePulse{
+
+    0%{ opacity:.25; transform:scale(.9); }
+
+    50%{ opacity:1; transform:scale(1.06); }
+
+    100%{ opacity:.25; transform:scale(.9); }
+
+}
+
+
+/* ==========================================================
    Toolbox: tarjetas de componentes arrastrables
 ========================================================== */
 

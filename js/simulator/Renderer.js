@@ -1020,10 +1020,18 @@ class Renderer {
     component._buzzerAudio.osc.frequency.setValueAtTime(freq, ctx.currentTime);
 
     if (component.element) {
+      // "buzzer-wave-active" (no opacity inline directo): la
+      // animación de pulso (ver css/simulator.css,
+      // @keyframes buzzerWavePulse) vive en la clase, así las 3
+      // ondas quedan LATIENDO mientras suena en vez de solo
+      // aparecer estáticas -- antes esto ponía opacity="1" fijo,
+      // que técnicamente ya las mostraba, pero como las 3 aparecían
+      // de golpe y quietas, a simple vista se veían como un solo
+      // arco sólido en vez de "ondas de sonido".
       component.element
         .querySelectorAll('[data-buzzer-role^="wave"]')
         .forEach((w) => {
-          w.style.opacity = "1";
+          w.classList.add("buzzer-wave-active");
         });
     }
   }
@@ -1042,7 +1050,7 @@ class Renderer {
       component.element
         .querySelectorAll('[data-buzzer-role^="wave"]')
         .forEach((w) => {
-          w.style.opacity = "0";
+          w.classList.remove("buzzer-wave-active");
         });
     }
   }
