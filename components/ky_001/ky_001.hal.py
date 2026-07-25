@@ -48,6 +48,18 @@ class _FakeDS18X20:
     def convert_temp(self):
         pass
     def read_temp(self, rom):
+        # A diferencia de ADC.read_u16()/Pin.value() (que sí lo
+        # hacían), esto se olvidaba de drenar stdin antes de leer
+        # _temp_states -- si el código del usuario nunca toca ningún
+        # Pin/ADC/I2C en su loop (típico acá: solo convert_temp() +
+        # read_temp() + sleep()), poll_input() nunca se llamaba desde
+        # NINGÚN lado, así que el "TEMP:<gpio>:<celsius>" que manda
+        # el slider del panel se quedaba sin leer en el buffer de
+        # stdin para siempre -- read_temp() devolvía siempre el
+        # default (25.0), sin importar cuánto moviera el usuario el
+        # control. Bug real reportado: "cambio el valor y ese no se
+        # actualiza".
+        poll_input()
         return _temp_states.get(self._ow._gpio, 25.0)
 
 class _OneWireModule:

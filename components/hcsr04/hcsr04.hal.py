@@ -60,6 +60,15 @@ class HCSR04:
         self.echo = Pin(echo_pin, Pin.IN)
 
     def _read_distance_cm(self):
+        # Ver el mismo fix en ky_001.hal.py/read_temp() y
+        # dht11.hal.py/measure(): en el uso típico esto ya andaba
+        # porque cada medición real dispara trigger.value(1)/(0)
+        # antes de leer (eso sí llama a poll_input() vía Pin.value()),
+        # pero si el código del usuario reusa una lectura vieja sin
+        # volver a triggerear, o simplemente por prolijidad/consistencia
+        # con el resto de los sensores "de valor empujado desde el
+        # panel", más vale no depender de ese efecto colateral.
+        poll_input()
         return _dist_states.get(self._echo_gpio, 100.0)
 
     def distance_cm(self):

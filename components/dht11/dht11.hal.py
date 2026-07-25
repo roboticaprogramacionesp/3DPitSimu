@@ -49,6 +49,12 @@ class _DHT11:
         self._hum  = 50.0
 
     def measure(self):
+        # Ver el mismo fix en ky_001.hal.py/read_temp(): sin esto,
+        # si el código del usuario no toca ningún Pin/ADC/I2C en su
+        # loop, poll_input() nunca se llama desde ningún lado y el
+        # "TEMP:<gpio>:<celsius>[:<hum>]" que manda el slider del
+        # panel se queda sin leer -- measure() siempre ve el default.
+        poll_input()
         state      = _dht_states.get(self._gpio, (25.0, 50.0))
         self._temp = state[0]
         self._hum  = state[1]
@@ -68,6 +74,8 @@ class _DHT22:
         self._hum  = 50.0
 
     def measure(self):
+        # Ver el mismo fix en _DHT11.measure() más arriba.
+        poll_input()
         state      = _dht_states.get(self._gpio, (25.0, 50.0))
         self._temp = state[0]
         self._hum  = state[1]
