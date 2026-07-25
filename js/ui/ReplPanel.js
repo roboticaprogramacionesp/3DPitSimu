@@ -49,6 +49,13 @@ class ReplPanel {
         // recién arrancado, sin nada pegado todavía).
         this._halSentToFirmware = new Set();
 
+        // Cuántas veces se reintentó automáticamente el HAL de cada
+        // "type" tras un HAL_ERROR (ver _retryHalAfterError) -- para
+        // no reintentar por siempre si algo está genuinamente roto
+        // (no solo una corrupción de transmisión pasajera). Se
+        // resetea junto con _halSentToFirmware en cada conexión nueva.
+        this._halRetryCounts = {};
+
         // Cola de envíos por paste mode (ver _enqueuePaste) -- así
         // preloadHal() y runEditorCode() nunca se pisan entre sí.
         this._pasteQueue = Promise.resolve();
@@ -940,9 +947,61 @@ class ReplPanel {
         // si el usuario le da "Ejecutar" mientras esto todavía está
         // en la cola, _assembleCode() no vuelva a incluir el mismo
         // HAL una segunda vez.
-        newlySent.forEach(type => this._halSentToFirmware.add(type));
+        newlySent.forEach(type => {
+            this._halSentToFirmware.add(type);
+            delete this._halRetryCounts[type]; // exito -- si vuelve a fallar mas adelante, cuenta de nuevo desde 0
+        });
 
         await this._enqueuePaste(() => this._pasteBlock(halBlock, 0, { silent: true }));
+
+    }
+
+    // ====================================================
+    // Reintento automático tras un HAL_ERROR (ver QemuBridge.parseLine,
+    // rama "HAL_ERROR:", y el listener de "qemu:hal-error" en
+    // bindBusEvents). Antes, un HAL corrupto en tránsito quedaba
+    // marcado como "no enviado" (para que el PRÓXIMO click en
+    // "Ejecutar" lo reintentara) pero exigía que el usuario mismo
+    // clickeara de nuevo cada vez -- con una transmisión que se
+    // corrompe seguido, eso significaba muchos clicks manuales
+    // seguidos sin ninguna garantía de cuántos iban a hacer falta.
+    //
+    // Acá se reintenta SOLO, en segundo plano (silencioso, igual que
+    // preloadHal), hasta HAL_RETRY_MAX veces por tipo, con una pausa
+    // corta entre intento e intento -- así, para cuando el usuario
+    // vuelve a clickear "Ejecutar" (o si ni se dio cuenta del primer
+    // fallo), lo más probable es que el HAL ya haya quedado bien
+    // cargado solo. No reemplaza al checksum (que sigue siendo la
+    // única forma de saber si hizo falta reintentar) ni "arregla" la
+    // corrupción en sí -- solo automatiza el mismo reintento manual
+    // que ya funcionaba, para no depender de que el usuario esté
+    // mirando la pantalla en cada intento.
+    static HAL_RETRY_MAX = 8;
+    static HAL_RETRY_DELAY_MS = 400;
+
+    _retryHalAfterError(type) {
+
+        const count = (this._halRetryCounts[type] || 0) + 1;
+        this._halRetryCounts[type] = count;
+
+        if (count > ReplPanel.HAL_RETRY_MAX) {
+            this.appendOutput(
+                `\n⚠️ El HAL de "${type}" falló ${ReplPanel.HAL_RETRY_MAX} veces seguidas -- ` +
+                `puede ser algo más que ruido de transmisión. Probá "Ejecutar" de nuevo a mano, ` +
+                `o revisá la consola del servidor.\n`,
+                "repl-error"
+            );
+            return;
+        }
+
+        setTimeout(() => {
+            // Si para cuando se cumple la pausa YA se volvió a marcar
+            // "enviado" (ej. el usuario le dio a "Ejecutar" a mano
+            // mientras tanto y esta vez salió bien), no hay nada que
+            // reintentar.
+            if (this._halSentToFirmware.has(type)) return;
+            this.preloadHal();
+        }, ReplPanel.HAL_RETRY_DELAY_MS);
 
     }
 
@@ -981,7 +1040,10 @@ class ReplPanel {
         // a intentar/perder ese componente puntual. Preferible a
         // esperar una confirmación que este protocolo no tiene forma
         // simple de dar.
-        newlySent.forEach(type => this._halSentToFirmware.add(type));
+        newlySent.forEach(type => {
+            this._halSentToFirmware.add(type);
+            delete this._halRetryCounts[type]; // exito -- si vuelve a fallar mas adelante, cuenta de nuevo desde 0
+        });
 
         // _enqueuePaste hace que esto espere su turno si justo había
         // una precarga de HAL (preloadHal) todavía mandándose --
@@ -1155,6 +1217,7 @@ class ReplPanel {
             const warmBoot = await this._probeWarmBoot();
             if (!warmBoot) {
                 this._halSentToFirmware.clear();
+                this._halRetryCounts = {};
             }
 
             // Precargar el HAL pendiente en segundo plano YA, sin
@@ -1182,6 +1245,7 @@ class ReplPanel {
         // quedaba roto hasta un F5 completo de la página).
         this.simulator.eventBus.on("qemu:hal-error", (type) => {
             this._halSentToFirmware.delete(type);
+            this._retryHalAfterError(type);
         });
 
         this.simulator.eventBus.on("gpio:changed", ({ gpio, value }) => {
