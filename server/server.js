@@ -252,8 +252,8 @@ function startQemu(wss) {
 // wrapper para poder DETECTAR corrupción con certeza en vez de
 // inferirla de un traceback -- ver la nota en
 // ReplPanel._wrapHalForIsolation() si se llega a ese punto.
-const SEND_CHUNK_SIZE = 16;     // antes: 48 (256, y 32 antes de eso) // bytes por trozo
-const SEND_CHUNK_DELAY_MS = 20; // antes: 10 (2, y 8 antes de eso) // pausa entre trozos
+const SEND_CHUNK_SIZE = 8;      // antes: 16 (48, 256, y 32 antes de eso) // bytes por trozo
+const SEND_CHUNK_DELAY_MS = 25; // antes: 20 (10, 2, y 8 antes de eso) // pausa entre trozos
 
 // Pausa ÚNICA antes del PRIMER trozo de un pegado grande (bulk) --
 // ver el comentario grande en writeToQemuThrottled(). Comparando
@@ -383,9 +383,23 @@ function writeToQemuThrottled(data) {
             const chunk = buf.subarray(offset, offset + SEND_CHUNK_SIZE);
             offset += SEND_CHUNK_SIZE;
 
-            qemuProc.stdin.write(chunk);
-
-            setTimeout(writeNextChunk, SEND_CHUNK_DELAY_MS);
+            // OJO -- antes esto llamaba a stdin.write(chunk) y
+            // arrancaba el setTimeout de la pausa en el mismo tick,
+            // SIN esperar a que Node confirme que ese trozo salió de
+            // verdad hacia el proceso de QEMU. write() puede devolver
+            // antes de que el dato realmente se escriba al pipe del
+            // sistema operativo (buffering interno de Node/libuv) --
+            // la pausa entre trozos, pensada para darle tiempo real
+            // al UART emulado, podía terminar corriendo en paralelo
+            // con la escritura anterior en vez de DESPUÉS, sin
+            // ninguna garantía real de espaciado. El callback de
+            // write() confirma que el SO ya aceptó ese trozo -- recién
+            // ahí arranca la pausa de SEND_CHUNK_DELAY_MS, así que el
+            // tiempo entre trozos que ve QEMU es el que realmente
+            // configuramos, no una suposición.
+            qemuProc.stdin.write(chunk, () => {
+                setTimeout(writeNextChunk, SEND_CHUNK_DELAY_MS);
+            });
 
         }
 
