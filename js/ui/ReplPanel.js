@@ -680,29 +680,23 @@ class ReplPanel {
 
         // ── 1. Módulos siempre presentes (solo los que falten en esta sesión) ──
         //
-        // OJO -- hasta acá esto mandaba "hal" CRUDO (sin _wrapHalForIsolation),
-        // a diferencia del HAL por componente más abajo. _base/_i2c_bus/
-        // _adc_bus son justo lo PRIMERO que viaja en CUALQUIER paste
-        // (siempre, en cada página nueva -- _halSentToFirmware vive en
-        // memoria del navegador, así que un F5 lo reinicia aunque QEMU
-        // siga corriendo) y son varios cientos de líneas -- mucho más
-        // grandes que el HAL de un componente individual. Reportado por
-        // el usuario: ky_001 (el único con checksum) seguía marcando
-        // "transmision corrupta" en casi todos los intentos, incluso
-        // después de reducir chunk size, agregar delay de arranque y
-        // esperar la confirmación real de escritura -- consistente con
-        // que la corrupción no sea específica de ky_001, sino que
-        // pegue en cualquier lado de este paste GIGANTE (base+i2c+adc+
-        // componente), y ky_001 sea el único segmento con checksum
-        // para DETECTARLA. Si la corrupción caía en el bloque de
-        // _base/_i2c_bus/_adc_bus (sin protección), no había forma de
-        // saberlo -- podía dejar funciones a medio definir, marcadas
-        // igual como "enviadas" para siempre en esta sesión del
-        // navegador (ver el commit del auto-retry sobre HAL_ERROR).
-        // Envolviendo esto con el mismo _wrapHalForIsolation() que ya
-        // usa cada componente, cualquier corrupción acá queda igual de
-        // detectable (HAL_ERROR:_base/_i2c_bus/_adc_bus) y reintentable
-        // sola, en vez de silenciosa.
+        // REVERTIDO -- se probó envolver esto con _wrapHalForIsolation()
+        // (mismo checksum que cada componente) pensando que la
+        // corrupción de ky_001 en realidad pegaba en este bloque grande
+        // sin protección. Resultado real, peor: _base/_i2c_bus/_adc_bus
+        // ya son varios cientos de líneas -- envueltos en base64 (que
+        // infla el tamaño ~33%) más el propio boilerplate del wrapper,
+        // el paste combinado se volvió considerablemente MÁS GRANDE que
+        // antes. Con el wrapper puesto, los CUATRO bloques (los 3 base
+        // + el del componente) fallaron a la vez en el primer intento
+        // real -- peor que cualquier fallo aislado visto hasta ahora,
+        // consistente con que un payload más grande tiene más
+        // superficie para la corrupción, no menos. Mejor detección,
+        // pero peor tasa de éxito neta -- no vale la pena el cambio.
+        // Se mantiene el consejo de no recargar la página entre
+        // reintentos (evita re-mandar este bloque grande de más) como
+        // mitigación real, y el checksum queda SOLO en el HAL por
+        // componente (mucho más chico, sección 2 más abajo).
         for (const type of ReplPanel.ALWAYS_HAL_TYPES) {
 
             if (this._halSentToFirmware.has(type)) continue;
@@ -710,7 +704,7 @@ class ReplPanel {
             const hal = await this._loadHal(type);
 
             if (hal) {
-                parts.push(this._wrapHalForIsolation(type, hal));
+                parts.push(hal);
                 newlySent.push(type);
             } else {
                 console.warn(`[ReplPanel] ${type}.hal.py no encontrado — puede faltar funcionalidad (bridge de pines/I2C).`);
