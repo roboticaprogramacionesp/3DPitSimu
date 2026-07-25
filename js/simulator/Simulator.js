@@ -421,6 +421,76 @@ class Simulator {
 
     /*
     ======================================================
+    Centrar/ajustar la vista sobre los componentes actuales.
+
+    Por qué existe: offsetX/offsetY (pan) NO se guarda en el
+    archivo del proyecto (ver ProjectManager.serialize()) --
+    solo las coordenadas x/y ABSOLUTAS de cada componente. Si el
+    usuario armó su circuito después de panear la vista (offset
+    ya no era 0,0 en ese momento), al reabrir el archivo el pan
+    vuelve a arrancar en 0,0 pero los componentes siguen en sus
+    coordenadas absolutas de siempre -- resultado: el circuito
+    aparece desplazado (ej. "se ve abajo") en vez de centrado.
+    Se llama después de ProjectManager.deserialize() y también
+    al crear un proyecto nuevo (ahí no hay componentes, así que
+    simplemente resetea zoom/pan a los valores por defecto).
+    ======================================================
+    */
+
+    centerViewOnComponents(padding = 60) {
+
+        const components = this.componentManager.getAll();
+
+        if (components.length === 0) {
+
+            this.zoom = 1;
+            this.offsetX = 0;
+            this.offsetY = 0;
+            this.applyViewportTransform();
+            return;
+
+        }
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        for (const c of components) {
+            minX = Math.min(minX, c.x);
+            minY = Math.min(minY, c.y);
+            maxX = Math.max(maxX, c.x + c.width);
+            maxY = Math.max(maxY, c.y + c.height);
+        }
+
+        const contentWidth = Math.max(1, maxX - minX);
+        const contentHeight = Math.max(1, maxY - minY);
+        const contentCenterX = minX + contentWidth / 2;
+        const contentCenterY = minY + contentHeight / 2;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const viewportWidth = rect.width || 1;
+        const viewportHeight = rect.height || 1;
+
+        // Zoom que hace entrar todo el contenido con margen -- nunca
+        // agranda de más un circuito chico (tope en 1: no queremos
+        // que un solo LED termine ocupando toda la pantalla), y
+        // respeta el mismo rango que ya usan setZoom()/zoomAt()
+        // (0.25-4).
+        const fitZoom = Math.min(
+            (viewportWidth - padding * 2) / contentWidth,
+            (viewportHeight - padding * 2) / contentHeight,
+            1
+        );
+
+        this.zoom = Utils.clamp(fitZoom, 0.25, 4);
+
+        this.offsetX = viewportWidth / 2 - contentCenterX * this.zoom;
+        this.offsetY = viewportHeight / 2 - contentCenterY * this.zoom;
+
+        this.applyViewportTransform();
+
+    }
+
+    /*
+    ======================================================
     Borrar la selección actual (componente(s) o codo de cable)
     ======================================================
     */

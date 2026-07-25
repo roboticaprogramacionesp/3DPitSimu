@@ -222,6 +222,13 @@ class ProjectManager {
             // Redibujar todo
             this.simulator.wireManager.renderAll();
 
+            // Centrar la vista sobre lo que se acaba de cargar -- el
+            // pan (offsetX/offsetY) no se guarda en el archivo, así
+            // que sin esto el circuito aparecía desplazado según
+            // dónde había quedado paneada la vista la última vez
+            // (ver el comentario grande en Simulator.centerViewOnComponents).
+            this.simulator.centerViewOnComponents();
+
             return true;
 
         } catch (err) {
@@ -327,6 +334,13 @@ class ProjectManager {
         // proyecto anterior sobre un canvas que ya se supone vacío.
         this.simulator.history.undoStack = [];
         this.simulator.history.redoStack = [];
+
+        // Resetea zoom/pan a los valores por defecto -- sin esto, un
+        // "Nuevo proyecto" pedido después de haber paneado/zoomeado
+        // el circuito anterior arrancaba el canvas vacío en ESE mismo
+        // pan, en vez del origen (ver Simulator.centerViewOnComponents,
+        // que con 0 componentes hace exactamente este reset).
+        this.simulator.centerViewOnComponents();
 
         // "Nuevo proyecto" no está vinculado a ningún archivo todavía --
         // el próximo "Guardar" tiene que preguntar dónde, igual que en
