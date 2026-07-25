@@ -82,7 +82,7 @@ class Renderer {
   // Buzzer piezo pasivo (KY-006): el único componente de este
   // proyecto que produce SONIDO de verdad (Web Audio API), no solo
   // feedback visual -- ver playBuzzerTone()/stopBuzzerTone() más
-  // abajo y buzzer_hal.py (primer machine.PWM del proyecto).
+  // abajo y buzzer.hal.py (primer machine.PWM del proyecto).
   static isBuzzer(type) {
     return type === "buzzer";
   }
@@ -971,7 +971,7 @@ class Renderer {
   // ─────────────────────────────────────────────────────
   // Buzzer piezo pasivo: reproduce el tono DE VERDAD con la Web
   // Audio API del navegador (no es un indicador cosmético) -- ver
-  // buzzer_hal.py/SignalEngine.evaluateBuzzer.
+  // buzzer.hal.py/SignalEngine.evaluateBuzzer.
   //
   // Un AudioContext solo se puede crear/arrancar dentro de un
   // gesto del usuario (política de autoplay de los navegadores) --

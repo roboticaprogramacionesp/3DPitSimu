@@ -1300,7 +1300,7 @@ class SignalEngine {
   // SALIDA del ESP32 (como cualquier GPIO/LED), solo que en vez de
   // 0/1 lleva una FRECUENCIA -- por eso pwmStates es su propio
   // registro (no reutiliza driverStates, que es estrictamente
-  // 0/1). Ver buzzer_hal.py para el protocolo "PWM:".
+  // 0/1). Ver buzzer.hal.py para el protocolo "PWM:".
   // ====================================================
 
   setPwmState(componentId, pinId, freq, duty) {

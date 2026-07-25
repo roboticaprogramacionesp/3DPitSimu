@@ -313,7 +313,7 @@ class QemuBridge {
 
         if (line.startsWith("PWM:")) {
             // Formato: PWM:<gpio>:<freq>:<duty> -- lo manda
-            // buzzer_hal.py cada vez que se construye/actualiza/
+            // buzzer.hal.py cada vez que se construye/actualiza/
             // apaga un PWM (freq=0 significa apagado). A diferencia
             // de "ADC:"/"I2CR:" (simulador → firmware), este es
             // firmware → simulador, igual dirección que "GPIO:".
