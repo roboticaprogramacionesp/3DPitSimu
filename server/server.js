@@ -311,7 +311,9 @@ function writeToQemuThrottled(data) {
     // de línea), sacamos comentarios y líneas vacías antes de
     // mandarlo. Comandos cortos tipeados a mano quedan intactos.
     const asText = buf.toString("utf8");
-    if (looksLikeBulkSource(asText)) {
+    const isBulk = looksLikeBulkSource(asText);
+
+    if (isBulk) {
 
         const stripped = stripPySource(asText);
 
@@ -324,6 +326,35 @@ function writeToQemuThrottled(data) {
     }
 
     sendQueue = sendQueue.then(() => new Promise((resolve) => {
+
+        // Mensajes cortos (una sola línea: "IN:4:1", "ADC:34:20000",
+        // "GPIO:2:1", lo que tipeás a mano en el REPL) van DIRECTO a
+        // stdin, sin trocear ni esperar SEND_CHUNK_DELAY_MS entre
+        // trozos -- esa pausa existe para proteger pegados GRANDES
+        // (HAL/código completo, cientos de líneas) del UART emulado
+        // de QEMU, que no tiene flow control real y se corrompe si
+        // se lo satura de golpe. Un mensaje de 10 bytes no satura
+        // nada, y aplicarle igual la pausa le agregaba un mínimo de
+        // ~20ms POR MENSAJE. Bug real reportado: un teclado
+        // matricial manda un "IN:<gpio>:<valor>" POR CADA FILA en
+        // cada columna que el firmware escanea (4 filas x 4 columnas
+        // = hasta 16 mensajes por get_key()) -- pasando los 16 por
+        // esta cola, cada uno pagando su propio mínimo de 20ms,
+        // volvía carísimo de lento cualquier tecleo (320ms+ por
+        // detección), aunque el teclado I2C (1-2 mensajes por
+        // lectura) casi no lo sufría. Sigue yendo por la misma
+        // sendQueue (para no intercalarse a mitad de un pegado
+        // grande en curso), solo que sin trocear+esperar.
+        if (!isBulk) {
+
+            if (qemuProc && qemuProc.stdin.writable) {
+                qemuProc.stdin.write(buf);
+            }
+
+            resolve();
+            return;
+
+        }
 
         let offset = 0;
 
