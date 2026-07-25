@@ -36,7 +36,7 @@
 # proyecto -- ver SignalEngine.js:_notifyMpuToFirmware).
 #
 # "última muestra gana" por dirección, mismo criterio que
-# joystick_hal.py -- no hace falta más que eso: a diferencia del
+# joystick.hal.py -- no hace falta más que eso: a diferencia del
 # encoder, acá no hay que capturar transiciones intermedias, cada
 # lectura del firmware simplemente toma el valor MÁS RECIENTE.
 # =============================================================

@@ -21,7 +21,7 @@ class Renderer {
 
   // Joystick KY-023: el único componente de este proyecto con una
   // entrada ANALÓGICA continua (X/Y), no solo digital -- ver
-  // bindJoystick() más abajo y joystick_hal.py (primer machine.ADC
+  // bindJoystick() más abajo y joystick.hal.py (primer machine.ADC
   // del proyecto). El botón SW no necesita nada especial acá: es
   // el mismo mecanismo genérico de botón momentáneo que ya usan
   // otros componentes (ver bindPressButton/component.pressPins).
@@ -55,7 +55,7 @@ class Renderer {
 
   // Potenciómetro deslizante: análogo de 1 solo eje (ver
   // bindSlider() más abajo) -- reutiliza el mismo machine.ADC que
-  // el joystick (ver pot_slider_hal.py), pero SIN resorte de
+  // el joystick (ver pot_slider.hal.py), pero SIN resorte de
   // centrado: al soltar el mouse, la perilla se queda donde
   // quedó, no vuelve sola a ningún lado.
   static isSlider(type) {

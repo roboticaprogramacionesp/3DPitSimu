@@ -6,7 +6,7 @@
 # reemplazo ahora vive en _adc_bus.py, que se inyecta SIEMPRE
 # (junto con _base_hal.py / _i2c_bus.py), tengas o no un
 # componente analógico puesto en el canvas (ver el mismo cambio
-# ya aplicado en pot_slider_hal.py).
+# ya aplicado en pot_slider.hal.py).
 #
 # Antes, esta clase propia (copia de la de adkey_hal.py) tenía
 # width()/atten() como no-ops reales -- read() quedaba SIEMPRE en

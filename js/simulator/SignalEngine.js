@@ -195,7 +195,7 @@ class SignalEngine {
   }
 
   // ====================================================
-  // Joystick KY-023 (X/Y analógico -- ver joystick_hal.py, que
+  // Joystick KY-023 (X/Y analógico -- ver joystick.hal.py, que
   // agrega el primer machine.ADC de este proyecto)
   //
   // A diferencia del botón momentáneo (que solo puentea 2 pines
@@ -208,7 +208,7 @@ class SignalEngine {
   //
   // nx, ny vienen normalizados -1..1 desde Renderer.bindJoystick
   // (arrastre del stick en el canvas) -- acá se convierten a la
-  // escala u16 (0..65535, centro=32768) que espera joystick_hal.py.
+  // escala u16 (0..65535, centro=32768) que espera joystick.hal.py.
   // ====================================================
 
   setJoystickPosition(component, nx, ny) {
@@ -1196,7 +1196,7 @@ class SignalEngine {
   // mandáramos las 3 fases intermedias una atrás de otra en el
   // mismo tick de JS, poll_input() del firmware las drenaría TODAS
   // de un saque -- "última muestra gana" (mismo criterio que
-  // joystick_hal.py) se comería las fases intermedias y el
+  // joystick.hal.py) se comería las fases intermedias y el
   // firmware nunca vería más que el estado de reposo final. Por
   // eso cada fase se manda con un setTimeout entre medio, no todas
   // juntas.

@@ -3,7 +3,7 @@
 #
 # ── CAMBIO ───────────────────────────────────────────────────
 # Antes, este archivo definía su propia clase "ADC" completa
-# (copiada de joystick_hal.py) -- width()/atten() eran no-ops
+# (copiada de joystick.hal.py) -- width()/atten() eran no-ops
 # reales, así que read() quedaba SIEMPRE en 12 bits fijos (>> 4)
 # sin importar qué resolución configurara el código del usuario.
 # Como este archivo se carga DESPUÉS de _adc_bus.py (que sí
