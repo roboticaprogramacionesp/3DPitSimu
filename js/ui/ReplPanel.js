@@ -499,6 +499,59 @@ class ReplPanel {
     // gusto.
     static HAL_B64_LINE_WIDTH = 200;
 
+    // Rompe corridas de un mismo PATRÓN CHICO (período 1 a 4
+    // caracteres) repetido 3+ veces seguidas, insertando un "\n" cada
+    // 2 repeticiones -- ver el comentario grande en
+    // _wrapHalForIsolation() sobre por qué hace falta probar varios
+    // períodos (no alcanza con "un caracter suelto repetido": una
+    // corrida de bytes IDÉNTICOS en el texto original se convierte,
+    // en base64, en el MISMO BLOQUE de hasta 4 caracteres repetido,
+    // no en un caracter individual repetido).
+    static _breakRepeatedPatterns(str) {
+
+        let result = "";
+        let i = 0;
+
+        while (i < str.length) {
+
+            let matched = false;
+
+            for (let period = 1; period <= 4 && !matched; period++) {
+
+                if (i + period * 3 > str.length) continue;
+
+                const block = str.slice(i, i + period);
+                let reps = 1;
+
+                while (
+                    i + (reps + 1) * period <= str.length &&
+                    str.slice(i + reps * period, i + (reps + 1) * period) === block
+                ) {
+                    reps++;
+                }
+
+                if (reps >= 3) {
+                    for (let r = 0; r < reps; r++) {
+                        if (r > 0 && r % 2 === 0) result += "\n";
+                        result += block;
+                    }
+                    i += reps * period;
+                    matched = true;
+                }
+
+            }
+
+            if (!matched) {
+                result += str[i];
+                i++;
+            }
+
+        }
+
+        return result;
+
+    }
+
     // Envuelve un .hal.py ya cargado en un exec(base64) aislado por
     // try/except (ver el comentario grande de más arriba, "Aislamiento
     // de fallas entre componentes"). El base64 se parte en líneas
@@ -562,30 +615,35 @@ class ReplPanel {
         }
         const expectedLen = binaryStr.length;
 
-        // Corridas largas de un mismo caracter repetido (ej. ky_001.hal.py
-        // tiene 12 espacios seguidos de indentación doble ANTES de
-        // codificar -- eso da una corrida de 16 caracteres base64
-        // idénticos, "ICAgICAgICAgICAg") -- comparando byte a byte
+        // Corridas largas de un mismo PATRÓN CHICO repetido (ej.
+        // ky_001.hal.py tiene 12 espacios seguidos de indentación
+        // doble ANTES de codificar -- base64 agrupa de a 3 bytes -> 4
+        // caracteres, así que 12 bytes IDÉNTICOS se convierten en el
+        // MISMO bloque de 4 caracteres repetido 4 veces seguidas,
+        // "ICAg" x4 = "ICAgICAgICAgICAg"). Comparando byte a byte
         // varias transmisiones corruptas reales de ese mismo archivo,
         // la pérdida cayó SIEMPRE justo en esa corrida, en el mismo
-        // offset exacto, sesión tras sesión. Consistente con que la
+        // offset exacto, sesión tras sesión -- consistente con que la
         // UART emulada (o el bridge stdin) pierda bytes específicamente
-        // ante ráfagas largas del mismo valor repetido -- no es un
+        // ante ráfagas largas del mismo patrón repetido, no un
         // problema de tamaño de mensaje en general (otros HAL mucho
-        // más grandes, sin corridas tan largas, cargan bien). Se
-        // rompe cualquier corrida de 3+ caracteres iguales insertando
-        // un "\n" cada 2 -- inofensivo, ya se filtra todo whitespace
-        // con "".join(_hal_raw.split()) antes de decodificar, así que
-        // esto no cambia el contenido, solo evita que el mismo byte se
-        // repita más de un par de veces seguidas en lo que viaja por
-        // el WS/UART.
-        const b64NoRuns = b64.replace(/(.)\1{2,}/g, (run, ch) => {
-            const pieces = [];
-            for (let i = 0; i < run.length; i += 2) {
-                pieces.push(run.slice(i, i + 2));
-            }
-            return pieces.join("\n");
-        });
+        // más grandes, sin corridas tan largas, cargan bien).
+        //
+        // OJO -- primer intento de este fix (ya corregido acá) solo
+        // buscaba un CARACTER SUELTO repetido 3+ veces
+        // (/(.)\1{2,}/g), que nunca encuentra este caso: dentro de
+        // "ICAgICAgICAgICAg" ningún caracter individual se repite 2
+        // veces seguidas (I-C-A-g-I-C-A-g-...), el que se repite es
+        // el BLOQUE de 4 caracteres completo. breakRepeatedPatterns()
+        // prueba períodos de 1 a 4 caracteres (cualquier tamaño de
+        // grupo base64 posible para una corrida de bytes idénticos,
+        // sea cual sea el offset de 3 bytes en el que arranque) y
+        // corta cada 2 repeticiones insertando un "\n" -- inofensivo,
+        // ya se filtra todo whitespace con "".join(_hal_raw.split())
+        // antes de decodificar, así que esto no cambia el contenido,
+        // solo evita que el mismo patrón viaje más de un par de veces
+        // seguidas por el WS/UART.
+        const b64NoRuns = ReplPanel._breakRepeatedPatterns(b64);
 
         const width = ReplPanel.HAL_B64_LINE_WIDTH;
         const rawLines = [];
