@@ -255,6 +255,21 @@ function startQemu(wss) {
 const SEND_CHUNK_SIZE = 16;     // antes: 48 (256, y 32 antes de eso) // bytes por trozo
 const SEND_CHUNK_DELAY_MS = 20; // antes: 10 (2, y 8 antes de eso) // pausa entre trozos
 
+// Pausa ÚNICA antes del PRIMER trozo de un pegado grande (bulk) --
+// ver el comentario grande en writeToQemuThrottled(). Comparando
+// byte a byte varias transmisiones corruptas reales (mismo
+// componente, ky_001, reportado por el usuario), la pérdida de
+// bytes apareció SIEMPRE dentro de los primeros ~150-200 bytes del
+// payload, nunca a la mitad o el final -- consistente con que la
+// UART/el bridge necesiten un instante para "asentarse" justo
+// después de que arranca una ráfaga nueva (típicamente tras un
+// reconnect de WS o un período sin tráfico). SEND_CHUNK_DELAY_MS ya
+// pausa ENTRE trozos, pero el primero se escribía inmediatamente
+// sin ningún respiro previo -- esta pausa extra, una sola vez al
+// principio, le da ese margen antes de que empiece la parte
+// riesgosa.
+const SEND_BULK_PRIME_DELAY_MS = 60;
+
 // ============================================
 // Stripper de comentarios/líneas vacías para pegados de
 // código fuente (los _*.hal.py, principalmente).
@@ -374,7 +389,11 @@ function writeToQemuThrottled(data) {
 
         }
 
-        writeNextChunk();
+        // Ver SEND_BULK_PRIME_DELAY_MS: la primera vuelta espera un
+        // poco más antes de escribir nada, en vez de arrancar en
+        // seco -- las siguientes ya usan el SEND_CHUNK_DELAY_MS de
+        // siempre (setTimeout adentro de writeNextChunk).
+        setTimeout(writeNextChunk, SEND_BULK_PRIME_DELAY_MS);
 
     }));
 
