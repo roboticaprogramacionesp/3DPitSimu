@@ -77,8 +77,29 @@
      stroke="#8c8c8c"
      stroke-width="1"
      id="circle2" />
+  <!-- Disco piezoelectrico -->
+  <circle
+     cx="25"
+     cy="25"
+     r="18"
+     fill="#151212"
+     stroke="#000000"
+     stroke-width="1"
+     id="circle4" />
+  <circle
+     cx="25"
+     cy="25"
+     r="5"
+     fill="#6a6a6a"
+     id="circle5" />
   <!-- Ondas de sonido : arrancan invisibles, Renderer las prende
-       mientras hay un tono sonando -->
+       mientras hay un tono sonando. Tienen que ir DESPUÉS del disco
+       en el documento: en SVG cada elemento se pinta ENCIMA de los
+       anteriores, y wave1/wave2 (radio 9.2/15) caen casi enteros
+       DENTRO del radio del disco (18); si el disco se dibuja después,
+       lo tapa y solo queda visible wave3 (radio 21.5, el único que
+       sobresale); bug real reportado por el usuario ("se ve como
+       una sola línea"). -->
   <path
      data-buzzer-role="wave1"
      d="M 32 19 A 9.2 9.2 0 0 1 32 31"
@@ -106,21 +127,6 @@
      opacity="0"
      stroke-linecap="round"
      id="path4" />
-  <!-- Disco piezoelectrico -->
-  <circle
-     cx="25"
-     cy="25"
-     r="18"
-     fill="#151212"
-     stroke="#000000"
-     stroke-width="1"
-     id="circle4" />
-  <circle
-     cx="25"
-     cy="25"
-     r="5"
-     fill="#6a6a6a"
-     id="circle5" />
   <!-- Franja del conector, donde van los 3 pines (S, +, -) -->
   <rect
      x="4"
