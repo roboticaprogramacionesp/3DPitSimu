@@ -285,6 +285,31 @@ class QemuBridge {
 
         if (!line) return;
 
+        if (line.startsWith("HAL_ERROR:")) {
+            // Formato: HAL_ERROR:<tipo>: <repr de la excepción> -- lo
+            // manda el wrapper try/except de ReplPanel._wrapHalForIsolation()
+            // cuando ese HAL puntual falló al cargarse (típicamente
+            // "transmision corrupta", ver el checksum del wrapper).
+            //
+            // ReplPanel marca cada tipo como "ya enviado" de forma
+            // OPTIMISTA, antes de saber si el paste realmente
+            // funcionó del lado de QEMU (no hay forma simple de
+            // confirmarlo en el momento -- ver el comentario grande
+            // en ReplPanel.runEditorCode()). Sin este aviso, un HAL
+            // que falló UNA vez queda marcado como "enviado" para
+            // siempre en esa sesión del navegador -- el usuario podía
+            // reintentar "Ejecutar" cien veces que ReplPanel nunca
+            // lo iba a volver a pegar, solo con un F5 completo de la
+            // página (que resetea _halSentToFirmware) se destrababa.
+            // Emitimos el tipo para que ReplPanel lo saque de esa
+            // marca y el PRÓXIMO "Ejecutar" lo reintente solo.
+            const match = line.match(/^HAL_ERROR:([^:]+):/);
+            if (match) {
+                this.simulator.eventBus.emit("qemu:hal-error", match[1]);
+            }
+            return;
+        }
+
         if (line.startsWith("GPIO:")) {
             const parts = line.split(":");
             if (parts.length >= 3) {

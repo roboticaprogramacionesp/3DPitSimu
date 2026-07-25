@@ -1072,6 +1072,17 @@ class ReplPanel {
             this.prompt.style.color = "#666";
         });
 
+        // Un HAL puntual falló al cargarse (ver el comentario grande
+        // en QemuBridge.parseLine(), rama "HAL_ERROR:") -- lo sacamos
+        // de _halSentToFirmware para que el PRÓXIMO "Ejecutar" lo
+        // reintente solo, en vez de quedar marcado como "ya enviado"
+        // para siempre en esta sesión del navegador (que era el
+        // comportamiento de antes: sin esto, un HAL corrupto una vez
+        // quedaba roto hasta un F5 completo de la página).
+        this.simulator.eventBus.on("qemu:hal-error", (type) => {
+            this._halSentToFirmware.delete(type);
+        });
+
         this.simulator.eventBus.on("gpio:changed", ({ gpio, value }) => {
 
             if (this._gpioLogMuted) return;
