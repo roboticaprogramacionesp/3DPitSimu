@@ -562,10 +562,35 @@ class ReplPanel {
         }
         const expectedLen = binaryStr.length;
 
+        // Corridas largas de un mismo caracter repetido (ej. ky_001.hal.py
+        // tiene 12 espacios seguidos de indentación doble ANTES de
+        // codificar -- eso da una corrida de 16 caracteres base64
+        // idénticos, "ICAgICAgICAgICAg") -- comparando byte a byte
+        // varias transmisiones corruptas reales de ese mismo archivo,
+        // la pérdida cayó SIEMPRE justo en esa corrida, en el mismo
+        // offset exacto, sesión tras sesión. Consistente con que la
+        // UART emulada (o el bridge stdin) pierda bytes específicamente
+        // ante ráfagas largas del mismo valor repetido -- no es un
+        // problema de tamaño de mensaje en general (otros HAL mucho
+        // más grandes, sin corridas tan largas, cargan bien). Se
+        // rompe cualquier corrida de 3+ caracteres iguales insertando
+        // un "\n" cada 2 -- inofensivo, ya se filtra todo whitespace
+        // con "".join(_hal_raw.split()) antes de decodificar, así que
+        // esto no cambia el contenido, solo evita que el mismo byte se
+        // repita más de un par de veces seguidas en lo que viaja por
+        // el WS/UART.
+        const b64NoRuns = b64.replace(/(.)\1{2,}/g, (run, ch) => {
+            const pieces = [];
+            for (let i = 0; i < run.length; i += 2) {
+                pieces.push(run.slice(i, i + 2));
+            }
+            return pieces.join("\n");
+        });
+
         const width = ReplPanel.HAL_B64_LINE_WIDTH;
         const rawLines = [];
-        for (let i = 0; i < b64.length; i += width) {
-            rawLines.push(b64.slice(i, i + width));
+        for (let i = 0; i < b64NoRuns.length; i += width) {
+            rawLines.push(b64NoRuns.slice(i, i + width));
         }
         // Sin indentación en las líneas de adentro: son CONTENIDO del
         // string triple-comillado, no sintaxis -- un espacio de más
