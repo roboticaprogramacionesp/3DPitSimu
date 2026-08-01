@@ -183,8 +183,8 @@ class WasmBridge {
     }
 
     // Mismo formato de protocolo que QemuBridge.js ("GPIO:<n>:<v>",
-    // etc.) -- se arranca solo con GPIO acá (LED, ver Fase 3 del
-    // plan); PWM/I2CR/ADC se suman cuando se porten esos componentes.
+    // etc.) -- ADC/I2CR (simulador→firmware) todavía no aplican acá,
+    // se suman cuando se porten componentes que los necesiten.
     _tryParseProtocolLine(line) {
 
         if (line.startsWith("GPIO:")) {
@@ -199,6 +199,34 @@ class WasmBridge {
             return true;
         }
 
+        if (line.startsWith("PWM:")) {
+            // Formato: PWM:<gpio>:<freq>:<duty> -- ver _base_wasm.py
+            // (misma clase PWM sintética que components/_base/_base.hal.py).
+            const parts = line.split(":");
+            if (parts.length >= 4) {
+                const gpio = parseInt(parts[1], 10);
+                const freq = parseInt(parts[2], 10);
+                const duty = parseInt(parts[3], 10);
+                if (!isNaN(gpio) && !isNaN(freq)) {
+                    this.simulator.signalEngine.setPwmState(this._espId(), `io${gpio}`, freq, duty);
+                }
+            }
+            return true;
+        }
+
+        if (line.startsWith("I2CW:")) {
+            // Formato: I2CW:<addr>:<byte> -- ver _i2c_bus_wasm.py.
+            const parts = line.split(":");
+            if (parts.length >= 3) {
+                const addr  = parseInt(parts[1], 10);
+                const value = parseInt(parts[2], 10);
+                if (!isNaN(addr) && !isNaN(value)) {
+                    this.simulator.signalEngine.setI2cWrittenByte(addr, value);
+                }
+            }
+            return true;
+        }
+
         const halErrorMatch = line.match(/^HAL_ERROR:([^:]+):/);
         if (halErrorMatch) {
             this.simulator.eventBus.emit("qemu:hal-error", halErrorMatch[1]);
@@ -207,6 +235,10 @@ class WasmBridge {
 
         return false;
 
+    }
+
+    _espId() {
+        return this.simulator.componentManager.getAll().find(c => c.type.startsWith("esp32"))?.id;
     }
 
     // Mismo criterio que QemuBridge.applyGpioChange() -- búsqueda en

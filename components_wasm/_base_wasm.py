@@ -130,6 +130,74 @@ class Pin:
             _irq_handlers[self._pin_num] = {"handler": handler, "trigger": trigger, "pin": self}
 
 
+# PWM genérico -- mismo protocolo "PWM:<gpio>:<freq>:<duty>\n" que ya
+# usa components/_base/_base.hal.py (ver ese archivo para el
+# historial completo: primero solo buzzer.hal.py/sg90.hal.py lo
+# tenían, después se generalizó acá también porque el PWM real de
+# QEMU tiraba "ValueError: invalid pin"). Acá no hay NINGÚN PWM real
+# de por medio (no existe tampoco en este puerto), así que esta
+# versión sintética es la ÚNICA que puede haber -- sin la sorpresa de
+# "el último componente que se carga pisa al anterior" que sí pasa en
+# QEMU (buzzer/sg90 cargan su propia clase PWM más específica encima).
+class PWM:
+
+    def __init__(self, pin, freq=None, duty=None, duty_u16=None, duty_ns=None):
+        self._pin_num = getattr(pin, "_pin_num", pin)
+        self._freq = 0
+        self._duty = 0
+        self._active = False
+
+        if duty is not None:
+            self._duty = duty
+        elif duty_u16 is not None:
+            self._duty = duty_u16 // 64
+
+        if freq is not None:
+            self._freq = freq
+            self._active = True
+            self._emit()
+
+    def _emit(self):
+        sent_freq = self._freq if self._active else 0
+        sys.stdout.write("PWM:%d:%d:%d\n" % (self._pin_num, sent_freq, self._duty))
+
+    def freq(self, hz=None):
+        if hz is None:
+            return self._freq
+        self._freq = hz
+        self._active = True
+        self._emit()
+
+    def duty(self, value=None):
+        if value is None:
+            return self._duty
+        self._duty = value
+        if self._active:
+            self._emit()
+
+    def duty_u16(self, value=None):
+        if value is None:
+            return self._duty * 64
+        self._duty = value // 64
+        if self._active:
+            self._emit()
+
+    def duty_ns(self, value=None):
+        pass
+
+    def init(self, freq=None, duty=None):
+        if freq is not None:
+            self._freq = freq
+        if duty is not None:
+            self._duty = duty
+        self._active = True
+        self._emit()
+
+    def deinit(self):
+        self._active = False
+        sys.stdout.write("PWM:%d:0:%d\n" % (self._pin_num, self._duty))
+
+
 # ─────────────────────────────────────────────────────────────
 # Módulo "machine" FALSO -- el puerto webassembly no trae ningún
 # módulo "machine" real (es específico de puertos con hardware de
@@ -150,4 +218,5 @@ class _FakeMachineModule:
 
 machine = _FakeMachineModule()
 machine.Pin = Pin
+machine.PWM = PWM
 sys.modules["machine"] = machine
