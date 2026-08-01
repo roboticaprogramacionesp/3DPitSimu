@@ -131,6 +131,39 @@ class Renderer {
     component.element.classList.toggle("led-on", isOn);
     component.element.classList.toggle("led-off", !isOn);
     this.applyLedColor(component, isOn);
+
+    // Este método representa control BINARIO (encendido a full o
+    // apagado) -- si un ciclo de evaluate() anterior dejó un opacity
+    // parcial puesto por applyLedBrightness() (PWM con duty bajo) y
+    // ahora el pin pasó a control digital normal, hay que limpiarlo:
+    // sin esto, un LED en digital HIGH se veía tenue si el mismo pin
+    // había tenido PWM de duty bajo momentos antes.
+    const graphic = component.element.querySelector(".component-graphic");
+    if (graphic) graphic.style.opacity = "";
+  }
+
+  // Llamado desde led.behavior.js cuando el ánodo está en un pin con
+  // PWM activo (ver SignalEngine.getPwmDutyForKey) -- brightness es
+  // duty/1023, 0..1. A diferencia de applyLedState (binario), acá el
+  // brillo es continuo, como un LED real atenuado por PWM.
+  applyLedBrightness(component, brightness) {
+    if (!component.element) return;
+
+    const isOn = brightness > 0;
+    this.applyLedState(component, isOn);
+
+    const graphic = component.element.querySelector(".component-graphic");
+    if (!graphic) return;
+
+    // El "opacity" de cada capa del SVG NO se toca acá (cada una ya
+    // trae su propia opacidad base a propósito -- ver el comentario
+    // grande de applyLedColor sobre las patitas internas). En cambio,
+    // se aplica un ÚNICO opacity sobre el contenedor ".component-graphic":
+    // CSS compone opacities de padre a hijo multiplicativamente, así
+    // que esto atenúa el conjunto sin pisar ninguna opacidad interna.
+    // Piso de 0.25 -- un LED real en duty bajo igual se ve tenue,
+    // nunca "perfectamente invisible" salvo apagado del todo (duty=0).
+    graphic.style.opacity = isOn ? (0.25 + brightness * 0.75).toFixed(2) : "";
   }
 
   // Compatibilidad con código que llame updateLedVisual directamente

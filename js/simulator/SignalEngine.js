@@ -1945,6 +1945,21 @@ class SignalEngine {
     return false;
   }
 
+  // Mismo criterio que isKeyConnectedToHighDriver, pero para PWM: un
+  // pin manejado con machine.PWM (ver setPwmState/_base.hal.py) nunca
+  // pasa por driverStates (no es un 0/1 digital), así que un LED
+  // cableado a un pin en PWM se veía SIEMPRE apagado -- isOn dependía
+  // solo de driverStates. Devuelve {freq, duty} del primer pin de la
+  // red con un PWM activo (freq > 0), o null si ninguno.
+  getPwmDutyForKey(startKey) {
+    const net = this.getNet(startKey);
+    for (const key of net) {
+      const pwm = this.pwmStates[key];
+      if (pwm && pwm.freq > 0) return pwm;
+    }
+    return null;
+  }
+
   // Un componente cuenta como FUENTE real de tierra/alimentación (no
   // solo "otro periférico que también tiene un pin ground/power") si
   // declara properties.isPowerSource=true en su .json -- hoy son el

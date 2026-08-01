@@ -13,11 +13,27 @@ ComponentBehaviorRegistry.register("led", {
 
         evaluate(component, engine) {
 
-            const anodoHigh = engine.isKeyConnectedToHighDriver(`${component.id}:anodo`);
             const catodoGnd = engine.isKeyConnectedToGnd(`${component.id}:catodo`);
-            const isOn = anodoHigh && catodoGnd;
+            if (!catodoGnd) {
+                engine.simulator.renderer.applyLedState(component, false);
+                return;
+            }
 
-            engine.simulator.renderer.applyLedState(component, isOn);
+            const anodoKey = `${component.id}:anodo`;
+
+            // PWM (machine.PWM, ver _base.hal.py) primero -- si el
+            // ánodo está en un pin manejado con PWM, el brillo depende
+            // del duty cycle, no de un 0/1 digital (isKeyConnectedToHighDriver
+            // nunca lo iba a ver: PWM no pasa por driverStates).
+            const pwm = engine.getPwmDutyForKey(anodoKey);
+            if (pwm) {
+                const brightness = Math.max(0, Math.min(1, pwm.duty / 1023));
+                engine.simulator.renderer.applyLedBrightness(component, brightness);
+                return;
+            }
+
+            const anodoHigh = engine.isKeyConnectedToHighDriver(anodoKey);
+            engine.simulator.renderer.applyLedState(component, anodoHigh);
 
         },
 
