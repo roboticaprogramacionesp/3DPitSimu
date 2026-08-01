@@ -243,6 +243,103 @@ class SignalEngine {
     this._notifyAdcToFirmware(component, "out2", value);
   }
 
+  // ====================================================
+  // Potenciómetro ROTATIVO (pot_rotary) -- mismo criterio que
+  // setSliderPosition (un solo eje, SIN resorte de centrado: el
+  // valor se queda en lo último que se arrastró), pero acá el
+  // arrastre en pot_rotary.behavior.js manda un ÁNGULO ya
+  // recortado a la carrera mecánica real (~300°) en vez de una
+  // posición lineal -- n01 (0..1) llega ya convertido desde ese
+  // ángulo. Un solo pin de salida ("sig"), a diferencia del
+  // deslizante que saca el wiper por 2.
+  // ====================================================
+
+  setPotRotaryValue(component, n01) {
+    const value = Math.round(Math.max(0, Math.min(1, n01)) * 65535);
+
+    component.potRotaryState = { n01, value };
+
+    this._notifyAdcToFirmware(component, "sig", value);
+  }
+
+  // ====================================================
+  // KY-018 Fotorresistor (LDR) -- mismo patrón que
+  // setPotRotaryValue/setSliderPosition (valor continuo por un solo
+  // pin "s"), pero acá n01 no viene de un arrastre en el canvas sino
+  // del slider "Nivel de luz" del panel de propiedades
+  // (ky-018.behavior.js), igual criterio que setBh1750Lux. 0 =
+  // oscuridad, 1 = luz intensa (más luz -> más voltaje en "s").
+  // ====================================================
+
+  setKy018LightLevel(component, n01) {
+    const value = Math.round(Math.max(0, Math.min(1, n01)) * 65535);
+
+    component.ky018State = { n01, value };
+
+    this._notifyAdcToFirmware(component, "s", value);
+  }
+
+  // ====================================================
+  // Lector RC522 -- REDISEÑADO a pedido (estilo Wokwi): ya no hay
+  // un componente "tarjeta" aparte para arrastrar/cablear -- la
+  // tarjeta a simular se elige desde el propio panel de propiedades
+  // del lector (dropdown con tarjetas preseteadas + botón TAP +
+  // switch Hold), igual que en Wokwi. rc522.behavior.js es quien
+  // arma ese panel y llama a estos métodos.
+  //
+  // A diferencia de TODO lo demás en este archivo, acá NO hay pin
+  // involucrado en decidir QUÉ tarjeta se "presenta" -- una RFID
+  // real se detecta por PROXIMIDAD (acoplamiento inductivo), no por
+  // continuidad eléctrica, así que no hay ningún "getNet() del lado
+  // de la tarjeta" que recorrer. Sí seguimos exigiendo que el LECTOR
+  // esté alimentado (isComponentPowered) antes de mandar nada --
+  // un RC522 sin 3.3V/GND no "detecta" nada tampoco en la vida real.
+  // ====================================================
+
+  setRc522PresentedCard(component, uidHex) {
+    component._rc522PresentedUid = uidHex || null;
+
+    if (!this.isComponentPowered(component)) return;
+    if (!this.simulator.qemuBridge?.connected) return;
+
+    this.simulator.qemuBridge.sendData(uidHex ? `RFID:${uidHex}` : `RFID:NONE`);
+  }
+
+  // TAP: presenta la tarjeta un instante y la retira sola (mismo
+  // concepto que "acercar y sacar" la tarjeta del lector) -- si
+  // mientras tanto se pidió otra cosa (otro tap, o Hold), el
+  // timeout de ESTE tap no pisa ese estado más nuevo (chequea que
+  // siga siendo la MISMA presentación antes de limpiar).
+  static RC522_TAP_DURATION_MS = 400;
+
+  tapRc522(component, uidHex) {
+    this.setRc522PresentedCard(component, uidHex);
+    setTimeout(() => {
+      if (component._rc522PresentedUid === uidHex) {
+        this.setRc522PresentedCard(component, null);
+      }
+    }, SignalEngine.RC522_TAP_DURATION_MS);
+  }
+
+  // Re-envía al firmware el estado de componentes que solo se
+  // notifican en el momento de una interacción puntual (ver nota
+  // "resync" en ComponentBehaviorRegistry.js) -- se llama una vez por
+  // cada reconexión real a QEMU, DESPUÉS de que el HAL ya esté
+  // cargado (si el mensaje llega antes de que el .hal.py del
+  // componente registre su propio protocolo, se pierde igual que
+  // cualquier otro mensaje sin listener). Sin esto, un RC522 con
+  // Hold prendido desde un proyecto recién cargado (o desde antes de
+  // un restart de QEMU) queda con la tarjeta "puesta" en la UI pero
+  // el firmware nunca se entera.
+  resyncAllComponents() {
+    this.simulator.componentManager.getAll().forEach((component) => {
+      const behavior = ComponentBehaviorRegistry.get(component.type);
+      if (behavior?.signal?.resync) {
+        behavior.signal.resync(component, this);
+      }
+    });
+  }
+
   _notifyAdcToFirmware(component, pinId, value) {
     if (!this.isComponentPowered(component)) return;
 
@@ -852,6 +949,34 @@ class SignalEngine {
   }
 
   // ====================================================
+  // Anillo de NeoPixel — llamado desde QemuBridge al recibir "NEOR:"
+  // (neopixel_ring.hal.py manda la tira completa cada vez que el
+  // firmware llama a NeoPixel.write()). Misma simplificación que la
+  // matriz: un solo anillo por canvas, sin direccionar por pin real.
+  // ====================================================
+
+  applyNeopixelRingFrame(hexString, n) {
+    const ring = this.simulator.componentManager
+      .getAll()
+      .find((c) => c.type === "neopixel_ring");
+
+    if (!ring) return;
+
+    const byteCount = Math.ceil(hexString.length / 2);
+    const bytes = new Uint8Array(byteCount);
+
+    for (let i = 0; i < byteCount; i++) {
+      bytes[i] = parseInt(hexString.substr(i * 2, 2), 16) || 0;
+    }
+
+    ring.lastNeopixelRingFrame = { rgbBytes: bytes, n };
+
+    this.simulator.renderer.drawNeopixelRingFrame(ring, bytes, n);
+
+    this.simulator.eventBus.emit("neopixel_ring:updated", { componentId: ring.id, n });
+  }
+
+  // ====================================================
   // Evaluar LEDs
   // ====================================================
 
@@ -1177,6 +1302,388 @@ class SignalEngine {
     );
   }
 
+  // ====================================================
+  // BH1750 (sensor de luz ambiental, I2C)
+  //
+  // Mismo criterio que MPU6050 (resolver por dirección I2C, "última
+  // muestra gana"), pero con un solo valor (lux) en vez de 7 --
+  // ver components/bh1750/bh1750.hal.py para el chip real (comando
+  // de modo por writeto() + lectura de 2 bytes crudos por
+  // readfrom(), sin mapa de registros).
+  // ====================================================
+
+  _getBh1750Address(component) {
+    const raw = component.properties?.i2cAddress;
+    if (raw === undefined || raw === null || raw === "") return 0x23;
+    const parsed =
+      typeof raw === "string"
+        ? parseInt(raw, raw.trim().toLowerCase().startsWith("0x") ? 16 : 10)
+        : raw;
+    return Number.isFinite(parsed) ? parsed : 0x23;
+  }
+
+  setBh1750Lux(componentId, lux) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+
+    if (!component.properties) component.properties = {};
+    component.properties.lux = lux;
+
+    this._notifyBh1750ToFirmware(component);
+
+    this.simulator.eventBus.emit("bh1750:changed", { componentId, lux });
+  }
+
+  _notifyBh1750ToFirmware(component) {
+    if (!this.simulator.qemuBridge?.connected) return;
+    if (!this.isComponentPowered(component)) return;
+    if (!this.isFullyConnected(component, "i2c")) return;
+
+    const address = this._getBh1750Address(component);
+    const lux = component.properties?.lux ?? 200;
+
+    this.simulator.qemuBridge.sendData(`BH1750:${address}:${lux}`);
+  }
+
+  // ====================================================
+  // TCS34725 (sensor de color RGB + clear, I2C)
+  //
+  // Dirección FIJA 0x29 (sin pin ADDR, igual criterio que BMP180) --
+  // ver components/tcs34725/tcs34725.hal.py para el mapa de
+  // registros real. El color se elige en el panel de propiedades
+  // (un <input type="color">) en vez de arrastrar/detectar nada en
+  // el canvas -- no hay una "tarjeta de color" física que simular.
+  //
+  // hexToU16Channels(): un hex #RRGGBB (0-255 por canal) se escala a
+  // la escala de 16 bits que espera el registro real (multiplicando
+  // por 257 = 65535/255, conversión exacta sin redondeo raro en los
+  // extremos). El canal "clear" (sin filtrar) no tiene un color
+  // real que leer -- se aproxima como el máximo de los 3 canales
+  // (misma idea que un sensor real: clear siempre es >= cualquier
+  // canal filtrado individual), con un piso para que nunca lea 0
+  // absoluto con luz ambiente aunque el color elegido sea negro puro.
+  // ====================================================
+
+  _hexToU16Channels(hex) {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || "");
+    const r8 = m ? parseInt(m[1], 16) : 255;
+    const g8 = m ? parseInt(m[2], 16) : 128;
+    const b8 = m ? parseInt(m[3], 16) : 0;
+
+    const toU16 = (v) => Math.round(v * 257);
+    const r = toU16(r8);
+    const g = toU16(g8);
+    const b = toU16(b8);
+    const c = Math.max(r, g, b, toU16(20));
+
+    return { r, g, b, c };
+  }
+
+  setTcs34725Color(componentId, hex) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+
+    if (!component.properties) component.properties = {};
+    component.properties.color = hex;
+
+    this._notifyTcs34725ToFirmware(component);
+
+    this.simulator.eventBus.emit("tcs34725:changed", { componentId, hex });
+  }
+
+  _notifyTcs34725ToFirmware(component) {
+    if (!this.simulator.qemuBridge?.connected) return;
+    if (!this.isComponentPowered(component)) return;
+    if (!this.isFullyConnected(component, "i2c")) return;
+
+    const { r, g, b, c } = this._hexToU16Channels(component.properties?.color);
+    const address = 0x29;
+
+    this.simulator.qemuBridge.sendData(`TCS:${address}:${r}:${g}:${b}:${c}`);
+  }
+
+  // ====================================================
+  // DS3231 (RTC de alta precisión, I2C)
+  //
+  // Dirección FIJA 0x68 (sin pin ADDR) -- ver
+  // components/ds3231/ds3231.hal.py para el mapa de registros real.
+  // Sigue tickeando SOLO mientras el componente exista en el canvas:
+  // ds3231.behavior.js arranca un setInterval de 1s en
+  // render.initialState y lo limpia en Renderer.removeComponent
+  // (ver ese archivo) -- acá solo se calcula y manda el epoch actual.
+  // ====================================================
+
+  setDs3231Offset(componentId, offsetMs) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+
+    if (!component.properties) component.properties = {};
+    component.properties.rtcOffsetMs = offsetMs;
+
+    this._notifyDs3231ToFirmware(component);
+  }
+
+  _notifyDs3231ToFirmware(component) {
+    if (!this.simulator.qemuBridge?.connected) return;
+    if (!this.isComponentPowered(component)) return;
+    if (!this.isFullyConnected(component, "i2c")) return;
+
+    const offsetMs = component.properties?.rtcOffsetMs || 0;
+    const epochSeconds = Math.floor((Date.now() + offsetMs) / 1000);
+
+    this.simulator.qemuBridge.sendData(`RTC:104:${epochSeconds}`);
+  }
+
+  // ====================================================
+  // BMP180 (presión barométrica + temperatura, I2C)
+  //
+  // Dirección FIJA 0x77 (a diferencia de BH1750/MPU6050, este chip
+  // no tiene pin ADDR) -- ver components/bmp180/bmp180.hal.py para
+  // el mapa de registros real + cómo se invierten las fórmulas de
+  // compensación de Bosch.
+  // ====================================================
+
+  setBmp180(componentId, key, value) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+
+    if (!component.properties) component.properties = {};
+    component.properties[key] = value;
+
+    this._notifyBmp180ToFirmware(component);
+
+    this.simulator.eventBus.emit("bmp180:changed", { componentId, key, value });
+  }
+
+  _notifyBmp180ToFirmware(component) {
+    if (!this.simulator.qemuBridge?.connected) return;
+    if (!this.isComponentPowered(component)) return;
+    if (!this.isFullyConnected(component, "i2c")) return;
+
+    const p = component.properties || {};
+    const temp = p.temperature ?? 22;
+    const pressure = p.pressure ?? 101325;
+
+    this.simulator.qemuBridge.sendData(`BMP180:119:${temp}:${pressure}`);
+  }
+
+  // ====================================================
+  // BMP280 (presión barométrica + temperatura, I2C)
+  //
+  // A diferencia del BMP180 (dirección fija 0x77), el BMP280 sí
+  // tiene pin SDO que elige 0x76/0x77 -- dirección configurable
+  // igual que BH1750/MPU6050. Ver components/bmp280/bmp280.hal.py
+  // para el mapa de registros real (distinto del BMP180) + la
+  // inversión de la fórmula de compensación de Bosch para este chip.
+  // ====================================================
+
+  _getBmp280Address(component) {
+    const raw = component.properties?.i2cAddress;
+    if (raw === undefined || raw === null || raw === "") return 0x76;
+    const parsed =
+      typeof raw === "string"
+        ? parseInt(raw, raw.trim().toLowerCase().startsWith("0x") ? 16 : 10)
+        : raw;
+    return Number.isFinite(parsed) ? parsed : 0x76;
+  }
+
+  setBmp280(componentId, key, value) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+
+    if (!component.properties) component.properties = {};
+    component.properties[key] = value;
+
+    this._notifyBmp280ToFirmware(component);
+
+    this.simulator.eventBus.emit("bmp280:changed", { componentId, key, value });
+  }
+
+  _notifyBmp280ToFirmware(component) {
+    if (!this.simulator.qemuBridge?.connected) return;
+    if (!this.isComponentPowered(component)) return;
+    if (!this.isFullyConnected(component, "i2c")) return;
+
+    const address = this._getBmp280Address(component);
+    const p = component.properties || {};
+    const temp = p.temperature ?? 22;
+    const pressure = p.pressure ?? 101325;
+
+    this.simulator.qemuBridge.sendData(`BMP280:${address}:${temp}:${pressure}`);
+  }
+
+  // ====================================================
+  // QMC5883L (magnetómetro/brújula, I2C) -- ver
+  // components/qmc5883l/qmc5883l.hal.py para el protocolo real de
+  // registro "a mano" que usa este driver (no readfrom_mem/
+  // writeto_mem). Dirección FIJA 0x2C (default del driver real del
+  // usuario) -- no tiene pin ADDR.
+  //
+  // El panel de propiedades elige un HEADING (0-360°, "hacia dónde
+  // apunta" el sensor) en vez de un valor crudo -- se convierte acá
+  // a un vector X/Y sintético (X=M*cos, Y=M*sin, magnitud M=2000
+  // arbitraria pero suficiente para que atan2(y,x) del código del
+  // usuario recupere el mismo heading), más una Z fija chica
+  // (componente vertical típica del campo terrestre).
+  // ====================================================
+
+  setQmc5883Heading(componentId, headingDeg) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+
+    if (!component.properties) component.properties = {};
+    component.properties.heading = headingDeg;
+
+    this._notifyQmc5883ToFirmware(component);
+
+    this.simulator.eventBus.emit("qmc5883l:changed", { componentId, headingDeg });
+  }
+
+  _notifyQmc5883ToFirmware(component) {
+    if (!this.simulator.qemuBridge?.connected) return;
+    if (!this.isComponentPowered(component)) return;
+    if (!this.isFullyConnected(component, "i2c")) return;
+
+    const headingDeg = component.properties?.heading ?? 0;
+    const rad = (headingDeg * Math.PI) / 180;
+    const MAG_MAGNITUDE = 2000;
+
+    const x = Math.round(MAG_MAGNITUDE * Math.cos(rad));
+    const y = Math.round(MAG_MAGNITUDE * Math.sin(rad));
+    const z = 400;
+
+    const address = 0x2c;
+
+    this.simulator.qemuBridge.sendData(`MAG:${address}:${x}:${y}:${z}`);
+  }
+
+  // ====================================================
+  // GPS (NMEA por UART) -- primer periférico UART de este proyecto,
+  // ver components/_uart_bus/_uart_bus.hal.py para el protocolo
+  // completo. A diferencia de I2C (se resuelve por dirección), acá
+  // el "id" de UART lo elige el código del usuario (UART(1)/UART(2))
+  // -- _findGpsUartId cruza el PININFO que declaró el firmware al
+  // construir su UART contra el cable real dibujado desde el pin
+  // "tx" del GPS hasta el ESP32, para saber a qué id mandarle las
+  // oraciones NMEA.
+  //
+  // Genera sentencias GPRMC + GGA reales (con checksum NMEA
+  // correcto, XOR de todo el cuerpo entre "$" y "*") a partir de las
+  // propiedades elegidas en el panel -- ver gps.behavior.js para el
+  // ticking de 1s (mismo patrón que ds3231.behavior.js) que llama a
+  // esto periódicamente para que la hora/fecha del GPRMC seas la
+  // hora real, no solo un valor fijo.
+  // ====================================================
+
+  _findGpsUartId(component) {
+    const esp32 = this.simulator.componentManager
+      .getAll()
+      .find((c) => c.type.startsWith("esp32"));
+    if (!esp32) return null;
+
+    const net = this.getNet(`${component.id}:tx`);
+    let gpioNum = null;
+    for (const key of net) {
+      const [cId, pId] = key.split(":");
+      if (cId !== esp32.id) continue;
+      const match = pId.match(/^io(\d+)$/);
+      if (match) {
+        gpioNum = parseInt(match[1], 10);
+        break;
+      }
+    }
+    if (gpioNum === null) return null;
+
+    for (const key of Object.keys(this.declaredPins)) {
+      if (!key.startsWith("uart:")) continue;
+      const declared = this.declaredPins[key];
+      if (declared.rx === gpioNum) {
+        return parseInt(key.slice("uart:".length), 10);
+      }
+    }
+    return null;
+  }
+
+  _nmeaChecksum(body) {
+    let cs = 0;
+    for (let i = 0; i < body.length; i++) cs ^= body.charCodeAt(i);
+    return cs.toString(16).toUpperCase().padStart(2, "0");
+  }
+
+  _nmeaLatLon(lat, lon) {
+    const latHemi = lat >= 0 ? "N" : "S";
+    const lonHemi = lon >= 0 ? "E" : "W";
+    const latAbs = Math.abs(lat);
+    const lonAbs = Math.abs(lon);
+    const latDeg = Math.floor(latAbs);
+    const latMin = (latAbs - latDeg) * 60;
+    const lonDeg = Math.floor(lonAbs);
+    const lonMin = (lonAbs - lonDeg) * 60;
+
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const pad3 = (n) => String(n).padStart(3, "0");
+    const padMin = (m) => m.toFixed(4).padStart(7, "0");
+
+    return {
+      latStr: `${pad2(latDeg)}${padMin(latMin)}`,
+      latHemi,
+      lonStr: `${pad3(lonDeg)}${padMin(lonMin)}`,
+      lonHemi,
+    };
+  }
+
+  _buildGprmc(component) {
+    const p = component.properties || {};
+    const now = new Date();
+    const time = `${String(now.getUTCHours()).padStart(2, "0")}${String(now.getUTCMinutes()).padStart(2, "0")}${String(now.getUTCSeconds()).padStart(2, "0")}.00`;
+    const date = `${String(now.getUTCDate()).padStart(2, "0")}${String(now.getUTCMonth() + 1).padStart(2, "0")}${String(now.getUTCFullYear() % 100).padStart(2, "0")}`;
+
+    const { latStr, latHemi, lonStr, lonHemi } = this._nmeaLatLon(p.lat ?? 0, p.lon ?? 0);
+    const status = p.fixValid === false ? "V" : "A";
+    const speed = (p.speedKnots ?? 0).toFixed(1);
+    const course = (p.course ?? 0).toFixed(1);
+
+    const body = `GPRMC,${time},${status},${latStr},${latHemi},${lonStr},${lonHemi},${speed},${course},${date},,,A`;
+    return `$${body}*${this._nmeaChecksum(body)}`;
+  }
+
+  _buildGpgga(component) {
+    const p = component.properties || {};
+    const now = new Date();
+    const time = `${String(now.getUTCHours()).padStart(2, "0")}${String(now.getUTCMinutes()).padStart(2, "0")}${String(now.getUTCSeconds()).padStart(2, "0")}.00`;
+
+    const { latStr, latHemi, lonStr, lonHemi } = this._nmeaLatLon(p.lat ?? 0, p.lon ?? 0);
+    const fixQuality = p.fixValid === false ? 0 : 1;
+    const satellites = p.satellites ?? 8;
+    const altitude = (p.altitude ?? 10).toFixed(1);
+
+    const body = `GPGGA,${time},${latStr},${latHemi},${lonStr},${lonHemi},${fixQuality},${satellites},1.0,${altitude},M,0.0,M,,`;
+    return `$${body}*${this._nmeaChecksum(body)}`;
+  }
+
+  setGpsData(componentId, data) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+
+    if (!component.properties) component.properties = {};
+    Object.assign(component.properties, data);
+
+    this._notifyGpsToFirmware(component);
+
+    this.simulator.eventBus.emit("gps:changed", { componentId });
+  }
+
+  _notifyGpsToFirmware(component) {
+    if (!this.simulator.qemuBridge?.connected) return;
+    if (!this.isComponentPowered(component)) return;
+
+    const uartId = this._findGpsUartId(component);
+    if (uartId === null) return; // el firmware todavía no construyó su UART
+
+    this.simulator.qemuBridge.sendData(`UART:${uartId}:${this._buildGprmc(component)}`);
+    this.simulator.qemuBridge.sendData(`UART:${uartId}:${this._buildGpgga(component)}`);
+  }
+
    // ====================================================
   // Encoder rotativo KY-040 (CLK/DT en cuadratura + SW)
   //
@@ -1201,12 +1708,25 @@ class SignalEngine {
   // eso cada fase se manda con un setTimeout entre medio, no todas
   // juntas.
   //
-  // LIMITACIÓN CONOCIDA (heredada de _base_hal.py, no es algo
-  // nuevo de acá): todo pin de entrada de este proyecto es de
-  // POLLEO -- no hay ninguna interrupción real de hardware detrás
-  // de un "IN:". Firmware que use Pin.irq() sobre CLK (muy común en
-  // ejemplos "de libro" de KY-040) NO va a disparar. Funciona con
-  // el patrón típico de tutorial (leer clk/dt en un while True:).
+  // ACTUALIZACIÓN: la nota vieja de acá decía que Pin.irq() sobre CLK
+  // (el patrón que usa rotary_irq_esp.py, la librería real más común
+  // para KY-040) NO iba a disparar nunca, por ser todo polleo sin
+  // interrupción de hardware real. Eso quedó desactualizado -- _base.hal.py
+  // arma un machine.Timer de fondo (10ms) que llama a poll_input()
+  // aunque el firmware nunca llame sleep()/value(), así que Pin.irq()
+  // SÍ dispara solo, de forma asincrónica. Confirmado offline: el
+  // handler se dispara correctamente en transiciones sucesivas (no en
+  // la primera lectura de un pin recién creado -- hace falta un valor
+  // anterior para detectar flanco, ver _maybe_fire_irq en _base.hal.py).
+  //
+  // Lo que SÍ era un bug real (reportado: "al hacer clic las flechas
+  // no se actualiza el valor" con rotary_irq_esp.py): el orden CLK
+  // antes que DT en el step() de abajo. Esa librería dispara su IRQ
+  // sobre CLK y lee dt.value() de forma síncrona ADENTRO del handler
+  // -- si la línea de CLK se procesa antes que la de DT, el handler ve
+  // un DT todavía viejo y la tabla de estados de cuadratura descarta
+  // la transición por "inválida" (silencioso, sin excepción). Ver el
+  // fix (DT antes que CLK) en step() más abajo.
   // ====================================================
 
   // direction: +1 (horario) / -1 (antihorario)
@@ -1222,11 +1742,32 @@ class SignalEngine {
     ];
 
     // Recorrido de 4 estados (3 intermedios + reposo final) según
-    // el sentido de giro.
+    // el sentido de giro. Antes empezaba directo en la fase 1/3 --
+    // FIX real (confirmado con el código fuente de verdad de
+    // rotary_irq_esp.py/rotary.py, que el usuario pasó): esa
+    // librería registra Pin.irq() en AMBOS pines (CLK y DT, no solo
+    // CLK) y arma su propia máquina de estados por Gray code
+    // re-leyendo los dos pines en cada flanco. El problema: la
+    // PRIMERA vez que se gira el encoder, ni CLK ni DT tuvieron
+    // NUNCA un "IN:" antes -- _maybe_fire_irq() de _base.hal.py
+    // exige un valor anterior para detectar un flanco (si no, no hay
+    // "flanco" que detectar), así que ese primer mensaje de cada pin
+    // actualiza _pin_input_states pero NUNCA dispara el IRQ. Eso
+    // significa que el primer giro entero se pierde en silencio --
+    // la máquina de estados de la librería ni se entera de que pasó.
+    // Confirmado a mano contra la tabla _transition_table real: sin
+    // este fix, el primer clic nunca completa un ciclo válido.
+    //
+    // Fix: mandar la fase de REPOSO [1,1] explícita ANTES de arrancar
+    // -- para el primer giro de la vida del encoder, esto establece
+    // la línea base que le faltaba a _maybe_fire_irq(); para
+    // cualquier giro posterior es un reenvío inofensivo del mismo
+    // valor ya vigente (no dispara nada, _maybe_fire_irq ve
+    // old==new).
     const path =
       direction > 0
-        ? [PHASES[1], PHASES[2], PHASES[3], PHASES[0]]
-        : [PHASES[3], PHASES[2], PHASES[1], PHASES[0]];
+        ? [PHASES[0], PHASES[1], PHASES[2], PHASES[3], PHASES[0]]
+        : [PHASES[0], PHASES[3], PHASES[2], PHASES[1], PHASES[0]];
 
     if (!this._encoderQueues) this._encoderQueues = {};
     if (!this._encoderQueues[component.id]) {
@@ -1252,8 +1793,26 @@ class SignalEngine {
         return;
       }
       const [clk, dt] = next;
-      this._notifyDigitalToFirmware(component, "clk", clk);
+      // FIX real (a pedido: "en el encoder al hacer clic las flechas
+      // no se actualiza el valor" -- confirmado con rotary_irq_esp.py,
+      // que SÍ depende de Pin.irq() sobre CLK, no del patrón de
+      // polling en while True:): antes se mandaba CLK primero y DT
+      // después. rotary_irq_esp registra su handler de IRQ sobre CLK
+      // y, DENTRO de ese handler, lee dt.value() de forma síncrona
+      // para decidir el sentido de giro (el clásico algoritmo de
+      // tabla de estados de cuadratura). Si la línea "IN:18:..." (CLK)
+      // se procesa ANTES que "IN:19:..." (DT) -- que es lo que pasaba,
+      // mandando CLK primero -- el handler de CLK se dispara con el DT
+      // TODAVÍA viejo en _pin_input_states (esa línea ni llegó a
+      // poll_input() todavía), así que lee la combinación
+      // CLK/DT incorrecta para esa fase. La mayoría de estas
+      // implementaciones descartan silenciosamente cualquier
+      // combinación que no matchee una transición válida de Gray code
+      // -- por eso el conteo se quedaba pegado en 0 pase lo que pase.
+      // Mandando DT primero, para cuando la línea de CLK se procesa y
+      // dispara el IRQ, DT ya está actualizado en _pin_input_states.
       this._notifyDigitalToFirmware(component, "dt", dt);
+      this._notifyDigitalToFirmware(component, "clk", clk);
       // 4ms entre fases: suficiente para que un while True: normal
       // (sin nada bloqueante pesado adentro) llegue a pollear cada
       // transición por separado, sin frenar demasiado un arrastre
@@ -1292,7 +1851,63 @@ class SignalEngine {
     }
   }
 
-  
+  // ====================================================
+  // FC-51 (sensor infrarrojo de obstáculos, salida digital)
+  //
+  // Sin protocolo propio -- reusa _notifyDigitalToFirmware() (el
+  // mismo helper genérico que ya usa el encoder KY-040 para CLK/DT),
+  // mandando el pin "out" directo. Activo en BAJO (0 = objeto
+  // detectado, 1 = sin obstáculo), igual que el módulo real.
+  // ====================================================
+
+  setFc51Detected(componentId, detected) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+
+    if (!component.properties) component.properties = {};
+    component.properties.detectado = detected;
+
+    this._notifyDigitalToFirmware(component, "out", detected ? 0 : 1);
+
+    this.simulator.eventBus.emit("fc51:changed", { componentId, detected });
+  }
+
+  // ====================================================
+  // TCRT5000 (sensor infrarrojo de línea/obstáculo) -- mismo
+  // criterio y protocolo que setFc51Detected, solo cambia el nombre
+  // del pin ("do" en vez de "out", ver tcrt5000.json).
+  // ====================================================
+
+  setTcrt5000Detected(componentId, detected) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+
+    if (!component.properties) component.properties = {};
+    component.properties.detectado = detected;
+
+    this._notifyDigitalToFirmware(component, "do", detected ? 0 : 1);
+
+    this.simulator.eventBus.emit("tcrt5000:changed", { componentId, detected });
+  }
+
+  // ====================================================
+  // PIR HC-SR501 (sensor de movimiento) -- a diferencia de FC-51/
+  // TCRT5000 (activos en BAJO), el HC-SR501 real es activo en ALTO:
+  // OUT=1 mientras detecta movimiento, OUT=0 en reposo.
+  // ====================================================
+
+  setPirDetected(componentId, detected) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+
+    if (!component.properties) component.properties = {};
+    component.properties.detectado = detected;
+
+    this._notifyDigitalToFirmware(component, "out", detected ? 1 : 0);
+
+    this.simulator.eventBus.emit("pir:changed", { componentId, detected });
+  }
+
   // ====================================================
   // Buzzer piezo pasivo (buzzer, KY-006)
   //
@@ -1330,13 +1945,72 @@ class SignalEngine {
     return false;
   }
 
+  // Un componente cuenta como FUENTE real de tierra/alimentación (no
+  // solo "otro periférico que también tiene un pin ground/power") si
+  // declara properties.isPowerSource=true en su .json -- hoy son el
+  // ESP32 (esp32_wroom.json) y la batería (battery_18650.json).
+  // Cualquier componente NUEVO que provea alimentación (otro pack de
+  // pilas, una fuente externa, etc.) solo necesita sumar ese flag,
+  // sin tocar nada acá.
+  //
+  // BUG REAL (reportado: LCD/OLED "sin alimentación" en un proyecto
+  // GUARDADO antes de que este flag existiera): un ESP32 restaurado
+  // desde un archivo viejo trae SUS PROPIAS properties congeladas al
+  // momento de guardar, sin el "isPowerSource" que se agregó acá
+  // después -- deserialize() nunca mezcla defaults nuevos del .json
+  // actual sobre un save viejo. Resultado: CUALQUIER proyecto
+  // guardado antes de este audit quedaba con TODOS sus periféricos
+  // reportando "no alimentado", sin importar que el cableado fuera
+  // perfecto. El ESP32 es la placa central -- no es opcional/
+  // enchufable como una batería, así que cuenta como fuente real
+  // por TIPO, sin depender de que esa propiedad haya sobrevivido la
+  // ida y vuelta de guardado/carga. El flag explícito sigue siendo
+  // la vía para fuentes NUEVAS (baterías, fuentes externas, etc.).
+  _isPowerSourceComponent(component) {
+    if (!component) return false;
+    if (component.type?.startsWith("esp32")) return true;
+    return !!component.properties?.isPowerSource;
+  }
+
   isKeyConnectedToGnd(startKey) {
     const net = this.getNet(startKey);
     if (net.length === 1) return false;
+
+    // AUDITORÍA (a pedido: "solo funcionen si los pines de gnd... está
+    // conectado al gnd de la tarjeta esp32"): antes esto aceptaba
+    // CUALQUIER otro pin tipo "ground" en la red, sin importar si esa
+    // red llegaba de verdad hasta una fuente real -- dos periféricos
+    // con su GND cableado entre sí, pero NINGUNO conectado al ESP32 ni
+    // a una batería, pasaban igual (cada uno "veía" el GND del otro).
+    // En la vida real eso no tiene tierra de verdad (nada cierra el
+    // circuito contra la fuente), así que ahora se exige encontrar
+    // puntualmente un pin ground de un componente FUENTE
+    // (_isPowerSourceComponent) en la red -- una cadena periférico ->
+    // periférico -> ESP32/batería sigue funcionando igual que antes
+    // (getNet ya la atraviesa completa), lo único que deja de
+    // aceptarse es una cadena que nunca llega a ninguna fuente real.
+    // IMPORTANTE: no se puede restringir esto a "debe ser el ESP32
+    // puntualmente" -- el L298N.power_gnd/power_12v se alimenta a
+    // propósito de una batería externa (12V), no del ESP32 (que ni
+    // siquiera podría proveer esa corriente en la vida real).
     for (const key of net) {
+      // FIX real (encontrado agregando el switch de alimentación): si
+      // startKey ES un pin ground (el caso normal -- se llama con el
+      // propio pin GND del componente que se está chequeando), el
+      // Set "visited" de getNet() SIEMPRE incluye a startKey en su
+      // propia red, así que el loop se encontraba a SÍ MISMO y
+      // devolvía true sin importar qué haya (o no) del otro lado del
+      // cable -- un pin GND wireado a CUALQUIER COSA (incluso a un
+      // interruptor ABIERTO, sin ninguna tierra real más allá) daba
+      // "conectado a tierra" trivialmente. Saltear startKey obliga a
+      // encontrar un pin ground DISTINTO en la red -- no cambia nada
+      // para el caso normal (GND cableado directo a otro GND real,
+      // ese otro pin sigue matcheando igual), pero si corta la
+      // continuidad real.
+      if (key === startKey) continue;
       const [cId, pId] = key.split(":");
       const component = this.simulator.componentManager.get(cId);
-      if (!component) continue;
+      if (!component || !this._isPowerSourceComponent(component)) continue;
       const pin = component.pins.find((p) => p.id === pId);
       if (pin && (pin.type === "ground" || pin.signal === "ground")) {
         return true;
@@ -1356,10 +2030,30 @@ class SignalEngine {
   isKeyConnectedToPower(startKey) {
     const net = this.getNet(startKey);
     if (net.length === 1) return false;
+
+    // Mismo criterio (y mismo motivo) que isKeyConnectedToGnd de
+    // arriba -- exigir que la red llegue puntualmente a un pin de
+    // alimentación de un componente FUENTE real (ESP32 o batería, ver
+    // _isPowerSourceComponent), no de cualquier otro periférico. Acá
+    // NO importa si es 3.3V/5V del ESP32 o los ~7.4V de la batería --
+    // cualquier fuente real cuenta como "hay alimentación" (a pedido:
+    // casi todo sensor/módulo debe poder usar cualquiera). La
+    // preferencia por 3.3V y las excepciones puntuales que sí
+    // necesitan un voltaje específico (ej. un relevador) se manejan
+    // aparte, como AVISO no bloqueante -- ver getVoltageWarnings()/
+    // _inferPinVoltage(), que solo dispara cuando el propio .json del
+    // componente declara "voltage" explícito en su pin.
     for (const key of net) {
+      // Mismo fix que isKeyConnectedToGnd de arriba -- ver ese
+      // comentario. Confirmado en la práctica con el nuevo switch de
+      // alimentación: sin este "continue", L298N.power_12v se
+      // encontraba a sí mismo en su propia red y reportaba "hay
+      // alimentación" incluso con el interruptor abierto entre él y
+      // la batería.
+      if (key === startKey) continue;
       const [cId, pId] = key.split(":");
       const component = this.simulator.componentManager.get(cId);
-      if (!component) continue;
+      if (!component || !this._isPowerSourceComponent(component)) continue;
       const pin = component.pins.find((p) => p.id === pId);
       if (pin && (pin.type === "power" || pin.signal === "power")) {
         return true;
@@ -1556,13 +2250,23 @@ class SignalEngine {
   _inferPinVoltage(pin) {
     if (!pin) return null;
 
+    // ANTES: si no había "voltage" explícito, se adivinaba mirando el
+    // TEXTO del id/name del pin (ej. "VCC (+5V)" -> 5). A pedido
+    // ("todos los sensores y módulos deben poder conectarse a 3.3V o
+    // 5V... debería funcionar en cualquiera"): eso generaba avisos
+    // falsos para CASI CUALQUIER sensor -- KY-040, joystick, KY-018,
+    // KY-023, L298N, etc. tienen "+5V" en el nombre (rótulo nominal
+    // de la sérigrafía real) pero en la práctica funcionan perfecto
+    // con 3.3V del ESP32, que es justo la conexión correcta y
+    // recomendada, no un error. Ninguno de esos .json declara
+    // "voltage" a propósito -- todos disparaban el aviso solo por el
+    // texto. Ahora SOLO se avisa si el componente declaró
+    // explícitamente "voltage" en su pin (para el día que se agregue
+    // algo que sí lo necesite de verdad, ej. un relevador que
+    // requiere 5V real para activar la bobina -- ese .json puede
+    // declarar "voltage": 5 a propósito, y ESE caso sí generaría el
+    // aviso, con intención real y no una adivinanza de texto).
     if (typeof pin.voltage === "number") return pin.voltage;
-
-    const id = (pin.id || "").toLowerCase();
-    const name = (pin.name || "").toLowerCase();
-
-    if (/3v3|3\.3\s*v/.test(id) || /3v3|3\.3\s*v/.test(name)) return 3.3;
-    if (/\b5v\b|5\.0\s*v/.test(id) || /\b5v\b|5\.0\s*v/.test(name)) return 5;
 
     return null;
   }
@@ -1645,6 +2349,50 @@ class SignalEngine {
           queue.push(keyA);
         }
       });
+
+      // Interruptor deslizante SPDT (NC/COM/NO, ej. slide_switch): a
+      // diferencia de pressPins (un solo par, puenteado solo mientras
+      // "pressed"), acá COM siempre está puenteado a UNO de los dos
+      // lados -- nunca ambos, nunca ninguno -- según
+      // component.spdtPosition ("nc"|"no"). Mismo criterio genérico
+      // que pressPins arriba, solo que el par activo puede cambiar.
+      this.simulator.componentManager.getAll().forEach((component) => {
+        if (!component.spdtPins) return;
+        const { common, nc, no } = component.spdtPins;
+        const activeSide = component.spdtPosition === "no" ? no : nc;
+        if (!activeSide) return;
+
+        const keyCommon = `${component.id}:${common}`;
+        const keyActive = `${component.id}:${activeSide}`;
+        if (keyCommon === current && !visited.has(keyActive)) {
+          visited.add(keyActive);
+          queue.push(keyActive);
+        }
+        if (keyActive === current && !visited.has(keyCommon)) {
+          visited.add(keyCommon);
+          queue.push(keyCommon);
+        }
+      });
+
+      // Puente incondicional (ej. resistencia): a diferencia de
+      // pressPins/spdtPins, este componente no tiene estado propio que
+      // decida SI puentea -- sus dos terminales están conectados entre
+      // sí siempre que exista el componente (ver resistencia.behavior.js,
+      // que fija component.alwaysBridgePins una sola vez en initialState).
+      this.simulator.componentManager.getAll().forEach((component) => {
+        if (!component.alwaysBridgePins) return;
+        const [pinA, pinB] = component.alwaysBridgePins;
+        const keyA = `${component.id}:${pinA}`;
+        const keyB = `${component.id}:${pinB}`;
+        if (keyA === current && !visited.has(keyB)) {
+          visited.add(keyB);
+          queue.push(keyB);
+        }
+        if (keyB === current && !visited.has(keyA)) {
+          visited.add(keyA);
+          queue.push(keyA);
+        }
+      });
     }
 
     return [...visited];
@@ -1707,6 +2455,12 @@ class SignalEngine {
       .find((c) => c.type === "neopixel_matrix");
     if (neo) {
       this.simulator.renderer.clearNeopixelGrid(neo);
+    }
+    const neoRing = this.simulator.componentManager
+      .getAll()
+      .find((c) => c.type === "neopixel_ring");
+    if (neoRing) {
+      this.simulator.renderer.clearNeopixelRing(neoRing);
     }
     const max7219 = this.simulator.componentManager
       .getAll()
