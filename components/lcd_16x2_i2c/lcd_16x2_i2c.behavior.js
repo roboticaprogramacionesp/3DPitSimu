@@ -1,31 +1,31 @@
 /*
 ==========================================================
- PitSimulator — lcd16x2.behavior.js
- Comportamiento de render del LCD 16x2 paralelo, migrado tal
- cual desde Renderer.tagLcdElements() hacia
- ComponentBehaviorRegistry.
+ PitSimulator — lcd_16x2_i2c.behavior.js
+ Copia de components/lcd16x2/lcd16x2.behavior.js.
 
- BUG REAL, YA CORREGIDO: este archivo asumía que registrándose
- para "lcd16x2" Y "lcd_16x2_i2c" alcanzaba para cubrir los dos
- tipos -- pero ComponentBehaviorRegistry.loadAll() solo pide
- este archivo si el manifest de "lcd16x2" tiene
- "hasBehavior":true (que si lo tenía), NO si es "lcd_16x2_i2c"
- el que está en el canvas. Con un LCD I2C SOLO (sin ningún LCD
- paralelo al lado), este archivo nunca se llegaba a cargar --
- el I2C se quedaba sin fondo/texto/backlight funcionando pese a
- que el firmware mandaba el protocolo "LCD:" perfecto. Ahora
- "lcd_16x2_i2c" tiene su propio components/lcd_16x2_i2c/
- lcd_16x2_i2c.behavior.js (copia de este, no se puede compartir
- el objeto entre <script> clásicos de scope distinto) y su
- propio "hasBehavior":true en el manifest.
+ BUG REAL encontrado y corregido acá: lcd16x2.behavior.js se
+ registraba para "lcd16x2" Y "lcd_16x2_i2c" en un solo archivo,
+ asumiendo que alcanzaba con eso -- pero ComponentBehaviorRegistry.
+ loadAll() decide qué .behavior.js buscar mirando el "hasBehavior"
+ de CADA entrada del manifest, y solo "lcd16x2" lo tenía. Si el
+ canvas tiene un LCD I2C SIN ningún LCD paralelo al lado, ese
+ archivo nunca se llegaba a pedir -- ningún LCD I2C tenía su fondo/
+ texto/backlight funcionando (el firmware mandaba "LCD:" perfecto,
+ pero nada en el navegador reaccionaba). Ahora "lcd_16x2_i2c" tiene
+ su propio "hasBehavior": true en el manifest y este archivo propio
+ -- ver también keypad3x4.behavior.js, mismo bug, mismo fix, mismo
+ par (keypad4x4/keypad3x4).
 
- Los statics Renderer.LCD_CHAR_COLS/LCD_CHAR_ROWS y los métodos
- applyLcdColorScheme()/_getLocalTransformUpTo()/_applyMatrix()
- siguen viviendo en Renderer.js -- se llaman vía "renderer".
+ No se puede compartir el objeto de comportamiento entre los dos
+ .js con un simple import: son <script> clásicos (no ES modules),
+ cada uno con su propio scope de nivel superior -- por eso es una
+ copia (mismo criterio que RC522_CARDS/RC522_REAL_CARDS), no una
+ referencia. Si se corrige algo acá, corregir también en
+ lcd16x2.behavior.js (y viceversa).
 ==========================================================
 */
 
-const lcdBehavior = {
+const lcdBehaviorI2c = {
 
     render: {
 
@@ -38,7 +38,7 @@ const lcdBehavior = {
             if (bg) {
                 bg.setAttribute("data-lcd-role", "screen-bg");
             } else {
-                console.warn("[lcd16x2.behavior] No se encontró el fondo de pantalla del LCD (#87AD34)");
+                console.warn("[lcd_16x2_i2c.behavior] No se encontró el fondo de pantalla del LCD (#87AD34)");
             }
 
             const dots = [];
@@ -52,7 +52,7 @@ const lcdBehavior = {
             renderer.applyLcdColorScheme(component);
 
             if (dots.length === 0) {
-                console.warn("[lcd16x2.behavior] No se encontró la grilla de puntos del LCD -- no se puede ubicar el overlay de texto");
+                console.warn("[lcd_16x2_i2c.behavior] No se encontró la grilla de puntos del LCD -- no se puede ubicar el overlay de texto");
                 return;
             }
 
@@ -88,7 +88,7 @@ const lcdBehavior = {
 
             if (!(boxWidth > 0) || !(boxHeight > 0)) {
                 console.warn(
-                    `[lcd16x2.behavior] Bounding box de la grilla de puntos del LCD (${component.type}) ` +
+                    `[lcd_16x2_i2c.behavior] Bounding box de la grilla de puntos del LCD (${component.type}) ` +
                     `salió raro (boxWidth=${boxWidth}, boxHeight=${boxHeight}) -- usando proporción ideal como respaldo.`,
                 );
             }
@@ -178,6 +178,7 @@ const lcdBehavior = {
 
             panel.content.appendChild(group);
 
+
             const sep = document.createElement("div");
             sep.style.cssText = "border-top:1px solid #333; margin: 12px 0;";
             panel.content.appendChild(sep);
@@ -201,4 +202,4 @@ const lcdBehavior = {
 
 };
 
-ComponentBehaviorRegistry.register("lcd16x2", lcdBehavior);
+ComponentBehaviorRegistry.register("lcd_16x2_i2c", lcdBehaviorI2c);

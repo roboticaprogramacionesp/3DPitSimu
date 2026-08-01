@@ -33,8 +33,49 @@ ComponentBehaviorRegistry.register("neopixel_matrix", {
             graphic.innerHTML = ""; // por si se está re-armando (cambio de tamaño)
 
             const pad = 8;
+            const CELL_PX = 24; // resolución nativa del <canvas> (nitidez), NO el tamaño físico -- ver _matrixDisplaySize.
+
+            // El tamaño físico del componente CRECE con cols/rows (a
+            // pedido: "cuando lo hago mas grande no crece entonces no se
+            // vera bien"), pero SUB-lineal (raíz cuadrada), no 1:1 con
+            // CELL_PX -- a pedido explícito de una segunda vuelta: "el
+            // tamaño al agregar otra fila es mucho, deberia crecer
+            // solamente un poco no tanto". 24px por celda 1:1 hacía que
+            // una 32x32 fuera ~4x más ancha que la 8x8 default (784px);
+            // con raíz cuadrada el mismo salto queda en ~2x (400px) --
+            // sigue creciendo, pero no se dispara. BASE_DIM=8 hace que el
+            // tamaño para 8x8 (el default del .json) no cambie ni un
+            // píxel respecto a antes.
+            const BASE_DIM = 8;
+            const _matrixDisplaySize = (n) => CELL_PX * Math.sqrt(BASE_DIM * n);
+
+            const newWidth = _matrixDisplaySize(cols) + pad * 2;
+            const newHeight = _matrixDisplaySize(rows) + pad * 2;
+
+            component.width = newWidth;
+            component.height = newHeight;
+
+            // Pines VCC/DIN/GND en un cluster CHICO y FIJO pegado al
+            // centro del borde inferior -- a pedido: "los pines estan
+            // muy separados cuando deberian estar mas juntos". Antes se
+            // reescalaban proporcionalmente al ancho (estilo max7219),
+            // lo que los mantenía esparcidos de punta a punta del
+            // módulo sin importar el tamaño; acá van con un offset FIJO
+            // desde el centro (no proporcional), así quedan juntos
+            // incluso en una matriz grande -- mismo criterio que ya usa
+            // neopixel_ring.behavior.js para su propio tab de pines.
+            const centerX = newWidth / 2;
+            const pinGap = 20;
+            const vccPin = component.pins.find((p) => p.id === "vcc");
+            const dinPin = component.pins.find((p) => p.id === "din");
+            const gndPin = component.pins.find((p) => p.id === "gnd");
+            if (vccPin) { vccPin.x = centerX - pinGap; vccPin.y = newHeight; }
+            if (dinPin) { dinPin.x = centerX;          dinPin.y = newHeight; }
+            if (gndPin) { gndPin.x = centerX + pinGap; gndPin.y = newHeight; }
 
             const bezel = document.createElementNS(Utils.SVG_NS, "rect");
+            // (etiquetas VCC/DIN/GND horneadas más abajo, después del
+            // bisel/canvas, para quedar dibujadas por encima)
             bezel.setAttribute("data-neo-role", "bezel");
             bezel.setAttribute("x", 0);
             bezel.setAttribute("y", 0);
@@ -58,12 +99,49 @@ ComponentBehaviorRegistry.register("neopixel_matrix", {
             canvas.setAttribute("data-neo-role", "grid");
             canvas.style.cssText = "width:100%; height:100%; display:block;";
 
-            const CELL_PX = 24;
             canvas.width = cols * CELL_PX;
             canvas.height = rows * CELL_PX;
 
             fo.appendChild(canvas);
             graphic.appendChild(fo);
+
+            // Etiquetas VCC/DIN/GND horneadas directo en el propio
+            // dibujo (mismo criterio que qmc5883l.svg/gps.svg) --
+            // debajo de cada pin, sobre el borde inferior del bisel.
+            const labelY = newHeight + 10;
+            [["VCC", centerX - pinGap], ["DIN", centerX], ["GND", centerX + pinGap]].forEach(([text, lx]) => {
+                const label = document.createElementNS(Utils.SVG_NS, "text");
+                label.setAttribute("x", lx);
+                label.setAttribute("y", labelY);
+                label.setAttribute("text-anchor", "middle");
+                label.setAttribute("dominant-baseline", "hanging");
+                label.setAttribute("fill", "#ffffff");
+                label.setAttribute("font-family", "DroidSans, sans-serif");
+                label.setAttribute("font-size", "9");
+                label.setAttribute("font-weight", "bold");
+                graphic.appendChild(label);
+                label.textContent = text;
+            });
+
+            if (component.element) {
+                component.element
+                    .querySelectorAll(":scope > .pin")
+                    .forEach((p) => p.remove());
+                renderer.renderPins(component, component.element);
+
+                if (component.selected) {
+                    renderer.simulator?.selectionManager?.renderHighlight();
+                }
+
+                // Los cables ya conectados leen la posición del pin en
+                // vivo (Component.getPinPosition), pero WireManager solo
+                // vuelve a dibujar las líneas ante eventos puntuales (mover
+                // un componente, etc.) -- un cambio de Columnas/Filas no
+                // dispara ninguno de esos, así que sin este empujón los
+                // cables se quedaban apuntando a la posición VIEJA del pin
+                // mientras el módulo crecía/achicaba.
+                renderer.simulator?.wireManager?.renderAll();
+            }
 
             renderer.clearNeopixelGrid(component);
 

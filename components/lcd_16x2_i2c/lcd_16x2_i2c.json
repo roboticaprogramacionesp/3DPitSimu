@@ -13,7 +13,7 @@
 
     "pins": [
         { "id": "gnd", "name": "GND", "x": 0.72, "y": 14.4, "type": "ground", "signal": "ground" },
-        { "id": "vcc", "name": "VCC", "x": 0.72, "y": 21.6, "type": "power",  "signal": "power", "voltage": 5 },
+        { "id": "vcc", "name": "VCC", "x": 0.72, "y": 21.6, "type": "power",  "signal": "power" },
         { "id": "sda", "name": "SDA", "x": 0.72, "y": 28.8, "type": "input",  "signal": "i2c" },
         { "id": "scl", "name": "SCL", "x": 0.72, "y": 36.0, "type": "input",  "signal": "i2c" }
     ],

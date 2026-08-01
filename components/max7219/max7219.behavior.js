@@ -31,29 +31,46 @@ ComponentBehaviorRegistry.register("max7219", {
 
             const pad = 8;
 
-            const oldWidth = component.width;
-            const oldHeight = component.height;
-
             const newWidth = cols * Renderer.MAX7219_LED_UNIT_SIZE + pad * 2;
             const newHeight = rows * Renderer.MAX7219_LED_UNIT_SIZE + pad * 2;
 
-            if (
-                Array.isArray(component.pins) &&
-                oldWidth &&
-                oldHeight &&
-                (newWidth !== oldWidth || newHeight !== oldHeight)
-            ) {
-                const scaleX = newWidth / oldWidth;
-                const scaleY = newHeight / oldHeight;
-
-                component.pins.forEach((pin) => {
-                    pin.x = pin.x * scaleX;
-                    pin.y = pin.y * scaleY;
-                });
-            }
-
             component.width = newWidth;
             component.height = newHeight;
+
+            // Pines en columna vertical sobre el borde IZQUIERDO, de
+            // abajo hacia arriba -- a pedido: "pon los pines de lado
+            // izquierdo de abajo hacia arriba esto para evitar que al
+            // cambiar de 8x8 a 16x8 o 32x8 los pines se muevan". Los 3
+            // presets del panel (8x8/16x8/32x8) SOLO cambian `cols`,
+            // `rows` siempre queda en 8 -- antes los pines vivían abajo
+            // repartidos a lo ANCHO (proporcional a newWidth), así que
+            // cambiar de preset los corría de lugar cada vez. Puestos
+            // acá, en x=0 fijo y con y repartido en función de newHeight
+            // (que no cambia entre presets), quedan en la MISMA posición
+            // pase lo que pase con `cols`.
+            const PIN_ORDER = ["vcc", "gnd", "din", "cs", "clk", "dout"];
+            const pinMarginY = 16;
+            const usableH = Math.max(0, newHeight - pinMarginY * 2);
+            const pinStep = PIN_ORDER.length > 1 ? usableH / (PIN_ORDER.length - 1) : 0;
+            PIN_ORDER.forEach((id, i) => {
+                const pin = component.pins.find((p) => p.id === id);
+                if (!pin) return;
+                pin.x = 0;
+                pin.y = newHeight - pinMarginY - i * pinStep;
+            });
+
+            // Etiquetas horneadas directo en el propio dibujo (mismo
+            // criterio que qmc5883l.svg/gps.svg) -- a la izquierda de
+            // cada pin, ya que los 6 quedan alineados sobre x=0 (borde
+            // izquierdo). Se arman ahora (mismas coordenadas que recién
+            // se calcularon) pero se agregan al gráfico DESPUÉS del
+            // bisel/canvas más abajo, para quedar dibujadas encima.
+            const labelTexts = { vcc: "VCC", gnd: "GND", din: "DIN", cs: "CS", clk: "CLK", dout: "DOUT" };
+            const pinLabelDefs = PIN_ORDER.map((id, i) => ({
+                id,
+                text: labelTexts[id],
+                y: newHeight - pinMarginY - i * pinStep,
+            }));
 
             const bezel = document.createElementNS(Utils.SVG_NS, "rect");
             bezel.setAttribute("data-max-role", "bezel");
@@ -86,6 +103,21 @@ ComponentBehaviorRegistry.register("max7219", {
             fo.appendChild(canvas);
             graphic.appendChild(fo);
 
+            const LABEL_GAP = 8;
+            pinLabelDefs.forEach(({ text, y }) => {
+                const label = document.createElementNS(Utils.SVG_NS, "text");
+                label.setAttribute("x", -LABEL_GAP);
+                label.setAttribute("y", y);
+                label.setAttribute("text-anchor", "end");
+                label.setAttribute("dominant-baseline", "middle");
+                label.setAttribute("fill", "#ffffff");
+                label.setAttribute("font-family", "DroidSans, sans-serif");
+                label.setAttribute("font-size", "9");
+                label.setAttribute("font-weight", "bold");
+                label.textContent = text;
+                graphic.appendChild(label);
+            });
+
             if (component.element) {
                 component.element
                     .querySelectorAll(":scope > .pin")
@@ -95,6 +127,8 @@ ComponentBehaviorRegistry.register("max7219", {
                 if (component.selected) {
                     renderer.simulator?.selectionManager?.renderHighlight();
                 }
+
+                renderer.simulator?.wireManager?.renderAll();
             }
 
             renderer.clearMax7219Grid(component);

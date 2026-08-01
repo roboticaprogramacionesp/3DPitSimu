@@ -48,6 +48,55 @@
 import sys as _sys
 import framebuf
 
+# ── SPI dummy ────────────────────────────────────────────────
+# A pedido ("matrix8x8.py -> ValueError: invalid pin" incluso con
+# sck=14, el pin HSPI real correcto): el error no era un problema de
+# qué pin elegir -- Max7219.__init__ de acá abajo guarda self.spi/
+# self.cs solo por compatibilidad de atributos, PERO NUNCA los usa
+# para hablar por SPI de verdad (show() manda todo por "MAX:..." vía
+# print(), ver más abajo). El problema es que matrix8x8.py igual
+# CONSTRUYE un machine.SPI(1, ...) real ANTES de llegar a esta clase
+# -- y ese SPI real de QEMU sí hace validación de hardware genuina
+# (igual que en un ESP32 físico). Mismo criterio y misma solución que
+# ya usan rc522.hal.py/tft_st7789.hal.py: reemplazar machine.SPI
+# entero por un dummy que acepta cualquier pin/parámetro sin validar
+# nada, ya que ningún byte real necesita viajar por ahí.
+#
+# OJO -- "el que se inyecta último gana": si en el mismo canvas hay
+# OTRO componente que también reemplaza machine.SPI (rc522, ST7789),
+# ese va a pisar a este si se pega después. No hay bus SPI compartido
+# real en este simulador todavía -- cada HAL asume que es el único
+# dispositivo SPI del circuito, mismo comentario que ya tienen esos
+# otros archivos.
+class SPI:
+
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def init(self, *args, **kwargs):
+        pass
+
+    def deinit(self):
+        pass
+
+    def write(self, buf):
+        pass
+
+    def read(self, nbytes, write=0x00):
+        return b"\x00" * nbytes
+
+    def readinto(self, buf, write=0x00):
+        pass
+
+    def write_readinto(self, write_buf, read_buf):
+        pass
+
+
+import machine as _machine_module
+_machine_module.SPI = SPI
+
+
 _MATRIX_SIZE = 8
 
 
