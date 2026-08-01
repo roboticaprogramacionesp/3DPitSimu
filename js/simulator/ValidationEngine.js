@@ -48,6 +48,20 @@ class ValidationEngine {
 
         }
 
+        // 1b. GND cableado directo a un pin de alimentación (o viceversa)
+        // -- a diferencia del chequeo de VOLTAJE de más abajo (que solo
+        // compara pin-de-poder contra pin-de-poder y es una advertencia
+        // "puede estar mal"), esto es un ERROR: nunca es correcto atar
+        // tierra a un riel de alimentación. Encontrado en la práctica:
+        // un cable de GND terminó en el pin "5v_2" del ESP32 por
+        // confusión visual (dos ESP32 superpuestos en la misma
+        // posición, ver el chequeo 6 más abajo) y el sensor nunca se
+        // detectaba como alimentado, sin ningún aviso que lo señalara.
+        for (const wire of this.simulator.wireManager.wires) {
+            const msg = this._groundPowerMismatch(wire);
+            if (msg) errors.push(msg);
+        }
+
         // 2. Verificar que hay al menos un componente
         if (this.simulator.componentManager.getAll().length === 0) {
             warnings.push("No hay componentes en el circuito");
@@ -84,7 +98,61 @@ class ValidationEngine {
             }
         }
 
+        // 6. Componentes del mismo tipo superpuestos en la posición
+        // EXACTA (mismo x,y) -- no es un error (a veces es intencional,
+        // ej. apilar dos LEDs para un efecto visual), pero es la causa
+        // de fondo más probable de un cableado accidental al pin
+        // equivocado (dos componentes idénticos en el mismo lugar hacen
+        // muy fácil arrastrar un cable al que NO querías, ver el
+        // chequeo 1b de arriba -- así se originó ese bug con dos ESP32
+        // superpuestos).
+        const byPosition = new Map();
+        for (const comp of this.simulator.componentManager.getAll()) {
+            const key = `${comp.type}:${comp.x}:${comp.y}`;
+            if (!byPosition.has(key)) byPosition.set(key, []);
+            byPosition.get(key).push(comp);
+        }
+        for (const group of byPosition.values()) {
+            if (group.length > 1) {
+                const name = group[0].name || group[0].type;
+                warnings.push(
+                    `Hay ${group.length} componentes "${name}" superpuestos en la misma posición -- si no es intencional, revisá que no sea un duplicado accidental (fácil de cablear al equivocado)`,
+                );
+            }
+        }
+
         return { valid: errors.length === 0, errors, warnings };
+
+    }
+
+    //------------------------------------------------------
+    // GND <-> pin de alimentación en el MISMO cable -- reutilizado
+    // tanto por validateCircuit() (revisión completa bajo demanda)
+    // como por WireManager.addWire() (aviso inmediato al trazar un
+    // cable nuevo, ver ese archivo).
+    //------------------------------------------------------
+
+    _groundPowerMismatch(wire) {
+
+        const fromComp = this.simulator.componentManager.get(wire.from.componentId);
+        const toComp = this.simulator.componentManager.get(wire.to.componentId);
+        if (!fromComp || !toComp) return null;
+
+        const pinFrom = fromComp.getPin(wire.from.pinId);
+        const pinTo = toComp.getPin(wire.to.pinId);
+        if (!pinFrom || !pinTo) return null;
+
+        const isGround = (p) => p.type === "ground" || p.signal === "ground";
+        const isPower = (p) => p.type === "power" || p.signal === "power";
+
+        const groundSide = isGround(pinFrom) ? { comp: fromComp, pin: pinFrom } : isGround(pinTo) ? { comp: toComp, pin: pinTo } : null;
+        const powerSide = isPower(pinFrom) ? { comp: fromComp, pin: pinFrom } : isPower(pinTo) ? { comp: toComp, pin: pinTo } : null;
+
+        if (!groundSide || !powerSide || groundSide.comp === powerSide.comp) return null;
+
+        const groundName = groundSide.comp.name || groundSide.comp.type;
+        const powerName = powerSide.comp.name || powerSide.comp.type;
+        return `GND de ${groundName} (${groundSide.pin.name || groundSide.pin.id}) está conectado a un pin de ALIMENTACIÓN en ${powerName} (${powerSide.pin.name || powerSide.pin.id}) -- nunca es correcto, revisá ese cable`;
 
     }
 
