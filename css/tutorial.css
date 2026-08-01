@@ -1,0 +1,474 @@
+/* ==========================================================
+   PitSimulator — tutorial.css
+   Botón/menú selector de tutoriales (junto al logo) + modal
+   flotante paso a paso + resaltado de componentes/pines/
+   botones relevantes en cada paso (ver TutorialManager.js).
+   ========================================================== */
+
+/* --------------------------------------------------------
+   Botón + dropdown selector (mismo lenguaje visual que
+   .project-drawer, ver project-drawer.css)
+   -------------------------------------------------------- */
+
+.tutorial-selector {
+    position: relative;
+}
+
+.tutorial-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+
+    z-index: 1000;
+
+    min-width: 220px;
+
+    background: #2b2d31;
+    border: 1px solid #444;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+
+    padding: 6px 0;
+
+    user-select: none;
+
+    transform-origin: top left;
+    animation: tutorialMenuOpen .12s ease-out;
+
+    /* Ya son 6 categorías / 16+ tutoriales -- sin este límite el menú
+       crecía más alto que la ventana y los últimos quedaban fuera de
+       pantalla, sin forma de hacer scroll para llegar a ellos. Alto
+       relativo al viewport (deja lugar arriba para la barra/logo de
+       donde cuelga) en vez de un número fijo, para que siga andando
+       bien en ventanas chicas. */
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+}
+
+.tutorial-menu::-webkit-scrollbar       { width: 8px; }
+.tutorial-menu::-webkit-scrollbar-track { background: transparent; }
+.tutorial-menu::-webkit-scrollbar-thumb { background: #4a4d54; border-radius: 4px; }
+.tutorial-menu::-webkit-scrollbar-thumb:hover { background: #5a5d64; }
+
+.tutorial-menu.hidden {
+    display: none;
+}
+
+@keyframes tutorialMenuOpen {
+    from { opacity: 0; transform: scale(.97) translateY(-4px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Encabezado de categoría (ver TutorialManager.buildDOM()) -- mismo
+   agrupamiento/orden que el <select id="tutorialSelect"> de
+   referencia en Blocks/AppBlock3 (optgroup/tut-group-label), solo
+   que acá es un <div> más entre los botones ya existentes, no un
+   contenedor aparte. */
+.tutorial-menu-category {
+    padding: 8px 14px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #7a7a86;
+    border-top: 1px solid #3a3a3a;
+    margin-top: 4px;
+}
+
+.tutorial-menu-category:first-child {
+    border-top: none;
+    margin-top: 0;
+}
+
+/* --------------------------------------------------------
+   Modal flotante paso a paso
+   -------------------------------------------------------- */
+
+.tutorial-modal {
+    position: absolute;
+    /* Debajo de #canvasTools (arriba a la derecha, ahora apilado
+       VERTICALMENTE -- screenshot/deshacer/rehacer, ver simulator.css)
+       para que no se solapen al abrir el tutorial por primera vez --
+       de ahí en más el usuario lo puede arrastrar a donde quiera
+       (ver TutorialManager._bindDrag), esto es solo la posición
+       inicial. */
+    top: 156px;
+    right: 12px;
+
+    z-index: 250;
+
+    width: 300px;
+
+    background: #1e1f22;
+    border: 1px solid #444;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+
+    padding: 14px 16px;
+
+    font-family: Segoe UI, Arial, sans-serif;
+    color: #e6e6e6;
+}
+
+.tutorial-modal.hidden {
+    display: none;
+}
+
+/* Animación de entrada -- clase APARTE (no en la regla base de
+   arriba) puesta solo una vez por TutorialManager.start() y sacada
+   sola al terminar (ver el listener de "animationend"). Tenerla en
+   la regla base y "apagarla" con .dragging (versión anterior de este
+   archivo) causaba un salto real: al soltar el arrastre, sacar
+   .dragging hacía que "animation" volviera a valer
+   "tutorialModalOpen ..." -- un cambio de valor que CSS trata como
+   una animación NUEVA, así que replayaba el translateY(-6px)->0
+   completo desde la posición ya arrastrada, un "brinco" visible cada
+   vez que soltabas el mouse. Con la animación viviendo en su propia
+   clase, .dragging nunca la toca -- no hay nada que replayar. */
+.tutorial-modal.opening {
+    animation: tutorialModalOpen .15s ease-out;
+}
+
+.tutorial-modal.dragging {
+    user-select: none;
+}
+
+@keyframes tutorialModalOpen {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.tutorial-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+
+    cursor: grab;
+    /* Un poco de "agarre" visual extra alrededor del texto/botón,
+       para que quede claro que toda la cabecera es arrastrable, no
+       solo el título. */
+    margin: -14px -16px 6px -16px;
+    padding: 10px 16px;
+    border-bottom: 1px solid #333;
+}
+
+.tutorial-modal.dragging .tutorial-modal-header {
+    cursor: grabbing;
+}
+
+.tutorial-modal-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tutorial-modal-minimize,
+.tutorial-modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex: none;
+}
+
+.tutorial-modal-minimize:hover {
+    color: #fff;
+    background: #333;
+}
+
+/* Minimizado: se colapsa todo salvo la cabecera (ver
+   TutorialManager._toggleMinimize()) -- la cabecera vive AFUERA de
+   .tutorial-modal-collapsible a propósito, así queda siempre visible. */
+.tutorial-modal-collapsible.tutorial-modal-collapsed {
+    display: none;
+}
+
+/* --------------------------------------------------------
+   Tamaño de letra de los pasos (S/M/L/XL) -- ver
+   TutorialManager._applyModalFontSize(). Mismas etiquetas que el
+   control del panel MicroPython (ReplPanel), pero es un control
+   aparte: cada uno persiste su propio tamaño.
+   -------------------------------------------------------- */
+
+.tutorial-font-size-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2d2d2d;
+}
+
+.tutorial-font-size-label {
+    font-size: 12px;
+    color: #888;
+}
+
+.tutorial-font-size-group {
+    display: flex;
+    gap: 4px;
+}
+
+.tutorial-font-btn {
+    min-width: 22px;
+    padding: 3px 7px;
+    border: 1px solid #444;
+    border-radius: 5px;
+    background: #2b2d31;
+    color: #ccc;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+.tutorial-font-btn:hover {
+    background: #3a3c42;
+}
+
+.tutorial-font-btn.active {
+    background: #4da3ff;
+    border-color: #4da3ff;
+    color: #fff;
+}
+
+/* Tamaños reales aplicados sobre .tutorial-modal -- solo el título
+   del paso y el texto de instrucción crecen (progreso/título del
+   tutorial se quedan como referencia chica fija). L/XL además
+   ensanchan un poco el modal para que el texto más grande no se
+   apriete en las mismas 300px de siempre. */
+
+.tutorial-modal.tutorial-font-S .tutorial-modal-step-title { font-size: 12.5px; }
+.tutorial-modal.tutorial-font-S .tutorial-modal-text       { font-size: 11.5px; }
+
+.tutorial-modal.tutorial-font-M .tutorial-modal-step-title { font-size: 14.5px; }
+.tutorial-modal.tutorial-font-M .tutorial-modal-text       { font-size: 13px; }
+
+.tutorial-modal.tutorial-font-L {
+    width: 340px;
+}
+.tutorial-modal.tutorial-font-L .tutorial-modal-step-title { font-size: 17px; }
+.tutorial-modal.tutorial-font-L .tutorial-modal-text       { font-size: 15px; }
+
+.tutorial-modal.tutorial-font-XL {
+    width: 380px;
+}
+.tutorial-modal.tutorial-font-XL .tutorial-modal-step-title { font-size: 20px; }
+.tutorial-modal.tutorial-font-XL .tutorial-modal-text       { font-size: 17.5px; line-height: 1.6; }
+
+.tutorial-modal-close:hover {
+    color: #fff;
+    background: #333;
+}
+
+.tutorial-modal-progress {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 10px;
+}
+
+.tutorial-modal-step-title {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--accent, #4da3ff);
+    margin-bottom: 6px;
+}
+
+/* Ya se puede avanzar (isDone) -- puramente informativo, ver
+   TutorialManager._updateDoneIndicator(). El tutorial NUNCA navega
+   solo: esto no dispara ningún cambio de paso, es al usuario a quien
+   le queda decidir cuándo tocar "Siguiente". */
+.tutorial-modal-step-title.done {
+    color: #2ecc71;
+}
+
+.tutorial-modal-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #ccc;
+    margin-bottom: 14px;
+}
+
+.tutorial-modal-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.tutorial-modal-actions button {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #2b2d31;
+    color: #e6e6e6;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+.tutorial-modal-actions button:hover {
+    background: #3a3c42;
+    border-color: #4da3ff;
+}
+
+.tutorial-modal-actions button:disabled {
+    opacity: .4;
+    cursor: default;
+}
+
+.tutorial-modal-next {
+    background: #2e7d32 !important;
+    border-color: #2e7d32 !important;
+    color: #fff;
+    font-weight: 600;
+}
+
+.tutorial-modal-next:hover {
+    background: #37944b !important;
+    border-color: #37944b !important;
+}
+
+.tutorial-modal-body.hidden {
+    display: none;
+}
+
+/* --------------------------------------------------------
+   Pantalla de finalización (ver TutorialManager._finish()) --
+   reemplaza al cuerpo normal cuando se completa el último paso,
+   ofreciendo repetir el tutorial en vez de cerrarse solo.
+   -------------------------------------------------------- */
+
+.tutorial-modal-complete.hidden {
+    display: none;
+}
+
+.tutorial-modal-complete {
+    text-align: center;
+    padding: 8px 4px 4px;
+}
+
+.tutorial-modal-complete-icon {
+    font-size: 34px;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.tutorial-modal-complete-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.tutorial-modal-complete-text {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #ccc;
+    margin-bottom: 16px;
+}
+
+.tutorial-modal-complete-text strong {
+    color: #fff;
+}
+
+.tutorial-modal-restart {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #4da3ff;
+    border-radius: 6px;
+    background: #4da3ff;
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+.tutorial-modal-restart:hover {
+    background: #6bb3ff;
+    border-color: #6bb3ff;
+}
+
+/* --------------------------------------------------------
+   Resaltado del elemento relevante en cada paso
+   -------------------------------------------------------- */
+
+/* Tarjeta del toolbox (HTML normal) */
+.toolbox-item.tutorial-highlight {
+    border-color: #ffd23f;
+    animation: tutorialPulseBox 1.1s ease-in-out infinite;
+}
+
+@keyframes tutorialPulseBox {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 210, 63, .55); }
+    50%      { box-shadow: 0 0 0 6px rgba(255, 210, 63, 0); }
+}
+
+/* Botón del toolbar (ej. ▶ Simular) o cabecera del panel REPL */
+.tutorial-highlight:is(button, .repl-header) {
+    animation: tutorialPulseBox 1.1s ease-in-out infinite;
+    outline: 2px solid #ffd23f;
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+/* Ítems del menú de proyecto (Nuevo/Abrir/Guardar/Validar/Recargar) --
+   están apilados uno pegado al otro sin margen entre sí (ver
+   project-drawer.css), así que el outline-offset:2px hacia AFUERA de
+   arriba invadía el contorno del ítem de al lado cuando varios se
+   resaltan a la vez en el mismo paso (ver "Paso 2" del recorrido de
+   interfaz). Contorno hacia ADENTRO acá, mismo criterio que las zonas
+   grandes (#toolbox/#workspace) más abajo, para que cada ítem quede
+   con su propio contorno separado del vecino.  */
+.project-drawer-item.tutorial-highlight {
+    outline-offset: -2px;
+}
+
+/* Zonas grandes (ej. #toolbox, #workspace, en el "Recorrido por la
+   interfaz") o el input del nombre del proyecto -- mismo glow
+   pulsante, contorno hacia ADENTRO (outline-offset negativo) para no
+   invadir el layout de al lado en elementos que ocupan todo un borde
+   de la pantalla. */
+.tutorial-highlight:is(#toolbox, #workspace, .current-file-label) {
+    animation: tutorialPulseBox 1.1s ease-in-out infinite;
+    outline: 3px solid #ffd23f;
+    outline-offset: -3px;
+    z-index: 5;
+}
+
+/* Componente entero en el canvas (SVG) -- mismo mecanismo que ya usa
+   .component.selected, un glow pulsante sobre el gráfico real. */
+.component.tutorial-highlight .component-graphic,
+.component.tutorial-highlight .component-placeholder {
+    animation: tutorialPulseGlow 1.1s ease-in-out infinite;
+}
+
+@keyframes tutorialPulseGlow {
+    0%, 100% { filter: drop-shadow(0 0 3px #ffd23f); }
+    50%      { filter: drop-shadow(0 0 14px #ffd23f); }
+}
+
+/* Pin puntual (SVG) -- ej. el GND de la ESP32 o el cátodo del LED */
+.pin.tutorial-highlight .pin-visible {
+    stroke: #ffd23f;
+    stroke-width: 2.5;
+    animation: tutorialPulsePin 1s ease-in-out infinite;
+}
+
+@keyframes tutorialPulsePin {
+    0%, 100% { filter: drop-shadow(0 0 2px #ffd23f); }
+    50%      { filter: drop-shadow(0 0 9px #ffd23f); }
+}
