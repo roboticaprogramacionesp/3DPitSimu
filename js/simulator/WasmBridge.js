@@ -114,6 +114,18 @@ class WasmBridge {
             try { this.worker.terminate(); } catch (err) { /* no-op */ }
         }
 
+        // Resolvers de sendData()-tipo-"run" pendientes -- si el
+        // Worker se mata (interrupt()) a mitad de un run, ese
+        // "runDone" nunca va a llegar (ver wasmWorker.js): sin esto,
+        // el Promise de esa llamada quedaría colgado para siempre.
+        // Se resuelven todos acá, al levantar el Worker NUEVO --
+        // buen momento para "dar por terminado" cualquier run previo.
+        if (this._pendingRunResolvers) {
+            this._pendingRunResolvers.forEach(resolve => resolve());
+        }
+        this._pendingRunResolvers = new Map();
+        this._runIdCounter = 0;
+
         this.worker = new Worker(WasmBridge.WORKER_PATH, { type: "module" });
 
         this.worker.onmessage = (e) => this._onWorkerMessage(e.data);
@@ -149,6 +161,15 @@ class WasmBridge {
 
         if (msg.type === "error") {
             this.simulator.eventBus.emit("qemu:output", msg.data);
+            return;
+        }
+
+        if (msg.type === "runDone") {
+            const resolve = this._pendingRunResolvers?.get(msg.runId);
+            if (resolve) {
+                this._pendingRunResolvers.delete(msg.runId);
+                resolve();
+            }
             return;
         }
 
@@ -296,16 +317,29 @@ class WasmBridge {
     // heredar esta ambigüedad del modelo de stream único de QEMU).
     static PROTOCOL_LINE_RE = /^[A-Z][A-Z0-9_]*:[\d.]/;
 
+    // Para código real (rama "run"): devuelve una Promise que se
+    // resuelve cuando el Worker confirma que mp.runPython() TERMINÓ
+    // de verdad (mensaje "runDone", ver wasmWorker.js) -- no cuando
+    // el postMessage() se mandó. runEditorCode() la espera para no
+    // reactivar el botón ▶ Ejecutar mientras el script todavía está
+    // corriendo (ej. un while True: con time.sleep(), que puede
+    // tardar para siempre -- ver la LIMITACIÓN CONOCIDA arriba: la
+    // única forma de que esta Promise SI o SI se resuelva es que el
+    // script termine solo o que se llame a interrupt(), que resuelve
+    // todo lo pendiente al matar el Worker viejo).
     sendData(data) {
 
-        if (!this.worker || !this._connected) return;
+        if (!this.worker || !this._connected) return Promise.resolve();
 
         if (WasmBridge.PROTOCOL_LINE_RE.test(data)) {
             this.worker.postMessage({ type: "processLine", line: data.trim() });
-            return;
+            return Promise.resolve();
         }
 
-        this.worker.postMessage({ type: "run", code: data });
+        const runId = ++this._runIdCounter;
+        const promise = new Promise(resolve => this._pendingRunResolvers.set(runId, resolve));
+        this.worker.postMessage({ type: "run", code: data, runId });
+        return promise;
 
     }
 

@@ -2041,8 +2041,28 @@ class ReplPanel {
             // Modo navegador: no hay pty/paste mode que proteger --
             // se manda el código entero de una sola vez (ver
             // WasmBridge.sendData()/wasmWorker.js, mp.runPython()
-            // sincrónico).
-            this.simulator.qemuBridge.sendData(fullCode);
+            // sincrónico). sendData() acá devuelve una Promise que
+            // recién se resuelve cuando el código TERMINÓ de correr
+            // de verdad (no cuando se mandó) -- si no se espera, el
+            // botón ▶ Ejecutar se reactivaba casi al instante aunque
+            // el script siguiera corriendo/colgado adentro del
+            // Worker (reportado por el usuario).
+            //
+            // Aviso de "esto puede tardar/colgarse" -- ver la
+            // LIMITACIÓN CONOCIDA del plan: un while True: con
+            // time.sleep() nunca termina solo acá (no hay Ctrl+C
+            // real), así que sin este aviso "▶ Ejecutando..." se ve
+            // igual que un cuelgue real. Con timeout para no
+            // spamear scripts cortos que ya terminan solos.
+            const hintTimer = setTimeout(() => {
+                this.appendOutput(
+                    "\n⏳ Si tu código tiene un bucle (while True:), esto no va a terminar solo -- hacé clic en ■ Interrumpir para cortarlo (se pierden las variables).\n",
+                    "repl-info"
+                );
+            }, 2500);
+
+            await this.simulator.qemuBridge.sendData(fullCode);
+            clearTimeout(hintTimer);
         } else {
             // _enqueuePaste hace que esto espere su turno si justo había
             // una precarga de HAL (preloadHal) todavía mandándose --

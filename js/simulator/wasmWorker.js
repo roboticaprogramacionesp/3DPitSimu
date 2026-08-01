@@ -73,6 +73,7 @@ self.onmessage = async (e) => {
 
         if (!mp || !baseLoaded) {
             self.postMessage({ type: "error", data: "\n⚠️ El intérprete todavía no está listo.\n" });
+            self.postMessage({ type: "runDone", runId: msg.runId });
             return;
         }
 
@@ -81,6 +82,14 @@ self.onmessage = async (e) => {
         } catch (err) {
             self.postMessage({ type: "stdout", data: "\n" + String(err) + "\n" });
         }
+
+        // Si esto tarda (o nunca vuelve -- ej. un while True: con
+        // time.sleep(), ver LIMITACIÓN CONOCIDA arriba), este mensaje
+        // recién sale cuando mp.runPython() finalmente retorna. Si el
+        // usuario interrumpe antes (Worker.terminate()), este postMessage
+        // nunca llega a mandarse -- no pasa nada, el Worker entero ya
+        // no existe para cuando llegaría.
+        self.postMessage({ type: "runDone", runId: msg.runId });
 
         return;
 
