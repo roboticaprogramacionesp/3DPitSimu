@@ -1927,6 +1927,19 @@ class SignalEngine {
       delete this.pwmStates[key];
     }
 
+    // Mismo hook que ya tiene setDriverState() para el LED GPIO2
+    // integrado de la placa -- SIN esto, ese LED solo reaccionaba a
+    // GPIO:2:0/1 (digital), nunca a PWM:2:..., así que quedaba fijo
+    // pase lo que pase con el duty (reportado por el usuario: "el led
+    // externo sí cambia de brillo, el interno no").
+    if (pinId === "io2") {
+      const esp32 = this.simulator.componentManager.get(componentId);
+      if (esp32) {
+        const brightness = freq > 0 ? Math.max(0, Math.min(1, duty / 1023)) : 0;
+        this.simulator.renderer.setEsp32GpioLedBrightness(esp32, brightness);
+      }
+    }
+
     this.evaluateAll();
   }
 

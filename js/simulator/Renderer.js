@@ -2926,6 +2926,33 @@ class Renderer {
     );
   }
 
+  // Brillo continuo del LED GPIO2 integrado (PWM, ver SignalEngine.setPwmState) --
+  // mismo criterio que Renderer.applyLedBrightness() para el LED
+  // externo: piso de opacidad 0.25 para que no se vea "apagado del
+  // todo" con duty bajo, escala hasta opacidad 1 en duty máximo.
+  // _setElementColor ya sobreescribe opacity/filter en cada llamada
+  // (no hay riesgo de que quede un valor viejo pegado al volver a
+  // control digital -- setEsp32GpioLed también pasa por ahí).
+  setEsp32GpioLedBrightness(component, brightness) {
+    if (!component.element) return;
+
+    const el = component.element.querySelector("#led_red_io2");
+    if (!el) {
+      console.warn("[Renderer] No se encontró #led_red_io2 en el ESP32");
+      return;
+    }
+
+    const isOn = brightness > 0;
+    const opacity = isOn ? (0.25 + brightness * 0.75).toFixed(2) : "0.5";
+
+    this._setElementColor(
+      el,
+      isOn ? "#ff2222" : "#ffffff",
+      opacity,
+      isOn ? "#ff0000" : null,
+    );
+  }
+
   // Encender/apagar el LED Power integrado del ESP32
   setEsp32PowerLed(component, isOn) {
     if (!component.element) return;

@@ -382,6 +382,22 @@ class Pin(_RealPin):
         self._mode     = mode
         if mode == _RealPin.OUT and "value" in kw:
             self._last_val = 1 if kw["value"] else 0
+            # FIX real (reportado por el usuario, traceback real: un
+            # "SYNC:" suelto aparecía como comando tipeado y tiraba
+            # SyntaxError después de Pin(N, Pin.OUT, value=1)). El
+            # super().__init__(**kw) de arriba YA hizo la escritura
+            # real del pin (gpio_set_level() de verdad, vía el kwarg
+            # "value" que machine.Pin real soporta nativamente) -- pero
+            # eso pasa por FUERA de on()/off(), que son los únicos que
+            # hoy llaman a _settle() para esperar el "SYNC:\n" de
+            # confirmación antes de devolver el control al usuario.
+            # Sin este _settle() acá, el REPL volvía al prompt ">>>"
+            # ANTES de que llegara esa confirmación -- y cuando por fin
+            # llegaba (async), el prompt idle la leía como si el
+            # usuario la hubiera tipeado. Mismo bug de fondo que
+            # KeyboardInterrupt/SYNC (ver el comentario grande de
+            # poll_input() más abajo), disparado por un camino distinto.
+            _settle()
 
     def on(self):
         super().on()
