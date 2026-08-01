@@ -36,6 +36,14 @@ class WasmBridge {
     // Fase 1/2 del plan para cómo se generan.
     static WORKER_PATH = "js/simulator/wasmWorker.js";
 
+    // Marca para que ReplPanel.js (y cualquier otro código que
+    // dependa de this.simulator.qemuBridge genéricamente) pueda
+    // distinguir este bridge del QemuBridge real SIN un import/
+    // instanceof cruzado -- ver los puntos donde ReplPanel.js hace
+    // cosas específicas de QEMU (probe de warm-boot/HAL congelado,
+    // paste mode) que no aplican acá.
+    isWasmBridge = true;
+
     constructor(simulator) {
 
         this.simulator = simulator;
@@ -47,6 +55,15 @@ class WasmBridge {
         // Worker puede mandar stdout en pedazos que no coinciden con
         // saltos de línea.
         this._lineBuf = "";
+
+        // Mismo patrón que QemuBridge.js: el botón ▶ Simular de
+        // Toolbar.js no conoce ni le importa qué bridge está activo,
+        // solo emite "simulation:start" -- cada bridge se suscribe
+        // por su cuenta. Como solo UNO de los dos bridges existe por
+        // carga de página (ver js/app.js, decidido por
+        // ?modo=wasm en la URL, nunca en runtime), nunca hay dos
+        // instancias escuchando el mismo evento a la vez.
+        this.simulator.eventBus.on("simulation:start", () => this.connect());
 
     }
 
@@ -86,7 +103,15 @@ class WasmBridge {
 
         if (msg.type === "ready") {
             this._connected = true;
+            this.updateStatus("connected");
             this.simulator.eventBus.emit("qemu:connected");
+            this.simulator.startSimulation();
+
+            const esp32 = this.simulator.componentManager
+                .getAll()
+                .find(c => c.type.startsWith("esp32"));
+            if (esp32) this.simulator.renderer.setEsp32PowerLed(esp32, true);
+
             return;
         }
 
@@ -227,11 +252,27 @@ class WasmBridge {
 
     // "Interrumpir" real (ver limitación conocida arriba): mata el
     // Worker y arranca uno nuevo. Pierde variables/estado del
-    // intérprete -- documentado a propósito, no es un bug.
+    // intérprete -- documentado a propósito, no es un bug. Mismo
+    // ciclo disconnected→connected que QemuBridge.onClose()/onOpen(),
+    // así que el resto de la UI (ReplPanel, LED power del ESP32) no
+    // necesita saber que esto es un bridge distinto.
     interrupt() {
 
+        if (!this._connected) return;
+
         this._connected = false;
+        this.updateStatus("disconnected");
         this.simulator.eventBus.emit("qemu:disconnected");
+        this.simulator.stopSimulation();
+
+        const esp32 = this.simulator.componentManager
+            .getAll()
+            .find(c => c.type.startsWith("esp32"));
+        if (esp32) {
+            this.simulator.renderer.setEsp32PowerLed(esp32, false);
+            this.simulator.renderer.setEsp32GpioLed(esp32, false);
+        }
+
         this._spawnWorker();
 
     }
@@ -243,5 +284,32 @@ class WasmBridge {
     // No-ops: no existe paste mode serial acá, nada que proteger.
     beginPasteLock() {}
     endPasteLock() {}
+
+    // Mismo criterio (y mismo elemento del DOM, #qemuStatus) que
+    // QemuBridge.updateStatus() -- duplicado acá en vez de compartido
+    // porque es puro DOM, sin ningún estado específico de QEMU.
+    updateStatus(status) {
+
+        const el = document.getElementById("qemuStatus");
+        if (!el) return;
+
+        const labels = {
+            connecting:   "⏳ Conectando...",
+            connected:    "✅ Simulando",
+            disconnected: "🔴 Detenido",
+            error:        "⚠️ Error",
+        };
+
+        const colors = {
+            connecting:   "#f2c94c",
+            connected:    "#00ff88",
+            disconnected: "#666",
+            error:        "#ff9800",
+        };
+
+        el.textContent = labels[status] || status;
+        el.style.color = colors[status] || "#eee";
+
+    }
 
 }

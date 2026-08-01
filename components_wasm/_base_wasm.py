@@ -128,3 +128,26 @@ class Pin:
             _irq_handlers.pop(self._pin_num, None)
         else:
             _irq_handlers[self._pin_num] = {"handler": handler, "trigger": trigger, "pin": self}
+
+
+# ─────────────────────────────────────────────────────────────
+# Módulo "machine" FALSO -- el puerto webassembly no trae ningún
+# módulo "machine" real (es específico de puertos con hardware de
+# verdad, como "esp32"), así que "from machine import Pin" del
+# código del alumno (el patrón real que enseñan los tutoriales)
+# tira ImportError sin esto. Mismo truco estándar de MicroPython
+# para crear un módulo sintético: un objeto cualquiera + registrarlo
+# en sys.modules -- el import machinery de Python no distingue un
+# módulo "de verdad" de esto.
+#
+# _i2c_bus_wasm.py (cargado DESPUÉS) le agrega I2C/SoftI2C al MISMO
+# objeto -- no crea uno nuevo -- mismo criterio que
+# "_machine_module.I2C = I2C" en _i2c_bus.hal.py real.
+# ─────────────────────────────────────────────────────────────
+class _FakeMachineModule:
+    pass
+
+
+machine = _FakeMachineModule()
+machine.Pin = Pin
+sys.modules["machine"] = machine

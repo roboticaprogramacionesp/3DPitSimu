@@ -108,3 +108,12 @@ class I2C:
 
 
 SoftI2C = I2C
+
+# Se agrega al MISMO módulo "machine" falso que ya armó _base_wasm.py
+# (cargado siempre antes que este archivo) -- no se pisa el objeto,
+# solo se le suman estos dos nombres, igual que
+# "_machine_module.I2C = I2C" en _i2c_bus.hal.py real.
+import sys
+machine = sys.modules["machine"]
+machine.I2C = I2C
+machine.SoftI2C = SoftI2C

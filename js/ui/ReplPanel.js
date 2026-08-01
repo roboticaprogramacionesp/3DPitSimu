@@ -2037,10 +2037,18 @@ class ReplPanel {
             delete this._halRetryCounts[type]; // exito -- si vuelve a fallar mas adelante, cuenta de nuevo desde 0
         });
 
-        // _enqueuePaste hace que esto espere su turno si justo había
-        // una precarga de HAL (preloadHal) todavía mandándose --
-        // nunca se pisan los dos Ctrl+E entre sí.
-        await this._enqueuePaste(() => this._pasteBlock(fullCode, halLineCount, { silent: false }));
+        if (this.simulator.qemuBridge?.isWasmBridge) {
+            // Modo navegador: no hay pty/paste mode que proteger --
+            // se manda el código entero de una sola vez (ver
+            // WasmBridge.sendData()/wasmWorker.js, mp.runPython()
+            // sincrónico).
+            this.simulator.qemuBridge.sendData(fullCode);
+        } else {
+            // _enqueuePaste hace que esto espere su turno si justo había
+            // una precarga de HAL (preloadHal) todavía mandándose --
+            // nunca se pisan los dos Ctrl+E entre sí.
+            await this._enqueuePaste(() => this._pasteBlock(fullCode, halLineCount, { silent: false }));
+        }
 
         this._running = false;
         if (runBtn) runBtn.disabled = false;
@@ -2366,6 +2374,40 @@ class ReplPanel {
         });
 
         this.simulator.eventBus.on("qemu:connected", async () => {
+
+            this._lastGpioLogged = {};
+
+            // Modo navegador (WasmBridge, ver plan "PitSimulator en
+            // GitHub Pages"): nada de lo de abajo aplica -- no hay
+            // "warm boot"/HAL congelado que sondear (_probeWarmBoot
+            // manda interrupt() como parte del probe, que en
+            // WasmBridge reinicia el Worker -> "qemu:connected" de
+            // nuevo -> loop infinito, confirmado en la práctica). El
+            // Worker ya cargó _base_wasm.py/_i2c_bus_wasm.py antes de
+            // mandar "ready", así que queda listo de una.
+            if (this.simulator.qemuBridge?.isWasmBridge) {
+                this.appendOutput("\n🌐 Listo (modo navegador -- sin QEMU real).\n", "repl-info");
+
+                // Los módulos "siempre presentes" (_base/_i2c_bus/etc.)
+                // NUNCA se fetchean/mandan acá -- wasmWorker.js ya cargó
+                // sus equivalentes _*_wasm.py (components_wasm/) al
+                // conectar. Si se mandaran los .hal.py REALES de QEMU
+                // encima, chocan: esos esperan un machine.Pin real (ej.
+                // Pin.IRQ_RISING), y acá machine.Pin es el fake de
+                // _base_wasm.py -- confirmado en la práctica
+                // (AttributeError). Marcarlos "sent" de entrada evita
+                // que _buildPendingHal() los toque.
+                ReplPanel.ALWAYS_HAL_TYPES.forEach(type => this._halSentToFirmware.add(type));
+
+                this._replReady = true;
+                this.input.disabled   = false;
+                this.sendBtn.disabled = false;
+                const runBtn = document.getElementById("replBtnRun");
+                if (runBtn) runBtn.disabled = false;
+                this.simulator.signalEngine.resyncAllComponents();
+                return;
+            }
+
             this.appendOutput("\n✅ ESP32 conectada — esperando que MicroPython termine de arrancar...\n", "repl-info");
 
             // Todavía NO se habilita el input/Ejecutar acá -- recién
@@ -2379,8 +2421,6 @@ class ReplPanel {
             this.sendBtn.disabled = true;
             const runBtn = document.getElementById("replBtnRun");
             if (runBtn) runBtn.disabled = true;
-
-            this._lastGpioLogged = {};
 
             // Ver _resyncHalAfterBoot() -- sondea primero (¿ya está
             // "_pit_state" en sys.modules, sea por reconexión en

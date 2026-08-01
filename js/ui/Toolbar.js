@@ -13,10 +13,40 @@ class Toolbar {
 
         this.bindEvents();
         this.bindSimToggle();
+        this.bindWasmModeToggle();
         this.bindSimulationEvents();
         this.bindWireWarnings();
         this.bindCanvasThemeToggle();
         this.bindCanvasTools();
+
+    }
+
+    //------------------------------------------------------
+    // Botón 🌐 -- alternar entre modo escritorio (QEMU) y modo
+    // navegador (WasmBridge, experimental -- ver plan "PitSimulator
+    // en GitHub Pages"). Recarga la página a propósito: los dos
+    // bridges se deciden UNA sola vez en js/app.js antes de crear
+    // nada, nunca se reemplazan en caliente (ver el comentario
+    // grande ahí sobre por qué).
+    //------------------------------------------------------
+
+    bindWasmModeToggle() {
+
+        const btn = document.getElementById("btnWasmModeToggle");
+        if (!btn) return;
+
+        const isWasmMode = location.hash === "#modo=wasm";
+        btn.classList.toggle("active", isWasmMode);
+        btn.title = isWasmMode
+            ? "Modo navegador (WASM) activo -- clic para volver al modo escritorio (QEMU)"
+            : "Modo escritorio (QEMU) activo -- clic para probar el modo navegador (WASM, experimental)";
+
+        btn.addEventListener("click", () => {
+
+            location.hash = isWasmMode ? "" : "modo=wasm";
+            location.reload();
+
+        });
 
     }
 

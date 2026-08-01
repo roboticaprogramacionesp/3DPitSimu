@@ -37,8 +37,21 @@
     const replPanel = new ReplPanel(sim);
 
     // 3. QemuBridge (se inicializa aquí, después de que los componentes
-    //    ya están en el canvas para que pueda encontrar el ESP32)
-    sim.qemuBridge = new QemuBridge(sim);
+    //    ya están en el canvas para que pueda encontrar el ESP32) --
+    //    o WasmBridge si se entró con #modo=wasm en la URL (modo
+    //    100% navegador, sin QEMU/servidor -- ver plan "PitSimulator
+    //    en GitHub Pages"). Se decide UNA sola vez acá, antes de que
+    //    exista cualquier bridge -- nunca se reemplaza en caliente
+    //    (evita el problema real que encontramos de un QemuBridge
+    //    viejo quedando con su propio listener de "simulation:start"
+    //    todavía activo). Cambiar de modo = recargar la página con
+    //    el hash puesto o sacado.
+    //    Hash y no query string a propósito -- confirmado en la
+    //    práctica que el dev server (`serve`) redirige /index.html a
+    //    /index y en el camino pierde el query string; un hash nunca
+    //    se manda al servidor, así que ningún redirect lo puede tocar.
+    const wasmMode = location.hash === "#modo=wasm";
+    sim.qemuBridge = wasmMode ? new WasmBridge(sim) : new QemuBridge(sim);
 
     // 4. Toolbar (botones superiores: eliminar, zoom)
     const toolbar = new Toolbar(sim);
