@@ -2041,12 +2041,23 @@ class ReplPanel {
             // Modo navegador: no hay pty/paste mode que proteger --
             // se manda el código entero de una sola vez (ver
             // WasmBridge.sendData()/wasmWorker.js, mp.runPython()
-            // sincrónico). sendData() acá devuelve una Promise que
-            // recién se resuelve cuando el código TERMINÓ de correr
-            // de verdad (no cuando se mandó) -- si no se espera, el
-            // botón ▶ Ejecutar se reactivaba casi al instante aunque
-            // el script siguiera corriendo/colgado adentro del
-            // Worker (reportado por el usuario).
+            // sincrónico).
+            //
+            // A diferencia de QEMU (donde el pty real hace eco de todo
+            // lo que se pega, así que el código aparece solo en la
+            // terminal), acá nada lo muestra por su cuenta -- sin
+            // esto, "▶ Ejecutando..." no dejaba ver QUÉ se mandó a
+            // correr (reportado por el usuario). Se imprime el mismo
+            // fullCode que se manda, tal cual -- mismo criterio que
+            // el eco de paste mode real.
+            this.appendOutput(fullCode + "\n", "repl-info");
+
+            // sendData() acá devuelve una Promise que recién se
+            // resuelve cuando el código TERMINÓ de correr de verdad
+            // (no cuando se mandó) -- si no se espera, el botón
+            // ▶ Ejecutar se reactivaba casi al instante aunque el
+            // script siguiera corriendo/colgado adentro del Worker
+            // (reportado por el usuario).
             //
             // Aviso de "esto puede tardar/colgarse" -- ver la
             // LIMITACIÓN CONOCIDA del plan: un while True: con
