@@ -65,6 +65,33 @@ class WasmBridge {
         // instancias escuchando el mismo evento a la vez.
         this.simulator.eventBus.on("simulation:start", () => this.connect());
 
+        // ReplPanel.sendInput() (el input de una línea + botón
+        // "Enviar" del REPL, abajo del todo -- distinto de ▶ Ejecutar,
+        // que ya usa sendData() directo, ver runEditorCode()) NO llama
+        // a qemuBridge.sendData() -- emite "qemu:send", mismo evento
+        // que QemuBridge.js usa para TODO su tráfico de bajo nivel
+        // (paste mode, Ctrl+C/D, líneas sueltas). Sin este listener,
+        // cualquier cosa tipeada ahí se perdía en silencio -- no
+        // llegaba a ningún lado (reportado por el usuario: "led.on()"
+        // tipeado en el REPL no hacía nada). Los bytes de control que
+        // sí manda ReplPanel por acá (Ctrl+C/D/E, paste mode) no
+        // aplican al modelo de WasmBridge -- runEditorCode() ya evita
+        // mandarlos para este bridge, así que en la práctica solo
+        // llegan líneas sueltas de código real.
+        this.simulator.eventBus.on("qemu:send", (text) => {
+            if (text === "\x03") { this.interrupt(); return; }
+            if (text === "\x04" || text === "\x05") return; // paste mode, no aplica acá
+
+            // Eco tipo REPL -- QEMU real lo hace solo (el pty lo
+            // devuelve), acá no hay pty, así que sin esto el usuario
+            // no ve NADA en la terminal para algo como "led.on()"
+            // (correcto que no imprima nada -- ni en hardware real lo
+            // hace -- pero entonces no queda ninguna confirmación
+            // visible de que se ejecutó).
+            this.simulator.eventBus.emit("qemu:output", `>>> ${text}\n`);
+            this.sendData(text);
+        });
+
     }
 
     get connected() {
