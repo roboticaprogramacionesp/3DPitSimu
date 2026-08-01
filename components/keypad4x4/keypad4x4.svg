@@ -483,4 +483,16 @@
      stroke="#c9a227"
      stroke-width="0.8"
      id="circle26" />
+  <!-- Etiquetas de pin, debajo de cada anillo (mismo criterio que
+       qmc5883l.svg/gps.svg: texto real horneado en el propio SVG) -->
+  <g fill="#ffffff" font-family="DroidSans, sans-serif" font-size="3" text-anchor="middle" id="pinLabels">
+    <text x="9.5" y="78">R1</text>
+    <text x="16.5" y="78">R2</text>
+    <text x="23.5" y="78">R3</text>
+    <text x="30.5" y="78">R4</text>
+    <text x="37.5" y="78">C1</text>
+    <text x="44.5" y="78">C2</text>
+    <text x="51.5" y="78">C3</text>
+    <text x="58.5" y="78">C4</text>
+  </g>
 </svg>

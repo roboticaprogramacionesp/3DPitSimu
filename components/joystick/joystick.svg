@@ -38,7 +38,7 @@
   <circle data-joystick-role="knob" data-role="button-cap" cx="25" cy="23" r="7" fill="#c0392b" stroke="#7a1f14" stroke-width="0.8"/>
 
   <!-- Serigrafia -->
-  <text x="25" y="43" text-anchor="middle" fill="#ffffff" font-family="DroidSans, sans-serif" font-size="4">KY-023</text>
+  <text x="25" y="43" text-anchor="middle" fill="#ffffff" font-family="DroidSans, sans-serif" font-size="4">JOYSTICK</text>
 
   <!-- Franja del conector, donde van los 5 pines -->
   <rect x="4" y="46" width="42" height="13" rx="3" fill="#0c1730"/>

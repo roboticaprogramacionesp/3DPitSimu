@@ -1,0 +1,23 @@
+{
+    "type": "ky-011",
+    "name": "KY-011 LED Bicolor (Rojo/Verde)",
+    "category": "LEDs",
+
+    "width": 53.150391,
+    "height": 94.081713,
+
+    "svgPath": "components/ky-011/ky-011.svg",
+
+    "pinShape": "square",
+    "pinSize": 4,
+
+    "pins": [
+        { "id": "com", "name": "Común (-)", "x": 17.64, "y": 95, "type": "ground", "signal": "digital" },
+        { "id": "r",   "name": "Rojo (R)",  "x": 26.68, "y": 95, "type": "input",  "signal": "digital" },
+        { "id": "g",   "name": "Verde (G)", "x": 35.68, "y": 95, "type": "input",  "signal": "digital" }
+    ],
+
+    "properties": {
+        "modelo": "KY-011: LED bicolor rojo+verde, cátodo común -- 'com' a GND. El asset real solo marca claramente el pin derecho como 'S' (silkscreen ambiguo); si tu módulo físico tiene R/G invertidos, cambiá el cableado. Cada canal acepta digital ON/OFF (Pin) o PWM (machine.PWM/duty) para variar el brillo; ambos a la vez mezclan a amarillo/naranja, igual que el LED real"
+    }
+}

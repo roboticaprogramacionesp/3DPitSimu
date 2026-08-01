@@ -72,4 +72,16 @@
   <circle cx="44.5" cy="79" r="2.4" fill="none" stroke="#c9a227" stroke-width="0.8"/>
   <circle cx="52"   cy="79" r="2.4" fill="none" stroke="#c9a227" stroke-width="0.8"/>
 
+  <!-- Etiquetas de pin, debajo de cada anillo (mismo criterio que
+       qmc5883l.svg/gps.svg: texto real horneado en el propio SVG) -->
+  <g fill="#ffffff" font-family="DroidSans, sans-serif" font-size="3" text-anchor="middle">
+    <text x="7"    y="84.5">R1</text>
+    <text x="14.5" y="84.5">R2</text>
+    <text x="22"   y="84.5">R3</text>
+    <text x="29.5" y="84.5">R4</text>
+    <text x="37"   y="84.5">C1</text>
+    <text x="44.5" y="84.5">C2</text>
+    <text x="52"   y="84.5">C3</text>
+  </g>
+
 </svg>

@@ -1,0 +1,24 @@
+{
+    "type": "fc-51",
+    "name": "FC-51 Sensor Infrarrojo de Obstáculos",
+    "category": "Sensores",
+
+    "width": 119.57836,
+    "height": 137.02456,
+
+    "svgPath": "components/fc-51/fc-51.svg",
+
+    "pinShape": "square",
+    "pinSize": 4,
+
+    "pins": [
+        { "id": "out", "name": "OUT", "type": "signal", "x": 0.000,  "y": 125.065 },
+        { "id": "gnd", "name": "GND", "type": "ground", "signal": "ground", "x": 7.075,  "y": 130.687 },
+        { "id": "vcc", "name": "VCC", "type": "power",  "signal": "power", "voltage": 3.3, "x": 13.206, "y": 135.558 }
+    ],
+
+    "properties": {
+        "modelo": "FC-51: sensor infrarrojo de obstáculos, salida digital activa en BAJO al detectar un objeto",
+        "detectado": false
+    }
+}

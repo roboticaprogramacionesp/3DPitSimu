@@ -1,0 +1,24 @@
+{
+    "type": "pir",
+    "name": "Sensor PIR de Movimiento (HC-SR501)",
+    "category": "Sensores",
+
+    "width": 54,
+    "height": 80,
+
+    "svgPath": "components/pir/pir.svg",
+
+    "pinShape": "square",
+    "pinSize": 3,
+
+    "pins": [
+        { "id": "vcc", "name": "VCC", "x": 18, "y": 76, "type": "power",  "signal": "power" },
+        { "id": "out", "name": "OUT", "x": 27, "y": 76, "type": "signal" },
+        { "id": "gnd", "name": "GND", "x": 36, "y": 76, "type": "ground", "signal": "ground" }
+    ],
+
+    "properties": {
+        "modelo": "PIR HC-SR501: sensor infrarrojo pasivo de movimiento, salida digital activa en ALTO al detectar (a diferencia del FC-51/TCRT5000, que son activos en BAJO)",
+        "detectado": false
+    }
+}

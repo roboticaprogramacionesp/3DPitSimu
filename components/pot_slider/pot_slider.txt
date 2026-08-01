@@ -1,0 +1,12 @@
+from machine import Pin, ADC
+from time import sleep
+deslizadorA = ADC(Pin(2))
+deslizadorA.atten(ADC.ATTN_11DB)
+deslizadorA.width(ADC.WIDTH_10BIT)
+deslizadorB = ADC(Pin(4))
+deslizadorB.atten(ADC.ATTN_11DB)
+deslizadorB.width(ADC.WIDTH_10BIT)
+while True:
+  print(deslizadorA.read())
+  print(deslizadorB.read())
+  sleep(1)

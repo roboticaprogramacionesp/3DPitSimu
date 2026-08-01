@@ -738,4 +738,38 @@
             </g>
         </g>
     </g>
+
+    <!-- Agregado a pedido (KY-023 real, no el joystick genérico
+         dibujado a mano): el stick real (círculo "path1480", más
+         arriba) vive metido adentro de un montón de <g> anidados con
+         matrix/scale/translate propios, en un espacio de coordenadas
+         LOCAL que no coincide con el de la raíz del documento:
+         intentar reusarlo directo para arrastrarlo (como hace
+         Renderer.bindJoystick, que lee/escribe cx/cy en las MISMAS
+         unidades) hubiera requerido meterse a mano en esa maraña de
+         transforms. Más simple y con menos riesgo: agregar acá, en
+         coordenadas YA RESUELTAS (medidas en vivo con getCTM()), un
+         círculo NUEVO que se superpone exacto arriba del cabezal
+         real (mismo color/posición/radio, así en reposo son
+         indistinguibles) y es ESE el que se arrastra: el cabezal
+         original de abajo queda como "base" fija, igual que en un
+         joystick real (el aro no se mueve, solo el stick).
+
+         data-role="joystick-area": zona de recorrido (invisible,
+         solo matemática: las flechas de abajo ya comunican
+         visualmente el rango).
+         data-joystick-role="knob" + data-role="button-cap": el
+         mismo círculo hace de perilla arrastrable Y de botón SW
+         (mismo patrón dual que ya usa joystick/joystick.svg). -->
+    <circle data-role="joystick-area" cx="12.97" cy="17.08" r="11" fill="none" stroke="none" opacity="0" />
+
+    <!-- Flechas estilo Wokwi (a pedido): triángulos apagados por
+         default, Renderer.bindJoystick los enciende según hacia
+         dónde está inclinado el stick (ver ese archivo). -->
+    <polygon data-joystick-arrow="up" points="12.97,4.78 11.87,7.18 14.07,7.18" fill="#8a8a8a" stroke="#000000" stroke-width="0.15" />
+    <polygon data-joystick-arrow="down" points="12.97,29.38 11.87,26.98 14.07,26.98" fill="#8a8a8a" stroke="#000000" stroke-width="0.15" />
+    <polygon data-joystick-arrow="left" points="0.67,17.08 3.07,15.98 3.07,18.18" fill="#8a8a8a" stroke="#000000" stroke-width="0.15" />
+    <polygon data-joystick-arrow="right" points="25.27,17.08 22.87,15.98 22.87,18.18" fill="#8a8a8a" stroke="#000000" stroke-width="0.15" />
+
+    <circle data-joystick-role="knob" data-role="button-cap" cx="12.97" cy="17.08" r="7.3" fill="#414141" stroke="#0e0e0e" stroke-width="0.3" />
 </svg>

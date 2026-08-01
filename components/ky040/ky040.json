@@ -3,20 +3,20 @@
     "name": "KY-040 Encoder Rotativo",
     "category": "Sensores",
 
-    "width": 100,
-    "height": 55,
+    "width": 52.44,
+    "height": 85.56,
 
     "svgPath": "components/ky040/ky040.svg",
 
     "pinShape": "square",
-    "pinSize": 4,
+    "pinSize": 3.067,
 
     "pins": [
-        { "id": "clk", "name": "CLK",        "x": 98, "y": 11, "type": "signal" },
-        { "id": "dt",  "name": "DT",         "x": 98, "y": 20, "type": "signal" },
-        { "id": "sw",  "name": "SW (botón)", "x": 98, "y": 29, "type": "signal" },
-        { "id": "vcc", "name": "VCC (+5V)",  "x": 98, "y": 38, "type": "power",  "signal": "power"  },
-        { "id": "gnd", "name": "GND",        "x": 98, "y": 47, "type": "ground", "signal": "ground" }
+        { "id": "gnd", "name": "GND",        "x": 18.685, "y": 83, "type": "ground", "signal": "ground" },
+        { "id": "vcc", "name": "VCC (+5V)",  "x": 25.640, "y": 83, "type": "power",  "signal": "power"  },
+        { "id": "sw",  "name": "SW (botón)", "x": 32.651, "y": 83, "type": "signal", "optional": true },
+        { "id": "dt",  "name": "DT",         "x": 39.661, "y": 83, "type": "signal" },
+        { "id": "clk", "name": "CLK",        "x": 46.672, "y": 83, "type": "signal" }
     ],
 
     "pressPins": ["sw", "gnd"],

@@ -1,0 +1,23 @@
+{
+    "type": "ky-018",
+    "name": "KY-018 Fotorresistor (LDR)",
+    "category": "Sensores",
+
+    "width": 53.150391,
+    "height": 100.07715,
+
+    "svgPath": "components/ky-018/ky-018.svg",
+
+    "pinShape": "square",
+    "pinSize": 4,
+
+    "pins": [
+        { "id": "s",   "name": "S (analógico)", "x": 17.79, "y": 99.47, "type": "signal" },
+        { "id": "vcc", "name": "+5V",           "x": 26.83, "y": 99.47, "type": "power",  "signal": "power"  },
+        { "id": "gnd", "name": "GND",           "x": 35.83, "y": 99.47, "type": "ground", "signal": "ground" }
+    ],
+
+    "properties": {
+        "modelo": "KY-018: módulo fotorresistor (LDR) + resistencia divisora. Salida analógica 'S' sube con más luz (0% = oscuridad, 100% = luz intensa)"
+    }
+}

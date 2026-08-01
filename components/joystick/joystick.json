@@ -1,6 +1,6 @@
 {
     "type": "joystick",
-    "name": "Joystick KY-023",
+    "name": "Joystick Analógico (genérico)",
     "category": "Sensores",
 
     "width": 50,
@@ -22,6 +22,6 @@
     "pressPins": ["sw", "gnd"],
 
     "properties": {
-        "modelo": "Joystick KY-023 (X/Y analógico + botón, resorte de centrado)"
+        "modelo": "Joystick analógico genérico (X/Y + botón, resorte de centrado) -- ver también 'ky-023' para el módulo real"
     }
 }

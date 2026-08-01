@@ -1,0 +1,21 @@
+from machine import Pin, ADC
+from time import sleep
+key = None
+
+adkey=ADC(Pin(4))
+adkey.atten(ADC.ATTN_11DB)
+adkey.width(ADC.WIDTH_10BIT)
+while True:
+  key = adkey.read()
+  print(key)
+  if key >= 0 and key < 100:
+    print('Select')
+  if key > 200 and key < 300:
+    print('Derecha')
+  if key >= 400 and key < 500:
+    print('Izquierda')
+  if key > 600 and key < 700:
+    print('Abajo')
+  if key > 800 and key < 900:
+    print('Arriba')
+  sleep(1)

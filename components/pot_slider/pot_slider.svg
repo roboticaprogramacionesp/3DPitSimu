@@ -1,5 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 46">
-
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 110 46"
+   version="1.1"
+   id="svg9"
+   sodipodi:docname="pot_slider.svg"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs9" />
+  <sodipodi:namedview
+     id="namedview9"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:zoom="8.1188715"
+     inkscape:cx="56.90446"
+     inkscape:cy="21.739475"
+     inkscape:window-width="1366"
+     inkscape:window-height="697"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg9" />
   <!--
     Icono plano propio, mismo criterio que el resto de los
     componentes de este proyecto.
@@ -27,28 +56,117 @@
     Coordenadas en las mismas unidades que "width"/"height" del JSON
     (110x46).
   -->
-
   <!-- Cuerpo del modulo (PCB) -->
-  <rect x="2" y="2" width="106" height="28" rx="4" fill="#132042" stroke="#05070f" stroke-width="1"/>
-
+  <rect
+     x="2"
+     y="2"
+     width="106"
+     height="28"
+     rx="4"
+     fill="#132042"
+     stroke="#05070f"
+     stroke-width="1"
+     id="rect1" />
+  <text
+     x="55"
+     y="26"
+     text-anchor="middle"
+     fill="#ffffff"
+     font-family="DroidSans, sans-serif"
+     font-size="4"
+     id="text2">10K SLIDE</text>
   <!-- Riel de recorrido -->
-  <rect data-role="slider-track" x="12" y="12" width="86" height="6" rx="3" fill="#0c1730" stroke="#3a4a7a" stroke-width="1"/>
-
+  <rect
+     data-role="slider-track"
+     x="12"
+     y="12"
+     width="86"
+     height="6"
+     rx="3"
+     fill="#0c1730"
+     stroke="#3a4a7a"
+     stroke-width="1"
+     id="rect2" />
   <!-- Perilla arrastrable -->
-  <circle data-slider-role="knob" cx="55" cy="15" r="9" fill="#c0392b" stroke="#7a1f14" stroke-width="0.8"/>
-
+  <circle
+     data-slider-role="knob"
+     cx="55"
+     cy="15"
+     r="9"
+     fill="#c0392b"
+     stroke="#7a1f14"
+     stroke-width="0.8"
+     id="circle2" />
   <!-- Serigrafia -->
-  <text x="55" y="26" text-anchor="middle" fill="#ffffff" font-family="DroidSans, sans-serif" font-size="4">10K SLIDE</text>
-
   <!-- Franja del conector, donde van los 4 pines (GND, VCC, OUT1, OUT2) -->
-  <rect x="4" y="34" width="102" height="10" rx="3" fill="#0c1730"/>
-
+  <rect
+     x="4"
+     y="32"
+     width="102"
+     height="12"
+     rx="3"
+     fill="#0c1730"
+     id="rect3"
+     style="stroke-width:1.09544" />
   <!-- Anillos de pad de cada pin, puramente cosmeticos: el cuadrado
        clickeable real lo dibuja Renderer.renderPins() encima, en las
        mismas coordenadas que vienen del JSON. -->
-  <circle cx="16" cy="39" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
-  <circle cx="40" cy="39" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
-  <circle cx="64" cy="39" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
-  <circle cx="88" cy="39" r="2.6" fill="none" stroke="#c9a227" stroke-width="0.8"/>
-
+  <circle
+     cx="16"
+     cy="39"
+     r="2.6"
+     fill="none"
+     stroke="#c9a227"
+     stroke-width="0.8"
+     id="circle3" />
+  <circle
+     cx="40"
+     cy="39"
+     r="2.6"
+     fill="none"
+     stroke="#c9a227"
+     stroke-width="0.8"
+     id="circle4" />
+  <circle
+     cx="64"
+     cy="39"
+     r="2.6"
+     fill="none"
+     stroke="#c9a227"
+     stroke-width="0.8"
+     id="circle5" />
+  <circle
+     cx="88"
+     cy="39"
+     r="2.6"
+     fill="none"
+     stroke="#c9a227"
+     stroke-width="0.8"
+     id="circle6" />
+  <!-- Etiquetas de pin, arriba de cada anillo (mismo criterio que
+       qmc5883l.svg/gps.svg: texto real horneado en el propio SVG) -->
+  <g
+     fill="#ffffff"
+     font-family="DroidSans, sans-serif"
+     font-size="2px"
+     text-anchor="middle"
+     id="g9"
+     transform="translate(0,-2)">
+    <text
+       x="16"
+       y="36.299999"
+       id="text6">GND</text>
+    <text
+       x="40"
+       y="36.299999"
+       id="text7">VCC</text>
+    <text
+       x="64"
+       y="36.299999"
+       id="text8">OUT1</text>
+    <text
+       x="88"
+       y="36.299999"
+       id="text9">OUT2</text>
+  </g>
 </svg>

@@ -1,0 +1,18 @@
+from machine import Pin, ADC
+from time import sleep
+
+joystick_x = ADC(Pin(4))
+joystick_x.atten(ADC.ATTN_11DB)
+joystick_x.width(ADC.WIDTH_10BIT)
+
+joystick_y = ADC(Pin(26))
+joystick_y.atten(ADC.ATTN_11DB)
+joystick_y.width(ADC.WIDTH_10BIT)
+
+joystick_sw = Pin(2, Pin.IN, None)
+
+while True:
+  print(joystick_x.read())
+  print(joystick_y.read())
+  print(joystick_sw.value())
+  sleep(1)
