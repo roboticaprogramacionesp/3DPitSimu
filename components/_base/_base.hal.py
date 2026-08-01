@@ -649,3 +649,90 @@ except Exception as _timer_setup_err:
 # componente, ni si lo hace el usuario) siempre trae ESTA clase.
 # ─────────────────────────────────────────────────────────────
 machine.Pin = Pin
+
+
+# ─────────────────────────────────────────────────────────────
+# machine.PWM genérico -- MISMO MOTIVO que machine.Pin arriba, pero
+# para PWM: antes, machine.PWM solo se reemplazaba por una clase
+# sintética cuando el HAL de un componente PWM-consciente (buzzer o
+# sg90) se cargaba -- si el circuito no tenía ninguno de los dos
+# (ej. código propio del usuario haciendo PWM(Pin(N), freq=..., ...)
+# para atenuar un LED, sin ningún buzzer/servo en el canvas),
+# machine.PWM seguía siendo el PWM/LEDC REAL de QEMU.
+#
+# CONFIRMADO EN LA PRÁCTICA (2026-08-01, reportado por el usuario):
+# esa build real tira "ValueError: invalid pin" para GPIO2 y GPIO4
+# (no son casos aislados como se pensaba con GPIO26 -- ver el mismo
+# diagnóstico en sg90.hal.py -- es la clase de PWM real la que está
+# rota en esta build, no un pin puntual).
+#
+# Mismo protocolo "PWM:<gpio>:<freq>:<duty>\n" que ya usaba
+# buzzer.hal.py -- si no hay ningún componente que lo consuma
+# (SignalEngine.setPwmState/evaluateAll), es un no-op silencioso del
+# lado del navegador, exactamente como un PWM real sin nada
+# físicamente conectado. Si buzzer.hal.py o sg90.hal.py se cargan
+# DESPUÉS (on-demand, según el canvas), su propio "machine.PWM = PWM"
+# pisa esta versión genérica con la suya más específica -- mismo
+# criterio de "el último HAL que se carga gana" ya documentado para
+# PWM (ver el comentario grande en buzzer.hal.py).
+# ─────────────────────────────────────────────────────────────
+class PWM:
+
+    def __init__(self, pin, freq=None, duty=None, duty_u16=None, duty_ns=None):
+        self._pin_num = getattr(pin, "_pin_num", pin)
+        self._freq = 0
+        self._duty = 0
+        self._active = False
+
+        if duty is not None:
+            self._duty = duty
+        elif duty_u16 is not None:
+            self._duty = duty_u16 // 64
+
+        if freq is not None:
+            self._freq = freq
+            self._active = True
+            self._emit()
+
+    def _emit(self):
+        sent_freq = self._freq if self._active else 0
+        sys.stdout.write("PWM:%d:%d:%d\n" % (self._pin_num, sent_freq, self._duty))
+
+    def freq(self, hz=None):
+        if hz is None:
+            return self._freq
+        self._freq = hz
+        self._active = True
+        self._emit()
+
+    def duty(self, value=None):
+        if value is None:
+            return self._duty
+        self._duty = value
+        if self._active:
+            self._emit()
+
+    def duty_u16(self, value=None):
+        if value is None:
+            return self._duty * 64
+        self._duty = value // 64
+        if self._active:
+            self._emit()
+
+    def duty_ns(self, value=None):
+        pass
+
+    def init(self, freq=None, duty=None):
+        if freq is not None:
+            self._freq = freq
+        if duty is not None:
+            self._duty = duty
+        self._active = True
+        self._emit()
+
+    def deinit(self):
+        self._active = False
+        sys.stdout.write("PWM:%d:0:%d\n" % (self._pin_num, self._duty))
+
+
+machine.PWM = PWM
