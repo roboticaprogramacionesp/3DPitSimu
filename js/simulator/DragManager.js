@@ -72,13 +72,52 @@ class DragManager {
 
         const point = Utils.getCanvasPoint(this.simulator.componentLayer, e.clientX, e.clientY);
 
+        // Arrastre en GRUPO: si el componente clickeado es parte de una
+        // selección múltiple (2+, ver SelectionManager), se arrastran
+        // TODOS los seleccionados juntos, preservando sus posiciones
+        // relativas -- si no, es un arrastre de uno solo, como siempre
+        // (de hecho el resto de este método/updateDrag/endDrag ya no
+        // distingue los dos casos: "grupo de 1" se comporta idéntico a
+        // como se comportaba antes).
+        const selMgr = this.simulator.selectionManager;
+        const groupIds = (selMgr && selMgr.selected.length > 1 && selMgr.selected.includes(id))
+            ? selMgr.selected
+            : [id];
+
+        const members = groupIds
+            .map(mid => this.simulator.componentManager.get(mid))
+            .filter(c => c && !c.locked)
+            .map(c => ({ component: c, startX: c.x, startY: c.y }));
+
+        // Cables "internos" al grupo: si AMBOS extremos de un cable son
+        // componentes que se están arrastrando juntos, sus codos
+        // manuales (wire.points, coordenadas ABSOLUTAS -- ver
+        // WireManager.renderAll) deben moverse con el mismo delta que
+        // el grupo. Si no se hacen, el cable se "estira" raro: sus
+        // puntas siguen al pin (auto, vía component:moved) pero los
+        // codos intermedios quedan clavados en su posición vieja.
+        const memberIds = new Set(groupIds);
+        const wireManager = this.simulator.wireManager;
+        const wires = wireManager
+            ? wireManager.wires.filter(w =>
+                memberIds.has(w.from.componentId) && memberIds.has(w.to.componentId) &&
+                Array.isArray(w.points) && w.points.length > 0)
+            : [];
+
+        const wireSnapshots = wires.map(w => ({
+            wire: w,
+            startPoints: w.points.map(p => ({ x: p.x, y: p.y })),
+        }));
+
         this.dragging = {
-            component,
+            anchor: component,
             pointerId: e.pointerId,
             offsetX: point.x - component.x,
             offsetY: point.y - component.y,
-            startX: component.x,
-            startY: component.y
+            anchorStartX: component.x,
+            anchorStartY: component.y,
+            members,
+            wireSnapshots,
         };
 
         // Capturamos el puntero: así, aunque el mouse se mueva muy
@@ -113,18 +152,42 @@ class DragManager {
         const gridSize    = this.simulator.gridSize || 20;
         const snapEnabled = !!this.simulator.gridSize;
 
-        const newX = Utils.snapToGrid(point.x - this.dragging.offsetX, gridSize, snapEnabled);
-        const newY = Utils.snapToGrid(point.y - this.dragging.offsetY, gridSize, snapEnabled);
+        // El snap se calcula SOLO sobre el "ancla" (el componente bajo
+        // el cursor) -- el resto del grupo se mueve por el MISMO delta
+        // (newAnchor - anchorStart), no cada uno snapeado por separado.
+        // Snapear cada uno individualmente los desalinearía entre sí
+        // apenas alguno cayera cerca de un borde de cuadrícula distinto.
+        const newAnchorX = Utils.snapToGrid(point.x - this.dragging.offsetX, gridSize, snapEnabled);
+        const newAnchorY = Utils.snapToGrid(point.y - this.dragging.offsetY, gridSize, snapEnabled);
 
-        this.dragging.component.setPosition(newX, newY);
+        const dx = newAnchorX - this.dragging.anchorStartX;
+        const dy = newAnchorY - this.dragging.anchorStartY;
 
-        // Si el componente arrastrado está seleccionado,
-        // el marco de selección debe moverse con él.
+        this.dragging.members.forEach(m => {
+            m.component.setPosition(m.startX + dx, m.startY + dy);
+            this.simulator.eventBus.emit("component:moved", m.component);
+        });
+
+        // Codos de los cables internos al grupo: mismo delta que el
+        // grupo, partiendo siempre del snapshot tomado en startDrag
+        // (no acumular sobre el valor ya movido, para no arrastrar
+        // error de redondeo del snap en cada pointermove).
+        this.dragging.wireSnapshots.forEach(ws => {
+            ws.wire.points.forEach((p, i) => {
+                p.x = ws.startPoints[i].x + dx;
+                p.y = ws.startPoints[i].y + dy;
+            });
+        });
+
+        if (this.simulator.wireManager && this.dragging.wireSnapshots.length > 0) {
+            this.simulator.wireManager.renderAll();
+        }
+
+        // Si el/los componente(s) arrastrados están seleccionados,
+        // el marco de selección debe moverse con ellos.
         if (this.simulator.selectionManager) {
             this.simulator.selectionManager.renderHighlight();
         }
-
-        this.simulator.eventBus.emit("component:moved", this.dragging.component);
 
     }
 
@@ -136,16 +199,14 @@ class DragManager {
 
         if (!this.dragging) return;
 
-        const { component, startX, startY } = this.dragging;
-        const endX = component.x;
-        const endY = component.y;
+        const { anchor, members, wireSnapshots } = this.dragging;
 
-        if (component.element) {
+        if (anchor.element) {
 
-            component.element.classList.remove("dragging");
+            anchor.element.classList.remove("dragging");
 
             try {
-                component.element.releasePointerCapture(this.dragging.pointerId);
+                anchor.element.releasePointerCapture(this.dragging.pointerId);
             } catch (err) {
                 // Ya se habrá liberado sola en la mayoría de los casos.
             }
@@ -154,19 +215,56 @@ class DragManager {
 
         this.simulator.canvas.style.cursor = "default";
 
-        this.simulator.eventBus.emit("component:dragend", component);
+        this.simulator.eventBus.emit("component:dragend", anchor);
 
-        if (startX !== endX || startY !== endY) {
+        // Snapshot de posiciones final -- un solo undo/redo deshace o
+        // rehace el movimiento de TODO el grupo junto, no uno por uno.
+        const moves = members
+            .filter(m => m.startX !== m.component.x || m.startY !== m.component.y)
+            .map(m => ({ component: m.component, startX: m.startX, startY: m.startY, endX: m.component.x, endY: m.component.y }));
+
+        // Mismo criterio que "moves": solo entra al historial si el
+        // cable realmente se movió (el grupo pudo haberse soltado sin
+        // arrastre real, o el cable pudo no tener codos que mover).
+        const wireMoves = wireSnapshots
+            .filter(ws => ws.wire.points.some((p, i) => p.x !== ws.startPoints[i].x || p.y !== ws.startPoints[i].y))
+            .map(ws => ({
+                wire: ws.wire,
+                startPoints: ws.startPoints,
+                endPoints: ws.wire.points.map(p => ({ x: p.x, y: p.y })),
+            }));
+
+        if (moves.length > 0 || wireMoves.length > 0) {
+
+            const wireManager = this.simulator.wireManager;
 
             this.simulator.history.push({
                 undo: () => {
-                    component.setPosition(startX, startY);
-                    this.simulator.eventBus.emit("component:moved", component);
+                    moves.forEach(m => {
+                        m.component.setPosition(m.startX, m.startY);
+                        this.simulator.eventBus.emit("component:moved", m.component);
+                    });
+                    wireMoves.forEach(wm => {
+                        wm.wire.points.forEach((p, i) => {
+                            p.x = wm.startPoints[i].x;
+                            p.y = wm.startPoints[i].y;
+                        });
+                    });
+                    if (wireManager && wireMoves.length > 0) wireManager.renderAll();
                     this.simulator.selectionManager.renderHighlight();
                 },
                 redo: () => {
-                    component.setPosition(endX, endY);
-                    this.simulator.eventBus.emit("component:moved", component);
+                    moves.forEach(m => {
+                        m.component.setPosition(m.endX, m.endY);
+                        this.simulator.eventBus.emit("component:moved", m.component);
+                    });
+                    wireMoves.forEach(wm => {
+                        wm.wire.points.forEach((p, i) => {
+                            p.x = wm.endPoints[i].x;
+                            p.y = wm.endPoints[i].y;
+                        });
+                    });
+                    if (wireManager && wireMoves.length > 0) wireManager.renderAll();
                     this.simulator.selectionManager.renderHighlight();
                 }
             });
