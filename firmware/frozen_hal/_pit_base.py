@@ -1,5 +1,22 @@
 # =============================================================
-# PitSimulator — HAL Base
+# PitSimulator — HAL Base (VARIANTE CONGELADA)
+#
+# Copia BIT A BIT del components/_base/_base.hal.py del repo del
+# simulador (browser), pensada para congelarse en el firmware real
+# (freeze) e importarse desde boot.py -- ver boot_snippet.py en esta
+# misma carpeta -- en vez de pegarse por paste-mode en cada sesión
+# de QEMU. Sin cambios funcionales respecto al original: mismo
+# contenido, la ÚNICA diferencia entre ambos archivos es este
+# encabezado.
+#
+# NO EDITAR ESTE ARCHIVO SIN EDITAR TAMBIÉN
+# components/_base/_base.hal.py EN EL REPO DEL SIMULADOR (y viceversa)
+# -- son dos copias del mismo comportamiento, una para transmisión
+# (paste-mode, firmware viejo sin este freeze) y otra para arranque
+# congelado (firmware nuevo). Si divergen, un firmware viejo y uno
+# nuevo se van a comportar distinto ante el mismo .hal.py de
+# componente.
+#
 # Se inyecta SIEMPRE antes del código del usuario.
 # Proporciona:
 #   - class Pin  con salida GPIO:N:V y lectura de IN:N:V

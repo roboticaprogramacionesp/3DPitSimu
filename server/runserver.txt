@@ -1,0 +1,11 @@
+$env:QEMU_BIN = "C:\Users\piter\.espressif\tools\qemu-xtensa\esp_develop_9.2.2_20250817\qemu\bin\qemu-system-xtensa.exe"
+$env:GDB_BIN = "C:\Users\piter\.espressif\tools\xtensa-esp-elf-gdb\16.2_20250324\xtensa-esp-elf-gdb\bin\xtensa-esp32-elf-gdb.exe"
+$env:MP_ELF = "C:\Users\piter\Downloads\Simulador de componentes\PitSimulator\server\micropython.elf"
+node server.js
+
+
+cd "C:\Users\piter\Downloads\Simulador de componentes\PitSimulator\server"
+$env:GDB_BIN = "C:\Users\piter\.espressif\tools\xtensa-esp-elf-gdb\16.2_20250324\xtensa-esp-elf-gdb\bin\xtensa-esp32-elf-gdb.exe"
+$env:MP_ELF = "C:\Users\piter\Downloads\Simulador de componentes\PitSimulator\server\micropython.elf"
+$env:QEMU_BIN = "C:\Users\piter\.espressif\tools\qemu-xtensa\esp_develop_9.2.2_20250817\qemu\bin\qemu-system-xtensa.exe"
+node server.js
