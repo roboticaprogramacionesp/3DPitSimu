@@ -1,0 +1,113 @@
+{
+  "version": "1.0",
+  "timestamp": 1785554835448,
+  "components": [
+    {
+      "id": "esp32_wroom_exmd23y",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 300,
+      "y": 140,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "neopixel_ring_wfhqk78",
+      "type": "neopixel_ring",
+      "name": "Anillo de NeoPixel",
+      "x": 589.8422218892443,
+      "y": 196.06311124430232,
+      "width": 124.72226013779195,
+      "height": 124.72226013779195,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "count": 8
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_jmefgno",
+      "from": {
+        "componentId": "esp32_wroom_exmd23y",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "neopixel_ring_wfhqk78",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 476.28,
+          "y": 369.73150390106787
+        },
+        {
+          "x": 636.4173940358376,
+          "y": 369.73150390106787
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_nlx608y",
+      "from": {
+        "componentId": "esp32_wroom_exmd23y",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "neopixel_ring_wfhqk78",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 446.28,
+          "y": 388.9236172350171
+        },
+        {
+          "x": 667.9893098804431,
+          "y": 388.9236172350171
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_ovwz0nq",
+      "from": {
+        "componentId": "esp32_wroom_exmd23y",
+        "pinId": "io2"
+      },
+      "to": {
+        "componentId": "neopixel_ring_wfhqk78",
+        "pinId": "din"
+      },
+      "points": [
+        {
+          "x": 506.28,
+          "y": 377.6341388032822
+        },
+        {
+          "x": 652.2033519581403,
+          "y": 377.6341388032822
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

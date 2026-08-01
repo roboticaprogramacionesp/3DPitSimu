@@ -1,0 +1,140 @@
+{
+  "version": "1.0",
+  "timestamp": 1785560812788,
+  "components": [
+    {
+      "id": "esp32_wroom_1k0hbbv",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 280,
+      "y": 100,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "hcsr04_3tuxgs9",
+      "type": "hcsr04",
+      "name": "HC-SR04 Ultrasónico",
+      "x": 576.6131564704796,
+      "y": 190.40394333302538,
+      "width": 127.56,
+      "height": 56.69,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "distance": 100
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_4fr46fy",
+      "from": {
+        "componentId": "hcsr04_3tuxgs9",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_1k0hbbv",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 650.2991564704796,
+          "y": 344.5405114928533
+        },
+        {
+          "x": 456.28,
+          "y": 344.5405114928533
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_qs5lidq",
+      "from": {
+        "componentId": "hcsr04_3tuxgs9",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_1k0hbbv",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 628.7001564704796,
+          "y": 334.94445482587867
+        },
+        {
+          "x": 426.28,
+          "y": 334.94445482587867
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_ol2uza0",
+      "from": {
+        "componentId": "hcsr04_3tuxgs9",
+        "pinId": "trig"
+      },
+      "to": {
+        "componentId": "esp32_wroom_1k0hbbv",
+        "pinId": "io12"
+      },
+      "points": [
+        {
+          "x": 635.9001564704796,
+          "y": 91.59831940013345
+        },
+        {
+          "x": 450.28,
+          "y": 91.59831940013345
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_c9rblss",
+      "from": {
+        "componentId": "esp32_wroom_1k0hbbv",
+        "pinId": "io13"
+      },
+      "to": {
+        "componentId": "hcsr04_3tuxgs9",
+        "pinId": "echo"
+      },
+      "points": [
+        {
+          "x": 440.28,
+          "y": 79.81426176789266
+        },
+        {
+          "x": 642.742054922828,
+          "y": 79.81426176789266
+        },
+        {
+          "x": 642.742054922828,
+          "y": 243.10311653539787
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

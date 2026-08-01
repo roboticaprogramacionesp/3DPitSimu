@@ -1,0 +1,114 @@
+{
+  "version": "1.0",
+  "timestamp": 1785558242494,
+  "components": [
+    {
+      "id": "esp32_wroom_c6cnuqu",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 341,
+      "y": 78,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "dht11_ysv7qsl",
+      "type": "dht11",
+      "name": "DHT11 Sensor",
+      "x": 638,
+      "y": 146,
+      "width": 50,
+      "height": 90,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "temperature": 25,
+        "humidity": 50
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_67muzyp",
+      "from": {
+        "componentId": "dht11_ysv7qsl",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_c6cnuqu",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 670.5,
+          "y": 306.6375227461274
+        },
+        {
+          "x": 517.28,
+          "y": 306.6375227461274
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_e1j0sw7",
+      "from": {
+        "componentId": "dht11_ysv7qsl",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_c6cnuqu",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 663,
+          "y": 300.9856032510871
+        },
+        {
+          "x": 487.28,
+          "y": 300.9856032510871
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_nogfre7",
+      "from": {
+        "componentId": "dht11_ysv7qsl",
+        "pinId": "signal"
+      },
+      "to": {
+        "componentId": "esp32_wroom_c6cnuqu",
+        "pinId": "io4"
+      },
+      "points": [
+        {
+          "x": 655.2,
+          "y": 294.82770588701646
+        },
+        {
+          "x": 557.28,
+          "y": 294.82770588701646
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

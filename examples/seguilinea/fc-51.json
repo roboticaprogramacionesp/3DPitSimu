@@ -1,0 +1,126 @@
+{
+  "version": "1.0",
+  "timestamp": 1785555957117,
+  "components": [
+    {
+      "id": "esp32_wroom_lrbjki1",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 140,
+      "y": 100,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "fc-51_y0gzzrg",
+      "type": "fc-51",
+      "name": "FC-51 Sensor Infrarrojo de Obstáculos",
+      "x": 393.06468152246237,
+      "y": 196.90902249278423,
+      "width": 119.57836,
+      "height": 137.02456,
+      "rotation": -39,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "FC-51: sensor infrarrojo de obstáculos, salida digital activa en BAJO al detectar un objeto",
+        "detectado": false
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_pen0fdu",
+      "from": {
+        "componentId": "fc-51_y0gzzrg",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_lrbjki1",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 480.8069831449005,
+          "y": 335.6750793457031
+        },
+        {
+          "x": 316.28,
+          "y": 335.6750793457031
+        },
+        {
+          "x": 316.28,
+          "y": 326.2031720924349
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_84dd2u5",
+      "from": {
+        "componentId": "fc-51_y0gzzrg",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_lrbjki1",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 488.637084659397,
+          "y": 345.6750793457031
+        },
+        {
+          "x": 286.28,
+          "y": 345.6750793457031
+        },
+        {
+          "x": 286.28,
+          "y": 335.84932184018925
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_4wch9u2",
+      "from": {
+        "componentId": "fc-51_y0gzzrg",
+        "pinId": "out"
+      },
+      "to": {
+        "componentId": "esp32_wroom_lrbjki1",
+        "pinId": "io4"
+      },
+      "points": [
+        {
+          "x": 471.77063622911027,
+          "y": 323.9250793457031
+        },
+        {
+          "x": 356.28,
+          "y": 323.9250793457031
+        },
+        {
+          "x": 356.28,
+          "y": 317.3852101751987
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

@@ -1,0 +1,138 @@
+{
+  "version": "1.0",
+  "timestamp": 1785561136472,
+  "components": [
+    {
+      "id": "esp32_wroom_bex36n0",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 300,
+      "y": 120,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "oled_xa944f7",
+      "type": "oled",
+      "name": "OLED 128x64 I2C",
+      "x": 613.5236667166134,
+      "y": 206.47633328338665,
+      "width": 76.535,
+      "height": 76.917,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "screenWidth": 128,
+        "screenHeight": 64,
+        "colorScheme": "blue"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_ursr44p",
+      "from": {
+        "componentId": "oled_xa944f7",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_bex36n0",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 640.9926667166135,
+          "y": 184.5093960835762
+        },
+        {
+          "x": 476.28,
+          "y": 184.5093960835762
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_wqwgc69",
+      "from": {
+        "componentId": "oled_xa944f7",
+        "pinId": "vdd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_bex36n0",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 648.1926667166134,
+          "y": 177.74756272526952
+        },
+        {
+          "x": 446.28,
+          "y": 177.74756272526952
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_zfkqztp",
+      "from": {
+        "componentId": "oled_xa944f7",
+        "pinId": "sck"
+      },
+      "to": {
+        "componentId": "esp32_wroom_bex36n0",
+        "pinId": "io22"
+      },
+      "points": [
+        {
+          "x": 655.3926667166135,
+          "y": 92.8489883376412
+        },
+        {
+          "x": 380.28,
+          "y": 92.8489883376412
+        }
+      ],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_jwnc8uv",
+      "from": {
+        "componentId": "oled_xa944f7",
+        "pinId": "sda"
+      },
+      "to": {
+        "componentId": "esp32_wroom_bex36n0",
+        "pinId": "io21"
+      },
+      "points": [
+        {
+          "x": 662.5896667166135,
+          "y": 79.32532162102784
+        },
+        {
+          "x": 390.28,
+          "y": 79.32532162102784
+        }
+      ],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

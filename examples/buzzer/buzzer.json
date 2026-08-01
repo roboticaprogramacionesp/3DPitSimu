@@ -1,0 +1,114 @@
+{
+  "version": "1.0",
+  "timestamp": 1785556048027,
+  "components": [
+    {
+      "id": "buzzer_bsipa6q",
+      "type": "buzzer",
+      "name": "Buzzer Piezo Pasivo (KY-006)",
+      "x": 331,
+      "y": 199,
+      "width": 50,
+      "height": 70,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "Buzzer piezo PASIVO (necesita PWM -- freq()/duty() -- para sonar, a diferencia de uno activo)",
+        "nota": "Suena de verdad en el navegador (Web Audio API) mientras el firmware mantenga el PWM activo en el pin S. Compatible con rtttl.py/songs.py tal cual: from machine import Pin, PWM; PWM(pin, freq=440, duty=512)."
+      },
+      "locked": false
+    },
+    {
+      "id": "esp32_wroom_og8j7nn",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 35.39251297822386,
+      "y": 118.75815743936056,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_3hf6zah",
+      "from": {
+        "componentId": "buzzer_bsipa6q",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_og8j7nn",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 368,
+          "y": 354.7809809341834
+        },
+        {
+          "x": 211.67251297822386,
+          "y": 354.7809809341834
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_562gorr",
+      "from": {
+        "componentId": "buzzer_bsipa6q",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_og8j7nn",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 356,
+          "y": 366.57848526025805
+        },
+        {
+          "x": 181.67251297822386,
+          "y": 366.57848526025805
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_b6vgchv",
+      "from": {
+        "componentId": "buzzer_bsipa6q",
+        "pinId": "s"
+      },
+      "to": {
+        "componentId": "esp32_wroom_og8j7nn",
+        "pinId": "io4"
+      },
+      "points": [
+        {
+          "x": 344,
+          "y": 338.6370276458708
+        },
+        {
+          "x": 251.67251297822386,
+          "y": 338.6370276458708
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

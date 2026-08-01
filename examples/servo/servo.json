@@ -1,0 +1,121 @@
+{
+  "version": "1.0",
+  "timestamp": 1785556654393,
+  "components": [
+    {
+      "id": "esp32_wroom_syfcwkc",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 320,
+      "y": 100,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "sg90_3fut70n",
+      "type": "sg90",
+      "name": "Servo SG90",
+      "x": 685.1670296935779,
+      "y": 198.75131481758964,
+      "width": 157.04755,
+      "height": 46.062609,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "angle": 90,
+        "shaftPivot": {
+          "x": 58.5,
+          "y": -49.5
+        }
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_2340xpj",
+      "from": {
+        "componentId": "sg90_3fut70n",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_syfcwkc",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 667.2763573157025,
+          "y": 226.54631481758963
+        },
+        {
+          "x": 667.2763573157025,
+          "y": 337.68296643056885
+        },
+        {
+          "x": 496.28,
+          "y": 337.68296643056885
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_pqp7xgx",
+      "from": {
+        "componentId": "esp32_wroom_syfcwkc",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "sg90_3fut70n",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 466.28,
+          "y": 328.08690976359424
+        },
+        {
+          "x": 635.1013437852582,
+          "y": 328.08690976359424
+        },
+        {
+          "x": 635.1013437852582,
+          "y": 220.16331481758965
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_khw7iog",
+      "from": {
+        "componentId": "esp32_wroom_syfcwkc",
+        "pinId": "io26"
+      },
+      "to": {
+        "componentId": "sg90_3fut70n",
+        "pinId": "signal"
+      },
+      "points": [
+        {
+          "x": 588.2631842878475,
+          "y": 213.78031481758964
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

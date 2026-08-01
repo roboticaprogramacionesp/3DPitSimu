@@ -1,0 +1,118 @@
+{
+  "version": "1.0",
+  "timestamp": 1785221359006,
+  "components": [
+    {
+      "id": "esp32_wroom_f5ctrcg",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 400,
+      "y": 150,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "semaforo_z8ei5p6",
+      "type": "semaforo",
+      "name": "Semáforo (3 LEDs)",
+      "x": 503,
+      "y": 45.65671746909908,
+      "width": 40,
+      "height": 100,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": true,
+      "properties": {
+        "modelo": "Semáforo 3 LEDs (R/Y/G, cátodo común)"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_o6u7e5m",
+      "from": {
+        "componentId": "semaforo_z8ei5p6",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_f5ctrcg",
+        "pinId": "gnd_0"
+      },
+      "points": [],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_7cyotc6",
+      "from": {
+        "componentId": "esp32_wroom_f5ctrcg",
+        "pinId": "io18"
+      },
+      "to": {
+        "componentId": "semaforo_z8ei5p6",
+        "pinId": "g"
+      },
+      "points": [],
+      "color": "#bb86fc",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_38em292",
+      "from": {
+        "componentId": "esp32_wroom_f5ctrcg",
+        "pinId": "io19"
+      },
+      "to": {
+        "componentId": "semaforo_z8ei5p6",
+        "pinId": "y"
+      },
+      "points": [
+        {
+          "x": 529.2381286621094,
+          "y": 160
+        },
+        {
+          "x": 529.2381286621094,
+          "y": 126.65671746909908
+        }
+      ],
+      "color": "#bb86fc",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_yucyrgc",
+      "from": {
+        "componentId": "semaforo_z8ei5p6",
+        "pinId": "r"
+      },
+      "to": {
+        "componentId": "esp32_wroom_f5ctrcg",
+        "pinId": "io23"
+      },
+      "points": [
+        {
+          "x": 540.3631357799698,
+          "y": 126.65671746909908
+        },
+        {
+          "x": 540.3631357799698,
+          "y": 160
+        }
+      ],
+      "color": "#bb86fc",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

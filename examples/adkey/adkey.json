@@ -1,0 +1,105 @@
+{
+  "version": "1.0",
+  "timestamp": 1785559981694,
+  "components": [
+    {
+      "id": "esp32_wroom_oegbcjm",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 380,
+      "y": 100,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "adkey_real_w2vu0f0",
+      "type": "adkey_real",
+      "name": "Teclado analógico ADKEY (5 botones)",
+      "x": 416.2836715134723,
+      "y": 328.5856055576538,
+      "width": 167.5,
+      "height": 80,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "Teclado analógico de 5 botones (D-pad + SEL) sobre un único pin ADC -- mismo circuito que 'adkey' (dibujo simple, ahora oculto), con el asset Fritzing real del módulo AD Keyboard",
+        "nota": "Los niveles de voltaje por tecla son valores de ejemplo (espaciados uniformemente), no están verificados contra un datasheet real -- si tenés los valores de tu módulo, se pueden ajustar en SignalEngine.ADKEY_LEVELS."
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_pih5uyi",
+      "from": {
+        "componentId": "adkey_real_w2vu0f0",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_oegbcjm",
+        "pinId": "gnd_2"
+      },
+      "points": [],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_gxpu3z9",
+      "from": {
+        "componentId": "esp32_wroom_oegbcjm",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "adkey_real_w2vu0f0",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 526.28,
+          "y": 313.3380304799776
+        },
+        {
+          "x": 550.2836715134723,
+          "y": 313.3380304799776
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_a69eie9",
+      "from": {
+        "componentId": "adkey_real_w2vu0f0",
+        "pinId": "out"
+      },
+      "to": {
+        "componentId": "esp32_wroom_oegbcjm",
+        "pinId": "io4"
+      },
+      "points": [
+        {
+          "x": 544.2836715134723,
+          "y": 321.43443909312896
+        },
+        {
+          "x": 596.28,
+          "y": 321.43443909312896
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

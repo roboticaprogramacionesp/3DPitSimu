@@ -1,0 +1,111 @@
+{
+  "version": "1.0",
+  "timestamp": 1785555282597,
+  "components": [
+    {
+      "id": "esp32_wroom_khckmp4",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 340,
+      "y": 100,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "ky_004_n0zgerf",
+      "type": "ky_004",
+      "name": "KY-004 Botón",
+      "x": 660,
+      "y": 180,
+      "width": 53.15,
+      "height": 85.56,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {},
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_npmxv2l",
+      "from": {
+        "componentId": "ky_004_n0zgerf",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_khckmp4",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 695.78,
+          "y": 334.94737439670973
+        },
+        {
+          "x": 516.28,
+          "y": 334.94737439670973
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_chjs1n6",
+      "from": {
+        "componentId": "ky_004_n0zgerf",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_khckmp4",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 686.77,
+          "y": 344.69737855648833
+        },
+        {
+          "x": 486.28,
+          "y": 344.69737855648833
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_k5gtj7l",
+      "from": {
+        "componentId": "esp32_wroom_khckmp4",
+        "pinId": "io4"
+      },
+      "to": {
+        "componentId": "ky_004_n0zgerf",
+        "pinId": "senal"
+      },
+      "points": [
+        {
+          "x": 556.28,
+          "y": 322.11842155489586
+        },
+        {
+          "x": 677.77,
+          "y": 322.11842155489586
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}
