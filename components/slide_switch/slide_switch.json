@@ -1,0 +1,23 @@
+{
+    "type": "slide_switch",
+    "name": "Interruptor Deslizante SPDT (NC/COM/NO)",
+    "category": "Alimentación",
+
+    "width": 56,
+    "height": 30,
+
+    "svgPath": "components/slide_switch/slide_switch.svg",
+
+    "pinShape": "square",
+    "pinSize": 3,
+
+    "pins": [
+        { "id": "nc",  "name": "NC (Normal Cerrado)",  "x": 4,  "y": 22, "type": "signal" },
+        { "id": "com", "name": "COM (Común)",          "x": 28, "y": 22, "type": "signal" },
+        { "id": "no",  "name": "NO (Normal Abierto)",   "x": 52, "y": 22, "type": "signal" }
+    ],
+
+    "properties": {
+        "modelo": "Interruptor deslizante SPDT de 3 patitas: COM queda SIEMPRE puenteado a uno de los dos lados (NC o NO), nunca a ambos ni a ninguno -- clic para cambiar de posición (queda fijo, no es momentáneo)"
+    }
+}

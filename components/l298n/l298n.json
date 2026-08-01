@@ -28,10 +28,10 @@
         { "id": "vcc5v_b", "name": "+5V", "x": 143.62, "y": 147.27, "type": "power", "signal": "power" },
 
         { "id": "ena", "name": "ENA", "x": 93.62,  "y": 157.27, "type": "input", "signal": "pwm", "optional": true },
-        { "id": "in1", "name": "IN1", "x": 103.62, "y": 157.27, "type": "input", "signal": "digital" },
-        { "id": "in2", "name": "IN2", "x": 113.62, "y": 157.27, "type": "input", "signal": "digital" },
-        { "id": "in3", "name": "IN3", "x": 123.62, "y": 157.27, "type": "input", "signal": "digital" },
-        { "id": "in4", "name": "IN4", "x": 133.62, "y": 157.27, "type": "input", "signal": "digital" },
+        { "id": "in1", "name": "IN1", "x": 103.62, "y": 157.27, "type": "input", "signal": "digital", "optional": true },
+        { "id": "in2", "name": "IN2", "x": 113.62, "y": 157.27, "type": "input", "signal": "digital", "optional": true },
+        { "id": "in3", "name": "IN3", "x": 123.62, "y": 157.27, "type": "input", "signal": "digital", "optional": true },
+        { "id": "in4", "name": "IN4", "x": 133.62, "y": 157.27, "type": "input", "signal": "digital", "optional": true },
         { "id": "enb", "name": "ENB", "x": 143.62, "y": 157.27, "type": "input", "signal": "pwm", "optional": true }
     ],
 

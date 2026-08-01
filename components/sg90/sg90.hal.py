@@ -8,10 +8,19 @@
 # servo. Mismo patrón que Pin.on()/off() (que avisan GPIO:<n>:v
 # hacia afuera) pero para PWM.
 #
-# Esta clase reemplaza machine.PWM completa (no solo la envuelve)
-# para que tu código pueda usar el PWM real tal cual lo harías en
-# hardware de verdad -- simplemente además, cada vez que cambia
-# el duty, calculamos el ángulo equivalente y lo mandamos afuera.
+# FIX real: esta clase antes heredaba de machine.PWM real
+# (class PWM(_RealPWM)) y llamaba a super().__init__(pin, ...),
+# confiando en el PWM/LEDC de verdad de QEMU. Confirmado en la
+# práctica: esa build tira "ValueError: invalid pin" para GPIO26
+# (un pin común para un servo) -- el hardware/emulación de PWM real
+# de este QEMU tiene restricciones de pin que no nos interesan acá
+# (no hay señal eléctrica real que generar, solo necesitamos el
+# ÁNGULO equivalente). Mismo diagnóstico y mismo arreglo que ya se
+# había hecho para buzzer.hal.py (ver ese archivo, "Primer HAL de
+# este proyecto que simula machine.PWM"): reemplazar machine.PWM
+# por una clase 100% sintética que NUNCA toca el PWM/LEDC real,
+# en vez de envolverlo. Cualquier pin GPIO válido funciona ahora,
+# sin las restricciones de canal/pin del periférico real.
 #
 # Protocolo de salida: SERVOOUT:<gpio>:<angulo>
 #   ejemplo: SERVOOUT:13:90.0
@@ -31,12 +40,9 @@
 # =============================================================
 
 import sys as _sys
-import machine as _machine_module
 
 _SERVO_DUTY_MIN = 26    # duty aprox. para 0°
 _SERVO_DUTY_MAX = 123   # duty aprox. para 180°
-
-_RealPWM = _machine_module.PWM
 
 
 def _duty_to_angle(duty_value):
@@ -45,19 +51,40 @@ def _duty_to_angle(duty_value):
     return round(pct * 180, 1)
 
 
-class PWM(_RealPWM):
+class PWM:
+    """
+    Reemplaza a machine.PWM -- cubre la API que necesita el patrón
+    típico de un servo (idéntica firma/comportamiento a la real,
+    ver docstring de buzzer.hal.py para el mismo criterio):
 
-    def __init__(self, pin, freq=50, **kw):
-        # Igual que la clase Pin de _base_hal.py: guardamos el
-        # número de GPIO para poder identificar, en el mensaje de
-        # salida, a qué pin físico corresponde este PWM.
+        PWM(pin, freq=50)   -- freq por default 50Hz (estándar servo)
+        .duty([value])      -- 0..1023, get/set
+        .duty_u16([value])  -- 0..65535, get/set
+        .duty_ns([value])   -- no-op de compatibilidad
+        .freq([hz])         -- get/set (no afecta el ángulo reportado)
+        .init(freq=, duty=) -- re-arranca con nuevos valores
+        .deinit()           -- no-op (no hay "apagar" un ángulo)
+    """
+
+    def __init__(self, pin, freq=50, duty=None, duty_u16=None, duty_ns=None, **kw):
         self._pin_num = getattr(pin, "_pin_num", None)
-        super().__init__(pin, freq=freq, **kw)
+        self._freq = freq
+        self._duty = 0
+
+        if duty is not None:
+            self.duty(duty)
+        elif duty_u16 is not None:
+            self.duty_u16(duty_u16)
+
+    def freq(self, hz=None):
+        if hz is None:
+            return self._freq
+        self._freq = hz
 
     def duty(self, value=None):
         if value is None:
-            return super().duty()
-        super().duty(value)
+            return self._duty
+        self._duty = value
         self._report_angle(_duty_to_angle(value))
         return None
 
@@ -67,11 +94,28 @@ class PWM(_RealPWM):
         # antes de calcular el ángulo, para reusar la misma
         # calibración.
         if value is None:
-            return super().duty_u16()
-        super().duty_u16(value)
+            return self._duty * 64
+        self._duty = value // 64
         duty_10bit = value / 65535 * 1023
         self._report_angle(_duty_to_angle(duty_10bit))
         return None
+
+    def duty_ns(self, value=None):
+        # No-op -- no hace falta simular nanosegundos de ancho de
+        # pulso, el ángulo ya se calcula a partir de duty()/duty_u16().
+        pass
+
+    def init(self, freq=None, duty=None):
+        if freq is not None:
+            self._freq = freq
+        if duty is not None:
+            self.duty(duty)
+
+    def deinit(self):
+        # No-op -- a diferencia de un tono (buzzer, que sí "se
+        # apaga"), un servo simplemente se queda en su último
+        # ángulo cuando se corta la señal PWM en la vida real.
+        pass
 
     def _report_angle(self, angle):
         if self._pin_num is None:
@@ -83,4 +127,5 @@ class PWM(_RealPWM):
 # import PWM" (tuyo o de otro HAL) traiga esta clase. Igual
 # criterio que con Pin en _base_hal.py: esto va DESPUÉS de que la
 # clase esté completamente definida.
+import machine as _machine_module
 _machine_module.PWM = PWM
