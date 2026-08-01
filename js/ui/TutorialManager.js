@@ -204,6 +204,85 @@ class TutorialManager {
             ],
         },
         {
+            id: "led_resistencia",
+            title: "LED con resistencia (protegido)",
+            icon: "Ω",
+            category: "💡 LEDs · Salidas digitales",
+            steps: [
+                {
+                    title: "Paso 1 — Coloca la ESP32",
+                    text: "Arrastra la placa ESP32 WeMos D1 R32 desde el panel de componentes (izquierda) hasta el lienzo.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("esp32_wroom"),
+                    isDone: (tm) => tm.hasComponent("esp32_wroom"),
+                },
+                {
+                    title: "Paso 2 — Toma un LED",
+                    text: "Arrastra el LED desde el panel de componentes hasta el lienzo, cerca de la ESP32.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("led"),
+                    isDone: (tm) => tm.hasComponent("led"),
+                },
+                {
+                    title: "Paso 3 — Toma una resistencia",
+                    text: "Arrastra la Resistencia (categoría Componentes básicos) hasta el lienzo. Sin ella, un GPIO conectado directo al LED deja pasar más corriente de la que el LED soporta -- en hardware real esto lo daña o lo quema. Déjala en 220 Ω, el valor más común para un LED con un GPIO de 3.3V.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("resistencia"),
+                    isDone: (tm) => tm.hasComponent("resistencia"),
+                },
+                {
+                    title: "Paso 4 — Conecta el GND al cátodo",
+                    text: "Traza un cable desde un pin GND de la ESP32 hasta el cátodo (–) del LED, la pata más corta.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.type === "ground" },
+                        { type: "led", match: (p) => p.id === "catodo" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetween(
+                        (pin) => pin.type === "ground",
+                        (comp, pin) => comp.type === "led" && pin.id === "catodo",
+                    ),
+                },
+                {
+                    title: "Paso 5 — Conecta un GPIO a la resistencia",
+                    text: "Elige cualquier pin GPIO libre de la ESP32 y conéctalo a cualquiera de los dos terminales de la resistencia -- no importa cuál, no tiene polaridad.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.type === "gpio" && !p.inputOnly && p.signal !== "uart" },
+                        { type: "resistencia", match: () => true },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetweenComponents(
+                        (comp, pin) => comp.type === "esp32_wroom" && pin.type === "gpio" && !pin.inputOnly && pin.signal !== "uart",
+                        (comp) => comp.type === "resistencia",
+                    ),
+                },
+                {
+                    title: "Paso 6 — Conecta la resistencia al ánodo",
+                    text: "Ahora conecta el otro terminal de la resistencia (el que quedó libre) al ánodo (+) del LED, la pata más larga.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "resistencia", match: () => true },
+                        { type: "led", match: (p) => p.id === "anodo" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetweenComponents(
+                        (comp) => comp.type === "resistencia",
+                        (comp, pin) => comp.type === "led" && pin.id === "anodo",
+                    ),
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
+                    text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
+                    highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
+                    isDone: (tm) => !!tm.simulator.isRunning,
+                },
+                {
+                    title: "Paso 8 — Escribe o carga tu código",
+                    text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
+                    highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
+                    onEnter: (tm) => {
+                        if (tm.replPanel && !tm.replPanel.open) tm.replPanel.toggle();
+                        tm.replPanel?.switchTab("editor");
+                    },
+                    isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
+                    isLast: true,
+                },
+            ],
+        },
+        {
             id: "semaforo",
             title: "Semáforo con ESP32",
             icon: "🚦",
