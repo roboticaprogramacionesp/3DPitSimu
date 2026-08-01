@@ -8,27 +8,56 @@
         {
             "type": "led",
             "name": "LED",
-            "category": "LEDs"
+            "category": "LEDs",
+            "hasBehavior": true
+        },
+        {
+            "type": "ky-009",
+            "name": "KY-009 LED RGB (SMD)",
+            "category": "LEDs",
+            "hasBehavior": true
+        },
+        {
+            "type": "ky-016",
+            "name": "KY-016 LED RGB (orificio pasante)",
+            "category": "LEDs",
+            "hasBehavior": true
+        },
+        {
+            "type": "ky-011",
+            "name": "KY-011 LED Bicolor (Rojo/Verde)",
+            "category": "LEDs",
+            "hasBehavior": true
         },
         {
             "type": "display7",
             "name": "Display 7 Segmentos",
-            "category": "LEDs"
+            "category": "LEDs",
+            "hasBehavior": true
         },
         {
             "type": "neopixel_matrix",
             "name": "Matriz NeoPixel",
-            "category": "LEDs"
+            "category": "LEDs",
+            "hasBehavior": true
+        },
+        {
+            "type": "neopixel_ring",
+            "name": "Anillo de NeoPixel",
+            "category": "LEDs",
+            "hasBehavior": true
         },
         {
             "type": "max7219",
             "name": "Matriz MAX7219",
-            "category": "LEDs"
+            "category": "LEDs",
+            "hasBehavior": true
         },
         {
             "type": "ky_001",
             "name": "KY-001 Temp",
-            "category": "Sensores"
+            "category": "Sensores",
+            "hasBehavior": true
         },
         {
             "type": "ky_004",
@@ -43,56 +72,89 @@
         {
             "type": "hcsr04",
             "name": "HC-SR04 Ultrasónico",
-            "category": "Sensores"
+            "category": "Sensores",
+            "hasBehavior": true
         },
         {
             "type": "sg90",
             "name": "Servo SG90",
-            "category": "Actuadores"
+            "category": "Actuadores",
+            "hasBehavior": true
         },
         {
             "type": "motor",
             "name": "Motor DC (reductora)",
-            "category": "Actuadores"
+            "category": "Actuadores",
+            "hasBehavior": true
+        },
+        {
+            "type": "ky-019",
+            "name": "KY-019 Módulo Relevador 5V",
+            "category": "Actuadores",
+            "hasBehavior": true
+        },
+        {
+            "type": "bombillo",
+            "name": "Foco / Bombillo",
+            "category": "Actuadores",
+            "hasBehavior": true
+        },
+        {
+            "type": "ky-008",
+            "name": "KY-008 Módulo Láser",
+            "category": "Actuadores",
+            "hasBehavior": true
         },
         {
             "type": "oled",
             "name": "OLED 128x64 I2C",
-            "category": "Pantallas"
+            "category": "Pantallas",
+            "hasBehavior": true
         },
         {
             "type": "tm1637",
             "name": "TM1637 4 Dígitos",
-            "category": "Pantallas"
+            "category": "Pantallas",
+            "hasBehavior": true
         },
         {
             "type": "l298n",
             "name": "L298N Motor",
-            "category": "Actuadores"
+            "category": "Actuadores",
+            "hasBehavior": true
         },
         {
             "type": "lcd_16x2_i2c",
             "name": "LCD 16x2 I2C",
-            "category": "Pantallas"
+            "category": "Pantallas",
+            "hasBehavior": true
         },
         {
             "type": "lcd16x2",
             "name": "LCD 16x2 (paralelo)",
-            "category": "Pantallas"
+            "category": "Pantallas",
+            "hasBehavior": true
         },
         {
             "type": "tft_st7789",
             "name": "TFT 1.54\" 240x240 (ST7789)",
-            "category": "Pantallas"
+            "category": "Pantallas",
+            "hasBehavior": true
         },
         {
             "type": "semaforo",
             "name": "Semáforo (3 LEDs)",
-            "category": "LEDs"
+            "category": "LEDs",
+            "hasBehavior": true
         },
         {
             "type": "joystick",
-            "name": "Joystick KY-023",
+            "name": "Joystick Analógico (genérico)",
+            "category": "Sensores"
+        },
+        {
+            "type": "ky-023",
+            "name": "KY-023 Joystick Analógico (X/Y + botón)",
             "category": "Sensores"
         },
         {
@@ -102,13 +164,20 @@
         },
         {
             "type": "adkey",
+            "name": "ADKEY (dibujo simple, oculto)",
+            "category": "Sensores",
+            "hidden": true
+        },
+        {
+            "type": "adkey_real",
             "name": "Teclado analógico ADKEY (5 botones)",
             "category": "Sensores"
         },
         {
             "type": "keypad4x4",
             "name": "Teclado matricial 4x4",
-            "category": "Sensores"
+            "category": "Sensores",
+            "hasBehavior": true
         },
         {
             "type": "keypad3x4",
@@ -118,7 +187,8 @@
         {
             "type": "keypad4x4_i2c",
             "name": "Teclado matricial 4x4 (I2C, PCF8574)",
-            "category": "Sensores"
+            "category": "Sensores",
+            "hasBehavior": true
         },
         {
             "type": "pot_slider",
@@ -128,12 +198,134 @@
         {
             "type": "mpu6050",
             "name": "MPU6050 Acelerómetro + Giroscopio",
-            "category": "Sensores"
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "bh1750",
+            "name": "BH1750 Sensor de Luz Ambiental (I2C)",
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "bmp180",
+            "name": "BMP180 Sensor de Presión y Temperatura (I2C)",
+            "category": "Sensores",
+            "hasBehavior": true,
+            "hidden": true
+        },
+        {
+            "type": "bmp280",
+            "name": "BMP280 Sensor de Presión y Temperatura (I2C)",
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "fc-51",
+            "name": "FC-51 Sensor Infrarrojo de Obstáculos",
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "tcrt5000",
+            "name": "TCRT5000 Sensor Infrarrojo (Línea/Obstáculo)",
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "pir",
+            "name": "Sensor PIR de Movimiento (HC-SR501)",
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "28byj",
+            "name": "28BYJ-48 Motor Paso a Paso + Driver ULN2003",
+            "category": "Actuadores",
+            "hasBehavior": true
         },
         {
             "type": "buzzer",
             "name": "Buzzer Piezo Pasivo (KY-006)",
-            "category": "Actuadores"
+            "category": "Actuadores",
+            "hasBehavior": true
+        },
+        {
+            "type": "pot_rotary",
+            "name": "Potenciómetro Rotativo 10K",
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "ky-018",
+            "name": "KY-018 Fotorresistor (LDR)",
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "tcs34725",
+            "name": "TCS34725 Sensor de Color (I2C)",
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "ds3231",
+            "name": "DS3231 Reloj de Tiempo Real (RTC, I2C)",
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "qmc5883l",
+            "name": "QMC5883L Magnetómetro/Brújula (I2C)",
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "gps",
+            "name": "Módulo GPS NEO-6M (UART)",
+            "category": "Sensores",
+            "hasBehavior": true
+        },
+        {
+            "type": "rc522",
+            "name": "RC522 (dibujo simple, oculto)",
+            "category": "RFID",
+            "hasBehavior": true,
+            "hidden": true
+        },
+        {
+            "type": "rc522_real",
+            "name": "Lector RFID RC522",
+            "category": "RFID",
+            "hasBehavior": true
+        },
+        {
+            "type": "battery_18650",
+            "name": "Batería 18650 (portapilas x2)",
+            "category": "Alimentación"
+        },
+        {
+            "type": "clavija_127v",
+            "name": "Clavija 127V (Toma de corriente)",
+            "category": "Alimentación"
+        },
+        {
+            "type": "switch",
+            "name": "Interruptor ON/OFF",
+            "category": "Alimentación",
+            "hasBehavior": true
+        },
+        {
+            "type": "slide_switch",
+            "name": "Interruptor Deslizante SPDT (NC/COM/NO)",
+            "category": "Alimentación",
+            "hasBehavior": true
+        },
+        {
+            "type": "resistencia",
+            "name": "Resistencia",
+            "category": "Componentes básicos",
+            "hasBehavior": true
         }
     ]
 }

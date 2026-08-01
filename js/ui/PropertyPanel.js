@@ -161,6 +161,15 @@ class PropertyPanel {
 
         });
 
+        // Actualizar display del motor paso a paso (28BYJ-48)
+        this.simulator.eventBus.on("stepper:changed", ({ componentId, bits, shaftAngle }) => {
+
+            if (this.current?.id === componentId) {
+                this._updateStepperDisplay(bits, shaftAngle);
+            }
+
+        });
+
         // Mostrar/ocultar el panel del cable seleccionado
         this.simulator.eventBus.on("wire:selected", (wireId) => {
 
@@ -245,10 +254,18 @@ class PropertyPanel {
 
         const cursor  = document.getElementById(`tempCursor_${this.current?.id}`);
 
+        // DHT11 real solo tiene resolución de °C enteros -- ver el
+        // mismo criterio (y motivo) en ky_001.behavior.js/render().
+        // Sin esto, arrastrar el slider mostraba acá "15.0°C" mientras
+        // el render() inicial ya mostraba "15°C" para el mismo valor.
+        const isDHT = this.current?.type === "dht11";
 
         if (display) {
 
-            display.textContent   = `${celsius.toFixed(1)}°C`;
+            // Math.trunc(), no Math.round() -- ver el mismo motivo en
+            // ky_001.behavior.js/render() (dht11.hal.py usa int(),
+            // que trunca hacia cero, no redondea).
+            display.textContent   = isDHT ? `${Math.trunc(celsius)}°C` : `${celsius.toFixed(1)}°C`;
 
             display.style.color   = this._tempToColor(celsius);
 
@@ -457,6 +474,53 @@ class PropertyPanel {
         };
 
         return colors[state] || "#555";
+
+    }
+
+
+    // ── Motor paso a paso (28BYJ-48) -- ver components/28byj/28byj.behavior.js ──
+
+    // Usado tanto para el estado inicial (llamado directo desde
+    // 28byj.behavior.js al abrir el panel) como para la actualización
+    // en vivo de acá abajo (_updateStepperDisplay, via "stepper:changed")
+    // -- misma fila de 4 cuadraditos IN1-IN4, se reconstruye entera
+    // cada vez (más simple que tocar cada cuadradito a mano, y son
+    // solo 4 elementos chicos).
+    _renderStepperCoils(coilsRow, bits) {
+
+        coilsRow.innerHTML = "";
+        (bits || [false, false, false, false]).forEach((on, i) => {
+            const dot = document.createElement("div");
+            dot.style.cssText = `
+                flex: 1;
+                text-align: center;
+                padding: 6px 0;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 700;
+                color: #fff;
+                background: ${on ? "#4da3ff" : "#333"};
+            `;
+            dot.textContent = `IN${i + 1}`;
+            coilsRow.appendChild(dot);
+        });
+
+    }
+
+    _renderStepperAngle(angleLabel, shaftAngle) {
+
+        const normalized = ((shaftAngle || 0) % 360 + 360) % 360;
+        angleLabel.textContent = `Ángulo del eje: ${normalized.toFixed(1)}°`;
+
+    }
+
+    _updateStepperDisplay(bits, shaftAngle) {
+
+        const coilsRow = document.getElementById(`stepperCoils_${this.current?.id}`);
+        const angleLabel = document.getElementById(`stepperAngle_${this.current?.id}`);
+
+        if (coilsRow) this._renderStepperCoils(coilsRow, bits);
+        if (angleLabel) this._renderStepperAngle(angleLabel, shaftAngle);
 
     }
 
@@ -711,7 +775,26 @@ class PropertyPanel {
 
             this.simulator.selectionManager.clear();
 
+            // Igual criterio que Simulator.deleteSelection(): capturar
+            // los cables conectados antes de borrar, para que Ctrl+Z
+            // los restaure junto con el componente (este botón antes
+            // ni siquiera empujaba un comando al historial -- borrar
+            // desde acá no se podía deshacer en absoluto).
+            const removedWires = this.simulator.wireManager.wires.filter(w =>
+                w.from.componentId === component.id || w.to.componentId === component.id
+            );
+
             this.simulator.removeComponent(component.id);
+
+            this.simulator.history.push({
+                undo: () => {
+                    this.simulator.addComponent(component);
+                    removedWires.forEach(wire => this.simulator.wireManager.wires.push(wire));
+                    this.simulator.wireManager.ensureUniqueWireIds();
+                    this.simulator.wireManager.renderAll();
+                },
+                redo: () => this.simulator.removeComponent(component.id)
+            });
 
             this.clear();
 
@@ -851,17 +934,45 @@ class PropertyPanel {
 
         // ── Extremos del cable (solo lectura) ───────────────────────────
 
+        // OJO -- "Desde"/"Hasta" muestran component.name, que es un
+        // campo de texto libre editable por el usuario (ver el campo
+        // "Nombre" más abajo en _renderGeneric) Y que además viaja tal
+        // cual dentro de cualquier archivo de proyecto .json (ver
+        // ProjectManager.serialize/deserialize) -- abrir un proyecto
+        // ajeno con un nombre de componente tipo "<img src=x
+        // onerror=...>" ejecutaría ese script apenas alguien
+        // seleccionara un cable conectado a ese componente, si esto
+        // fuera innerHTML con el texto interpolado crudo (como era
+        // antes). Con textContent + nodos armados a mano, ese texto
+        // nunca se interpreta como HTML, sea lo que sea que contenga.
         const endsBox = document.createElement("div");
         endsBox.style.cssText = "font-size:13px; color:#ccc; margin-bottom:16px; line-height:1.7; background:#1e1f22; border:1px solid #333; border-radius:6px; padding:10px 12px;";
-        endsBox.innerHTML = `
-            <div><strong style="color:#999;">Desde:</strong> ${this._describeWireEnd(wire.from)}</div>
-            <div><strong style="color:#999;">Hasta:</strong> ${this._describeWireEnd(wire.to)}</div>
-        `;
+
+        const fromRow = document.createElement("div");
+        const fromLabel = document.createElement("strong");
+        fromLabel.style.color = "#999";
+        fromLabel.textContent = "Desde: ";
+        fromRow.appendChild(fromLabel);
+        fromRow.appendChild(document.createTextNode(this._describeWireEnd(wire.from)));
+
+        const toRow = document.createElement("div");
+        const toLabel = document.createElement("strong");
+        toLabel.style.color = "#999";
+        toLabel.textContent = "Hasta: ";
+        toRow.appendChild(toLabel);
+        toRow.appendChild(document.createTextNode(this._describeWireEnd(wire.to)));
+
+        endsBox.appendChild(fromRow);
+        endsBox.appendChild(toRow);
         this.content.appendChild(endsBox);
 
         // ── Color (paleta automática + personalizado) ───────────────────
 
         this._appendWireColorField(wire);
+
+        // ── Tipo de conector (para el circuito físico real) ─────────────
+
+        this._appendWireConnectorTypeField(wire);
 
         // ── Restaurar color automático ──────────────────────────────────
 
@@ -1045,6 +1156,54 @@ class PropertyPanel {
         palette.appendChild(customPicker);
 
         wrap.appendChild(palette);
+        this.content.appendChild(wrap);
+
+    }
+
+    // Tipo de conector real (ver WireManager.CONNECTOR_TYPES/
+    // defaultConnectorType) -- para armar el circuito FÍSICO, no tiene
+    // ningún efecto en la simulación. El valor inicial es un default
+    // razonable (ver WireManager.defaultConnectorType), pero el
+    // usuario es quien mejor sabe qué conectores tiene a mano, así que
+    // acá lo puede cambiar libremente.
+    _appendWireConnectorTypeField(wire) {
+
+        const wrap = document.createElement("div");
+        wrap.style.cssText = "margin-bottom: 12px;";
+
+        const label = document.createElement("label");
+        label.style.cssText = "display:block; font-size:12px; color:#999; text-transform:uppercase; margin-bottom:8px;";
+        label.textContent = "Tipo de cable (circuito físico)";
+        wrap.appendChild(label);
+
+        const select = document.createElement("select");
+        select.className = "property-select";
+
+        WireManager.CONNECTOR_TYPES.forEach((type) => {
+            const opt = document.createElement("option");
+            opt.value = type;
+            opt.textContent = type;
+            if ((wire.connectorType || "hembra-hembra") === type) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        select.addEventListener("change", () => {
+
+            const oldType = wire.connectorType;
+            const newType = select.value;
+
+            if (oldType === newType) return;
+
+            wire.connectorType = newType;
+
+            this.simulator.history.push({
+                undo: () => { wire.connectorType = oldType; this._syncWirePanelIfCurrent(wire); },
+                redo: () => { wire.connectorType = newType; this._syncWirePanelIfCurrent(wire); },
+            });
+
+        });
+
+        wrap.appendChild(select);
         this.content.appendChild(wrap);
 
     }

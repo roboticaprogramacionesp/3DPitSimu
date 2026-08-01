@@ -48,7 +48,10 @@ class ProjectManager {
 
         this.bindEvents();
         this.startAutoSave();
-        this.loadFromLocalStorage();
+
+        // Restaurado desde acá, NO desde el constructor -- ver el
+        // comentario grande en loadFromLocalStorage() sobre la
+        // condición de carrera real que esto evitaba antes.
 
     }
 
@@ -108,6 +111,34 @@ class ProjectManager {
 
     }
 
+    //------------------------------------------------------
+    // Renombrar el proyecto activo desde el input junto al logo
+    // (ver Toolbar.bindCurrentFileLabel()). No toca fileHandle --
+    // el File System Access API no permite renombrar un archivo ya
+    // vinculado in situ -- así que un nombre distinto al del
+    // archivo actualmente vinculado hace que el PRÓXIMO "Guardar"
+    // se comporte como "Guardar como" (ver saveProject()) en vez de
+    // sobreescribir en silencio el archivo viejo con el nombre
+    // nuevo puesto encima.
+    //------------------------------------------------------
+
+    setProjectName(rawName) {
+
+        let name = (rawName || "").trim();
+
+        if (!name) {
+            name = this.currentFileName || `proyecto_${new Date().toISOString().slice(0, 10)}.json`;
+        } else if (!/\.json$/i.test(name)) {
+            name += ".json";
+        }
+
+        if (name === this.currentFileName) return;
+
+        this._setCurrentFile(name);
+        this.markDirty();
+
+    }
+
     startAutoSave() {
 
         this.autoSaveInterval = setInterval(() => {
@@ -145,14 +176,18 @@ class ProjectManager {
             from: { ...wire.from },
             to: { ...wire.to },
             points: wire.points.map(p => ({ ...p })),
-            color: wire.color
+            color: wire.color,
+            connectorType: wire.connectorType
         }));
+
+        const annotations = this.simulator.annotationManager?.serialize() || [];
 
         return {
             version: "1.0",
             timestamp: Date.now(),
             components,
-            wires
+            wires,
+            annotations
         };
 
     }
@@ -176,6 +211,7 @@ class ProjectManager {
             this.simulator.selectionManager.clear();
             this.simulator.wireLayer.innerHTML = "";
             this.simulator.componentLayer.innerHTML = "";
+            this.simulator.annotationManager?.clear();
 
             // Restaurar componentes (usar createFromDefinition para cargar SVG)
             for (const compData of data.components) {
@@ -208,7 +244,13 @@ class ProjectManager {
                     from: wireData.from,
                     to: wireData.to,
                     points: wireData.points,
-                    color: wireData.color
+                    color: wireData.color,
+                    // Campo nuevo -- proyectos guardados antes de que
+                    // existiera simplemente no lo traen, ahí se le
+                    // asigna el mismo default sensato que un cable
+                    // recién dibujado usaría.
+                    connectorType: wireData.connectorType
+                        || WireManager.defaultConnectorType(this.simulator, wireData.from, wireData.to),
                 };
                 this.simulator.wireManager.wires.push(wire);
             }
@@ -221,6 +263,12 @@ class ProjectManager {
 
             // Redibujar todo
             this.simulator.wireManager.renderAll();
+
+            // Notas del lienzo -- campo nuevo, proyectos guardados antes
+            // de que existiera simplemente no lo traen (data.annotations
+            // === undefined), restore() ya maneja ese caso como lista
+            // vacía sin romper nada.
+            this.simulator.annotationManager?.restore(data.annotations);
 
             // Centrar la vista sobre lo que se acaba de cargar -- el
             // pan (offsetX/offsetY) no se guarda en el archivo, así
@@ -267,33 +315,57 @@ class ProjectManager {
     // Cargar, al iniciar la página, el proyecto guardado
     //------------------------------------------------------
 
-    loadFromLocalStorage() {
+    // BUG REAL encontrado (2026-07-28): esto vivía en el constructor
+    // como una IIFE "fire and forget" (sin await), y Simulator.start()
+    // agregaba la ESP32 default de forma INCONDICIONAL un par de líneas
+    // más abajo. Como un async arrow function corre en SÍNCRONO hasta
+    // su primer await real, "deserialize()" alcanzaba a hacer
+    // componentManager.clear() (síncrono, al principio de su propio
+    // try) y arrancar el primer createFromDefinition() del proyecto
+    // guardado ANTES de que el control volviera a start() -- pero
+    // start() seguía ejecutando SU PROPIO createFromDefinition("esp32_
+    // wroom", ...) inmediatamente después, sin saber que ya había un
+    // restore en curso. Resultado: cada refresh con un proyecto
+    // guardado en localStorage (o sea, casi siempre, por el auto-
+    // guardado) terminaba con la ESP32 default de start() SUMADA a la
+    // ESP32 que traía el proyecto restaurado -- 2 ESP32, sin que el
+    // usuario hiciera nada raro. Si esa duplicación llegaba a
+    // persistirse (cualquier interacción que dispare markDirty()) antes
+    // del PRÓXIMO refresh, se repetía sobre un guardado ya duplicado --
+    // de ahí "si le doy clic varias veces se duplica más".
+    //
+    // Fix: ahora es un método async normal que Simulator.start() espera
+    // (await) ANTES de decidir si hace falta la ESP32 default -- ver
+    // ese archivo. Devuelve true si de verdad restauró un proyecto
+    // guardado (para que start() sepa que NO hace falta la default).
+    async loadFromLocalStorage() {
 
-        (async () => {
-            try {
+        try {
 
-                // Migración: además de la clave actual, se revisa la
-                // clave legacy de versiones muy anteriores de
-                // PitSimulator -- así nadie pierde su circuito guardado
-                // al actualizar.
-                const saved = localStorage.getItem(this.storageKey)
-                    || localStorage.getItem(this.legacyStorageKey);
+            // Migración: además de la clave actual, se revisa la
+            // clave legacy de versiones muy anteriores de
+            // PitSimulator -- así nadie pierde su circuito guardado
+            // al actualizar.
+            const saved = localStorage.getItem(this.storageKey)
+                || localStorage.getItem(this.legacyStorageKey);
 
-                if (!saved) return;
+            if (!saved) return false;
 
-                const data = JSON.parse(saved);
-                await this.deserialize(data);
+            const data = JSON.parse(saved);
+            const restored = await this.deserialize(data);
 
-                if (window?.location?.search?.includes("debug=1")) {
-                    console.log("[ProjectManager] ✅ Cargado desde localStorage");
-                }
-
-            } catch (err) {
-
-                console.warn("[ProjectManager] No se pudo cargar de localStorage:", err);
-
+            if (restored && window?.location?.search?.includes("debug=1")) {
+                console.log("[ProjectManager] ✅ Cargado desde localStorage");
             }
-        })();
+
+            return !!restored;
+
+        } catch (err) {
+
+            console.warn("[ProjectManager] No se pudo cargar de localStorage:", err);
+            return false;
+
+        }
 
     }
 
@@ -328,6 +400,7 @@ class ProjectManager {
         this.simulator.selectionManager.clear();
         this.simulator.wireLayer.innerHTML = "";
         this.simulator.componentLayer.innerHTML = "";
+        this.simulator.annotationManager?.clear();
 
         // Limpiar también el historial de undo/redo -- si no, un Ctrl+Z
         // después de "Nuevo proyecto" podría "revivir" componentes del
@@ -461,7 +534,13 @@ class ProjectManager {
 
         this.saveToLocalStorage();
 
-        if (this.fileHandle) {
+        // Si el usuario escribió un nombre nuevo en el input (ver
+        // setProjectName()) desde la última vez que se vinculó este
+        // archivo, "Guardar" no puede simplemente sobreescribirlo en
+        // silencio bajo su nombre viejo -- no hay forma de renombrar
+        // un FileSystemFileHandle in situ, así que esto cae a
+        // "Guardar como" para que el nombre nuevo realmente aplique.
+        if (this.fileHandle && this.fileHandle.name === this.currentFileName) {
 
             const ok = await this._writeToHandle(this.fileHandle);
 

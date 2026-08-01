@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="3DPit.ico" />
-    <title>3DPitSimulator</title>
+    <title>3DPitSim</title>
 
     <link rel="stylesheet" href="css/simulator.css">
     <link rel="stylesheet" href="css/grid.css">
@@ -14,6 +14,13 @@
     <link rel="stylesheet" href="css/led-colors.css">
     <link rel="stylesheet" href="css/simulation-lock.css">
     <link rel="stylesheet" href="css/project-drawer.css">
+    <link rel="stylesheet" href="css/tutorial.css">
+    <link rel="stylesheet" href="css/report-generator.css">
+    <link rel="stylesheet" href="css/annotations.css">
+
+    <link rel="stylesheet" href="lib/xterm/xterm.css">
+    <link rel="stylesheet" href="lib/codemirror/codemirror.css">
+    <link rel="stylesheet" href="lib/codemirror/dracula.css">
 
 </head>
 
@@ -31,9 +38,16 @@
                 <span class="project-toggle-icon">☰</span>
             </button>
 
-            <h2>3DPitSimulator</h2>
+            <div id="tutorialSelector" class="tutorial-selector">
+                <button id="btnTutorial" class="btn-project-toggle" title="Tutoriales paso a paso">🎓</button>
+                <div id="tutorialMenu" class="tutorial-menu hidden"></div>
+            </div>
+
+            <h2>3DPitSim</h2>
             <span>v0.1</span>
-            <span id="currentFileLabel" class="current-file-label" title="Archivo actual">Sin guardar</span>
+            <input id="currentFileLabel" class="current-file-label" type="text" title="Nombre del proyecto -- se usa al Guardar/Guardar como" value="Sin guardar" spellcheck="false">
+            <span id="currentFileLabelDirty" class="current-file-label-dirty" title="Cambios sin guardar">•</span>
+            <button id="btnGenerateReport" class="btn-project-toggle" title="Generar reporte de la práctica (SVG)">📄</button>
 
             <div id="projectDrawer" class="project-drawer hidden">
 
@@ -47,6 +61,7 @@
                 <div class="project-drawer-separator"></div>
 
                 <button class="project-drawer-item" id="pdValidate" title="Validar circuito (F12)">✓ Validar circuito</button>
+                <button class="project-drawer-item" id="pdReload" title="Recargar el simulador para reiniciarlo, sin salir del navegador">🔄 Recargar</button>
 
             </div>
 
@@ -63,6 +78,7 @@
                     <option value="40">40 px</option>
                 </select>
             </label>
+            <button id="btnCanvasTheme" class="btn-canvas-theme" title="Cambiar a fondo oscuro (noche)">🌙</button>
             <button id="btnSimToggle" class="btn-sim-toggle">▶ Simular</button>
         </div>
 
@@ -104,6 +120,16 @@
                  solo que ya no le cuesta espacio permanente a nadie. -->
             <div id="statusBar">
                 <span id="statusText">Listo</span>
+                <span id="statusWarning" class="status-warning hidden"></span>
+            </div>
+
+            <!-- Deshacer/Rehacer + captura del circuito como imagen --
+                 lado derecho arriba, ver Toolbar.bindCanvasTools() -->
+            <div id="canvasTools" class="canvas-tools">
+                <button id="btnScreenshot" class="canvas-tool-btn" title="Capturar el circuito como imagen"><img src="assets/icons/camera.png" alt="Screenshot"></button>
+                <button id="btnUndo" class="canvas-tool-btn" title="Deshacer (Ctrl+Z)"><img src="assets/icons/undo.png" alt="Deshacer"></button>
+                <button id="btnRedo" class="canvas-tool-btn" title="Rehacer (Ctrl+Y)"><img src="assets/icons/redo.png" alt="Rehacer"></button>
+                <button id="btnAddAnnotation" class="canvas-tool-btn" title="Agregar una nota al lienzo (info, tip, problema o advertencia)">🏷️</button>
             </div>
 
             <svg id="simulatorCanvas">
@@ -122,6 +148,11 @@
 
                     <!-- Selección -->
                     <g id="selectionLayer"></g>
+
+                    <!-- Notas del lienzo (ver AnnotationManager.js) -- arriba
+                         de todo a propósito, para que nunca queden tapadas
+                         por un componente/cable. -->
+                    <g id="annotationLayer"></g>
 
                 </g>
 
@@ -169,9 +200,22 @@
     <script src="js/simulator/QemuBridge.js"></script>
     <script src="js/simulator/Renderer.js"></script>
     <script src="js/simulator/HistoryManager.js"></script>
+    <script src="js/simulator/AnnotationManager.js"></script>
     <script src="js/simulator/ProjectManager.js"></script>
     <script src="js/simulator/ValidationEngine.js"></script>
     <script src="js/simulator/Simulator.js"></script>
+
+
+    <!-- ====================================================== -->
+    <!-- LIBRERÍAS DE TERCEROS                                  -->
+    <!-- ====================================================== -->
+
+    <script src="lib/xterm/xterm.js"></script>
+    <script src="lib/xterm/xterm-addon-fit.js"></script>
+    <script src="lib/xterm/xterm-addon-links.js"></script>
+    <script src="lib/codemirror/codemirror.js"></script>
+    <script src="lib/codemirror/lang-python.js"></script>
+    <script src="lib/jspdf/jspdf.umd.min.js"></script>
 
 
     <!-- ====================================================== -->
@@ -183,6 +227,8 @@
     <script src="js/ui/PropertyPanel.js"></script>
     <script src="js/ui/ReplPanel.js"></script>
     <script src="js/ui/ContextMenu.js"></script>
+    <script src="js/ui/TutorialManager.js"></script>
+    <script src="js/ui/ReportGenerator.js"></script>
 
 
     <!-- ====================================================== -->

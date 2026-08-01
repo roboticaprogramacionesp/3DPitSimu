@@ -19,14 +19,19 @@ class Renderer {
   // los llamaba ya. isLed sigue porque className/PropertyPanel todavía
   // la usan fuera del dispatch de render.
 
-  // Joystick KY-023: el único componente de este proyecto con una
-  // entrada ANALÓGICA continua (X/Y), no solo digital -- ver
-  // bindJoystick() más abajo y joystick.hal.py (primer machine.ADC
-  // del proyecto). El botón SW no necesita nada especial acá: es
-  // el mismo mecanismo genérico de botón momentáneo que ya usan
-  // otros componentes (ver bindPressButton/component.pressPins).
+  // Joystick: el único componente de este proyecto con una entrada
+  // ANALÓGICA continua (X/Y), no solo digital -- ver bindJoystick()
+  // más abajo y joystick.hal.py (primer machine.ADC del proyecto).
+  // El botón SW no necesita nada especial acá: es el mismo
+  // mecanismo genérico de botón momentáneo que ya usan otros
+  // componentes (ver bindPressButton/component.pressPins).
+  //
+  // Acepta "joystick" (el genérico dibujado a mano, primer diseño)
+  // Y "ky-023" (el módulo real -- se sumó después a pedido del
+  // usuario, dejando el genérico intacto sin borrarlo) -- mismo
+  // criterio que isEncoder(), que acepta "ky_040" Y "ky040".
   static isJoystick(type) {
-    return type === "joystick";
+    return type === "joystick" || type === "ky-023";
   }
 
   // Teclado analógico ADKEY (5 botones sobre un único pin ADC):
@@ -35,7 +40,10 @@ class Renderer {
   // -- son puramente virtuales, así que usan su propio bind
   // (bindAdKey) en vez de bindPressButton/component.pressPins.
   static isAdKey(type) {
-    return type === "adkey";
+    // "adkey_real" (asset Fritzing real) se suma a "adkey" (dibujo a
+    // mano original, ahora oculto pero conservado) -- mismo criterio
+    // que isEncoder/isJoystick para sus pares de tipos.
+    return type === "adkey" || type === "adkey_real";
   }
 
   // Teclado matricial (4x4, 3x4, o cualquier NxM futuro): 8 (o
@@ -312,6 +320,24 @@ class Renderer {
     const press = (e) => {
       if (component.locked) return;
 
+      // FIX real (a pedido: "cuando lo agrego ya no lo puedo mover,
+      // hace clic y cambia de estado, no lo puedo seleccionar ni
+      // arrastrar"): antes esto SIEMPRE capturaba el click acá (con
+      // stopPropagation), sin importar si la simulación estaba
+      // corriendo -- como el "cap" suele cubrir gran parte del
+      // dibujo del componente (ej. KY-004), casi cualquier click
+      // terminaba presionando el botón en vez de dejar que
+      // DragManager arrastrara el componente entero. DragManager YA
+      // se bloquea solo mientras isRunning (no tiene sentido
+      // reordenar el circuito a mitad de una simulación), así que
+      // acá se aplica el criterio complementario: si la simulación
+      // NO está corriendo, todavía estás ARMANDO el circuito -- no
+      // hacer nada acá (ni stopPropagation) y dejar que el evento
+      // siga de largo hacia DragManager, como cualquier otro punto
+      // del componente. Presionar el botón de verdad solo tiene
+      // sentido una vez que hay firmware corriendo del otro lado.
+      if (!this.simulator.isRunning) return;
+
       e.stopPropagation();
       e.preventDefault();
 
@@ -388,6 +414,30 @@ class Renderer {
     const areaR = parseFloat(area.getAttribute("r"));
     const maxTravel = Math.max(1, areaR - knobR);
 
+    // Flechas estilo Wokwi (a pedido, ver ky-023.svg) -- opcionales:
+    // el joystick genérico (joystick.svg) no las tiene, así que acá
+    // simplemente no hacen nada (querySelector da null, los ifs de
+    // updateArrows() cortan solos). No hace falta ninguna rama por
+    // tipo, alcanza con que el SVG las tenga o no.
+    const arrows = {
+      up: group.querySelector('[data-joystick-arrow="up"]'),
+      down: group.querySelector('[data-joystick-arrow="down"]'),
+      left: group.querySelector('[data-joystick-arrow="left"]'),
+      right: group.querySelector('[data-joystick-arrow="right"]'),
+    };
+    const ARROW_THRESHOLD = 0.3;
+    const ARROW_IDLE_FILL = "#8a8a8a";
+    const ARROW_ACTIVE_FILL = "#ffcc00";
+
+    const updateArrows = (nx, ny) => {
+      if (arrows.right) arrows.right.setAttribute("fill", nx > ARROW_THRESHOLD ? ARROW_ACTIVE_FILL : ARROW_IDLE_FILL);
+      if (arrows.left) arrows.left.setAttribute("fill", nx < -ARROW_THRESHOLD ? ARROW_ACTIVE_FILL : ARROW_IDLE_FILL);
+      // Mismo criterio de eje Y invertido que más abajo (arriba =
+      // ny positivo).
+      if (arrows.up) arrows.up.setAttribute("fill", ny > ARROW_THRESHOLD ? ARROW_ACTIVE_FILL : ARROW_IDLE_FILL);
+      if (arrows.down) arrows.down.setAttribute("fill", ny < -ARROW_THRESHOLD ? ARROW_ACTIVE_FILL : ARROW_IDLE_FILL);
+    };
+
     let dragging = false;
 
     const toLocalPoint = (e) => {
@@ -448,6 +498,7 @@ class Renderer {
       const nx = Math.max(-1, Math.min(1, dx / maxTravel));
       const ny = Math.max(-1, Math.min(1, -dy / maxTravel));
 
+      updateArrows(nx, ny);
       this.simulator.signalEngine.setJoystickPosition(component, nx, ny);
     };
 
@@ -457,6 +508,7 @@ class Renderer {
       dragging = false;
 
       applyOffset(0, 0); // resorte: vuelve al centro
+      updateArrows(0, 0);
 
       try {
         knob.releasePointerCapture(e.pointerId);
@@ -513,6 +565,14 @@ class Renderer {
 
       const press = (e) => {
         if (component.locked) return;
+        // Mismo fix que bindPressButton/switch.behavior.js (ver el
+        // comentario grande en bindPressButton): sin este guard, un
+        // click acá SIEMPRE capturaba el puntero sin importar si la
+        // simulación estaba corriendo, y como las teclas cubren casi
+        // toda el área del componente, no quedaba lugar para
+        // seleccionar/arrastrar el ADKEY entero mientras se arma el
+        // circuito.
+        if (!this.simulator.isRunning) return;
         e.stopPropagation();
 
         if (!pressedStack.includes(keyId)) pressedStack.push(keyId);
@@ -856,8 +916,25 @@ class Renderer {
       return;
     }
 
-    const cx = parseFloat(area.getAttribute("cx"));
-    const cy = parseFloat(area.getAttribute("cy"));
+    // FIX real (a pedido: "al rotar la D no rota desde el centro,
+    // rota como en lado"): esto ANTES leía cx/cy del atributo de
+    // "area", que vive en el sistema de coordenadas EXTERNO del SVG
+    // (afuera de scale(0.018) y del matrix(...) de rotaryEncoder).
+    // "knob" (desde el fix anterior, que aisló el rol a solo el
+    // disco+eje) vive VARIAS transformaciones más adentro, en un
+    // sistema de coordenadas totalmente distinto -- 20.21,17.374
+    // (área) no significa lo mismo que esas coordenadas dentro del
+    // sistema local de "knob" (donde el eje está en, ej., 16,18).
+    // Por eso el giro orbitaba en vez de girar en el propio eje.
+    // getBBox() devuelve el bounding box de "knob" en SU PROPIO
+    // sistema de coordenadas local (el mismo que transform/
+    // transform-origin de más abajo van a usar sobre este MISMO
+    // elemento), así que el pivote sale siempre correcto sin
+    // importar cuántas transformaciones envuelvan al elemento por
+    // afuera, ni el tamaño/escala del componente.
+    const knobBBox = knob.getBBox();
+    const cx = knobBBox.x + knobBBox.width / 2;
+    const cy = knobBBox.y + knobBBox.height / 2;
 
     if (Number.isNaN(cx) || Number.isNaN(cy)) {
       // Si esto pasa, applyRotation() generaría un transform tipo
@@ -865,7 +942,7 @@ class Renderer {
       // que el eje simplemente nunca rota y no hay ninguna pista en
       // consola de por qué. Mejor cortar acá con un aviso explícito.
       console.warn(
-        `[KY-040] bindEncoder: cx/cy inválidos en ${component.id} (cx="${area.getAttribute("cx")}", cy="${area.getAttribute("cy")}"). La perilla no va a rotar.`
+        `[KY-040] bindEncoder: cx/cy inválidos en ${component.id} (getBBox de "knob" dio ${JSON.stringify(knobBBox)}). La perilla no va a rotar.`
       );
       return;
     }
@@ -1114,26 +1191,34 @@ class Renderer {
   // cualquier otro elemento oscuro del bisel/chip que también use
   // #1A1A1A.
   //
-  // No hay renderizado de texto real todavía (necesitaría el
-  // protocolo "LCD:" -- ver la nota que le dejamos a QemuBridge.js
-  // para el OLED). Por ahora esto solo permite elegir el esquema
-  // de color, calcado del selector que ya existe para el OLED.
+  // El texto real (protocolo "LCD:") se dibuja en un <canvas>
+  // superpuesto -- ver drawLcdText()/renderLcdFrame() más abajo.
   // ─────────────────────────────────────────────────────
 
+  // "dots" (los 32 cuadraditos de fondo, uno por celda de carácter,
+  // ver [data-lcd-role="dot"]) NO es un color elegible acá -- el
+  // .svg no se altera, se queda siempre con su fill nativo (#1a1a1a,
+  // oscuro), ver setLcdBacklight(). "ink" es el color del texto que
+  // dibuja renderLcdFrame() en el canvas de encima. A pedido: negro
+  // puro para yellow_green (el look clásico LCD verde/negro) -- se
+  // ve legible en la práctica pese al contraste teórico bajo contra
+  // el #1a1a1a del cuadradito (confirmado con captura real, letras
+  // nítidas por el antialiasing del canvas). "blue" se queda con
+  // tinta clara porque ahí SÍ hace falta (fondo azul oscuro).
   static LCD_COLOR_SCHEMES = {
-    // La que ya traía el .svg original (LCD clásica verde/amarilla,
-    // texto oscuro) -- la dejamos como default para no cambiarle
-    // el aspecto a nadie que ya tenga LCDs puestos en su proyecto.
+    // La que ya traía el .svg original (fondo verde/amarillo) -- la
+    // dejamos como default para no cambiarle el aspecto a nadie que
+    // ya tenga LCDs puestos en su proyecto.
     yellow_green: {
       background: "#87AD34",
-      dots: "#1A1A1A",
+      ink: "#000000",
     },
 
     // La otra variante comercial más común: fondo azul, texto
     // blanco/celeste claro.
     blue: {
       background: "#2B4EA8",
-      dots: "#EAF1FF",
+      ink: "#FFFFFF",
     },
   };
 
@@ -1393,15 +1478,13 @@ class Renderer {
     return bitmap;
   }
 
-  // Apariencia del panel cuando el backlight está apagado -- un
-  // solo tono oscuro para background Y dots (a diferencia de los
-  // esquemas normales, que contrastan fondo/puntos, acá buscamos
-  // que se vea "apagado" parejo, sin importar qué esquema de
-  // color tenía activo). No depende de LCD_COLOR_SCHEMES porque
-  // no es un esquema elegible por el usuario, es un estado.
+  // Apariencia del panel cuando el backlight está apagado -- solo
+  // el fondo grande (screen-bg) se oscurece; los cuadraditos de
+  // celda (dots) YA NO se tocan en ningún estado, ver la nota
+  // grande en setLcdBacklight(). No depende de LCD_COLOR_SCHEMES
+  // porque no es un esquema elegible por el usuario, es un estado.
   static LCD_BACKLIGHT_OFF_APPEARANCE = {
     background: "#12140d",
-    dots: "#12140d",
   };
 
   applyLcdColorScheme(component) {
@@ -1434,11 +1517,19 @@ class Renderer {
     const bg = component.element.querySelector('[data-lcd-role="screen-bg"]');
     if (bg) bg.setAttribute("fill", scheme.background);
 
-    component.element
-      .querySelectorAll('[data-lcd-role="dot"]')
-      .forEach((poly) => {
-        poly.setAttribute("fill", scheme.dots);
-      });
+    // Los 32 "dot" del SVG (un rectángulo por CELDA de carácter, no
+    // por píxel) NO se tocan acá -- a pedido explícito del usuario,
+    // el .svg de las LCD no debe alterarse más allá de agregarle el
+    // texto encima; se quedan siempre con el fill que ya traía el
+    // archivo (#1a1a1a, oscuro), prendido o apagado el backlight,
+    // cualquiera sea el esquema de color elegido. Versión anterior:
+    // se repintaban con scheme.dots (un verde/azul más claro que el
+    // fondo) para separar la tinta del texto del cuadradito de fondo
+    // -- eso sí arreglaba la invisibilidad del texto, pero alteraba
+    // el aspecto original del .svg, que es justo lo que no se quiere.
+    // Ahora en cambio scheme.ink (ver LCD_COLOR_SCHEMES) se elige
+    // para que contraste directamente contra el #1a1a1a nativo del
+    // cuadradito, sin necesidad de recolorearlo.
 
     // El texto ya dibujado también tiene que recolorearse -- si
     // no, cambiar de esquema (o prender/apagar el backlight)
@@ -1578,7 +1669,10 @@ class Renderer {
     const dotH = glyphH / ROWS;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = scheme.dots;
+    // scheme.ink -- elegido para contrastar contra el #1a1a1a nativo
+    // del cuadradito de celda (ver LCD_COLOR_SCHEMES), que ya no se
+    // recolorea.
+    ctx.fillStyle = scheme.ink;
 
     for (let r = 0; r < numLines; r++) {
       const rowText = rows[r] || "";
@@ -2112,6 +2206,150 @@ class Renderer {
   }
 
   // ─────────────────────────────────────────────────────
+  // Anillo de NeoPixel (WS2812) -- mismo enfoque que la matriz
+  // (bisel + LEDs dibujados enteros por código, ver
+  // neopixel_ring.behavior.js), pero acá los N píxeles (1-256,
+  // configurable desde el panel) se ubican en un CÍRCULO en vez de
+  // una grilla rectangular -- ángulo = 2π*i/n, arrancando arriba
+  // (i=0 a las 12) y en sentido horario, que es como vienen
+  // numerados los anillos de NeoPixel reales.
+  // ─────────────────────────────────────────────────────
+
+  // Geometría compartida entre el bisel (SVG, armado en
+  // neopixel_ring.behavior.js/render.tag) y el dibujo de LEDs (acá
+  // abajo) -- factorizada para no repetir la fórmula en dos lugares
+  // que tienen que quedar sincronizados.
+  //
+  // A pedido, última vuelta ("los cuadros se van reduciendo a medida
+  // que vamos agregando mas y asi no deberia... has que el circulo
+  // cresca tomando en cuenta que los cuadros siempre deben tener la
+  // misma medida"): LED_HALF es una constante FIJA de verdad, sin
+  // ningún fallback que la achique -- antes, pasado un tope de radio
+  // (pensado para no salirse de una caja de tamaño fijo), el LED se
+  // achicaba para seguir entrando ahí. Ahora es al revés: el tamaño
+  // del componente (ringD, calculado en tag() a partir de esta misma
+  // geometría) es el que se ADAPTA para siempre alcanzar, nunca el
+  // LED el que cede. Pura matemática de circunferencia: el perímetro
+  // necesario para n LEDs de ancho fijo (con un margen cómodo entre
+  // ellos) determina el radio, punto -- sin techo artificial. Ya no
+  // depende de un "size" externo (por eso ya no recibe ese parámetro):
+  // antes el tamaño de la caja LIMITABA la geometría; ahora la
+  // geometría DEFINE el tamaño de la caja (ver neopixel_ring.
+  // behavior.js/tag()).
+  static _neopixelRingGeometry(n) {
+    const LED_HALF = 9; // tamaño FIJO de cada LED, en unidades de pantalla -- igual al que tenía el anillo default (8 píxeles) antes de este cambio
+    const SPACING = 1.7; // separación cómoda entre LEDs, en "anchos de LED"
+    const MIN_RING_R = 32; // piso para conteos muy chicos (1-4), para que no colapse a un punto
+
+    const count = Math.max(1, n);
+    const idealRadius = (count * LED_HALF * 2 * SPACING) / (2 * Math.PI);
+    const ringRadius = Math.max(MIN_RING_R, idealRadius);
+
+    return { ringRadius, ledHalf: LED_HALF };
+  }
+
+  drawNeopixelRingFrame(component, rgbBytes, n) {
+    if (!component.element) return;
+
+    if (component.properties?.count !== n) {
+      const graphic = component.element.querySelector(".component-graphic");
+      if (!graphic) return;
+      component.properties.count = n;
+      // render.tag() reconstruye el <canvas> desde cero (geometría nueva
+      // para el n nuevo) y lo pinta "todo apagado" como estado inicial --
+      // hay que seguir DESPUÉS de esto y repintar con el rgbBytes real,
+      // si no el frame recién recibido del firmware se pierde (quedaba
+      // apagado hasta el próximo frame).
+      this.tagNeopixelRingElements(component, graphic);
+    }
+
+    const canvas = component.element.querySelector('[data-neo-role="ring"]');
+    if (!canvas) return;
+
+    this._paintNeopixelRingCanvas(canvas, rgbBytes, n);
+  }
+
+  // Lógica de pintado real, separada de drawNeopixelRingFrame() para
+  // poder llamarla DIRECTO sobre un <canvas> recién creado desde
+  // neopixel_ring.behavior.js/render.tag() -- ahí todavía no existe
+  // component.element (Renderer.renderComponent() llama a
+  // setElement() DESPUÉS de tag(), ver ese archivo), así que
+  // cualquier cosa que dependa de volver a buscar el canvas por
+  // component.element (como hacía antes clearNeopixelRing) se
+  // quedaba sin hacer nada en el primer pintado -- bug real
+  // encontrado a pedido ("pinta los 8 píxeles por defecto"): el
+  // anillo recién colocado no mostraba nada hasta el primer frame
+  // real del firmware.
+  _paintNeopixelRingCanvas(canvas, rgbBytes, n) {
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width;
+    const H = canvas.height;
+    const cx = W / 2;
+    const cy = H / 2;
+
+    // _neopixelRingGeometry ya no toma un "size" externo -- devuelve la
+    // geometría en unidades de PANTALLA (las mismas que usa el bisel en
+    // neopixel_ring.behavior.js/tag()). El <canvas> nativo está
+    // sobremuestreado (ver "canvasRes" en tag()), así que hay que
+    // escalar esa geometría al tamaño nativo real de ESTE canvas --
+    // el factor sale de W (nativo) contra el diámetro en unidades de
+    // pantalla (outerR*2), sin necesidad de conocer ese factor de
+    // antemano ni repetirlo en dos archivos.
+    const { ringRadius, ledHalf } = Renderer._neopixelRingGeometry(n);
+    const outerR = ringRadius + ledHalf * 2.6;
+    const scale = W / (outerR * 2);
+    const r = ringRadius * scale;
+    const half = ledHalf * scale;
+
+    ctx.clearRect(0, 0, W, H);
+
+    for (let i = 0; i < n; i++) {
+      const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+
+      const idx = i * 3;
+      const rgb_r = rgbBytes[idx] || 0;
+      const rgb_g = rgbBytes[idx + 1] || 0;
+      const rgb_b = rgbBytes[idx + 2] || 0;
+
+      const isOn = rgb_r + rgb_g + rgb_b > 10;
+
+      // Cuadrados lisos (sin alternar rombo) -- a pedido, mismo
+      // criterio que un anillo de NeoPixel real/Wokwi.
+      ctx.fillStyle = isOn ? `rgb(${rgb_r},${rgb_g},${rgb_b})` : "#e6e6e6";
+
+      if (isOn) {
+        ctx.shadowColor = `rgb(${rgb_r},${rgb_g},${rgb_b})`;
+        ctx.shadowBlur = half * 1.6;
+      }
+      ctx.fillRect(x - half, y - half, half * 2, half * 2);
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  clearNeopixelRing(component) {
+    if (!component.element) return;
+
+    const canvas = component.element.querySelector('[data-neo-role="ring"]');
+    if (!canvas) return;
+
+    const n = component.properties?.count || 8;
+    // Frame "todo apagado" -- reusa drawNeopixelRingFrame con un
+    // buffer vacío (todo ceros) en vez de duplicar el layout
+    // circular acá.
+    this.drawNeopixelRingFrame(component, new Uint8Array(n * 3), n);
+  }
+
+  // Wrapper delgado, mismo criterio que tagNeopixelElements() (ver
+  // el comentario ahí) -- llamado desde PropertyPanel al cambiar la
+  // cantidad de píxeles a mano, y desde drawNeopixelRingFrame cuando
+  // detecta un cambio de tamaño.
+  tagNeopixelRingElements(component, graphic) {
+    ComponentBehaviorRegistry.get(component.type)?.render?.tag?.(component, graphic, this);
+  }
+
+  // ─────────────────────────────────────────────────────
   // Matriz MAX7219 (1 bit por LED, monocromática) -- tamaño
   // encadenable (width x height en píxeles/LEDs)
   //
@@ -2561,6 +2799,22 @@ class Renderer {
   }
 
   removeComponent(component) {
+    // ds3231.behavior.js arranca un setInterval de 1s para que el
+    // RTC siga tickeando solo (ver render.initialState ahí) -- sin
+    // esto, borrar el componente del canvas no lo frenaba y quedaba
+    // corriendo indefinidamente contra un component.element ya nulo.
+    if (component._ds3231TickInterval) {
+      clearInterval(component._ds3231TickInterval);
+      component._ds3231TickInterval = null;
+    }
+
+    // gps.behavior.js: mismo criterio que el ds3231TickInterval de
+    // arriba -- ver ese comentario.
+    if (component._gpsTickInterval) {
+      clearInterval(component._gpsTickInterval);
+      component._gpsTickInterval = null;
+    }
+
     if (component.element?.parentNode) {
       component.element.parentNode.removeChild(component.element);
     }

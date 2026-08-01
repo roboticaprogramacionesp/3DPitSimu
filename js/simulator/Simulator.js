@@ -30,6 +30,7 @@ class Simulator {
         this.wireLayer = null;
         this.componentLayer = null;
         this.selectionLayer = null;
+        this.annotationLayer = null;
 
         // ==========================
         // Componentes
@@ -107,27 +108,41 @@ class Simulator {
 
         this.initializeManagers();
 
+        // Restaurar el proyecto guardado (si lo hay) ANTES de decidir
+        // si hace falta la ESP32 default de más abajo -- ver el
+        // comentario grande en ProjectManager.loadFromLocalStorage()
+        // sobre la condición de carrera real que esto arregla (la
+        // versión vieja no esperaba este restore, así que la ESP32
+        // default se sumaba a la que ya traía el proyecto guardado).
+        const restoredProject = await this.projectManager.loadFromLocalStorage();
+
         // ------------------------------------------
         // ESP32: el que el QemuBridge va a buscar
-        // automáticamente por su type "esp32_wroom"
+        // automáticamente por su type "esp32_wroom" --
+        // único componente presente al abrir el programa
+        // (antes también traía un LED de prueba de más,
+        // a pedido se sacó: un lienzo en blanco con solo
+        // la placa es el punto de partida real de cualquier
+        // circuito, no algo ya armado a medias). Solo si NO había
+        // nada guardado para restaurar -- si no, esto se sumaba a
+        // la ESP32 que ya traía el proyecto restaurado.
         // ------------------------------------------
 
-        await this.componentManager.createFromDefinition("esp32_wroom", {
-            x: 400,
-            y: 150
-        });
-
-        // ------------------------------------------
-        // Componente de prueba: se carga desde su
-        // definición JSON en components/led/led.json
-        // ------------------------------------------
-
-        await this.componentManager.createFromDefinition("led", {
-            x: 150,
-            y: 150
-        });
+        if (!restoredProject) {
+            await this.componentManager.createFromDefinition("esp32_wroom", {
+                x: 400,
+                y: 150
+            });
+        }
 
         await this.render();
+
+        // Centrada en el lienzo visible, sin importar el tamaño de
+        // ventana -- mismo mecanismo que ya usa "Nuevo proyecto"/abrir
+        // un proyecto (ver ProjectManager), así que si el usuario
+        // resetea el zoom/pan después, la ESP32 vuelve a quedar igual
+        // de centrada que en este primer arranque.
+        this.centerViewOnComponents();
 
         if (window?.location?.search?.includes("debug=1")) {
             console.log("PitSimulator listo.");
@@ -154,6 +169,8 @@ class Simulator {
         this.componentLayer = document.getElementById("componentLayer");
 
         this.selectionLayer = document.getElementById("selectionLayer");
+
+        this.annotationLayer = document.getElementById("annotationLayer");
 
         this.viewport = document.getElementById("viewport");
 
@@ -189,13 +206,19 @@ class Simulator {
             // "interactivo" y el paneo del canvas arranca al mismo tiempo
             // que WireManager intenta arrastrar el punto -- se pelean por
             // el mismo pointermove y el cable "se mueve solo con el lienzo".
-            const onInteractive = e.target.closest(".component, .pin, .wire-segment, .wire-handle-hit, .wire-seg-handle-hit, .wire-node-hit, .wire-visual, .wire-flow");
+            const onInteractive = e.target.closest(".component, .pin, .wire-segment, .wire-handle-hit, .wire-seg-handle-hit, .wire-node-hit, .wire-visual, .wire-flow, .annotation");
 
             if (onInteractive) return;
 
             // Si se está dibujando un cable nuevo, este click fija un
             // codo (ver WireManager.onCanvasDown) -- no debe panear.
             if (this.wireManager?.pendingFrom) return;
+
+            // Shift + arrastrar sobre vacío es selección por rectángulo
+            // (ver SelectionManager._startBoxSelect) -- no panear al
+            // mismo tiempo, si no ambos gestos se pelean por el mismo
+            // pointermove.
+            if (e.shiftKey) return;
 
             panStart = {
                 x: e.clientX,
@@ -293,6 +316,8 @@ class Simulator {
         this.signalEngine = new SignalEngine(this);
 
         this.history = new HistoryManager(this);
+
+        this.annotationManager = new AnnotationManager(this);
 
         this.contextMenu = new ContextMenu(this);
 
@@ -560,13 +585,28 @@ class Simulator {
         if (selectedComponents.length === 0) return;
 
         const removed = selectedComponents.slice();
+        const removedIds = new Set(removed.map(c => c.id));
+
+        // Capturar los cables conectados a CUALQUIERA de los
+        // componentes que se van a borrar -- removeComponent()
+        // (vía WireManager.removeWiresForComponent) los descarta en
+        // silencio, así que sin esto el undo revivía el componente
+        // pero lo dejaba completamente desconectado.
+        const removedWires = this.wireManager.wires.filter(w =>
+            removedIds.has(w.from.componentId) || removedIds.has(w.to.componentId)
+        );
 
         selectedComponents.forEach(component => this.removeComponent(component.id));
 
         this.selectionManager.clear();
 
         this.history.push({
-            undo: () => { removed.forEach(component => this.addComponent(component)); },
+            undo: () => {
+                removed.forEach(component => this.addComponent(component));
+                removedWires.forEach(wire => this.wireManager.wires.push(wire));
+                this.wireManager.ensureUniqueWireIds();
+                this.wireManager.renderAll();
+            },
             redo: () => { removed.forEach(component => this.removeComponent(component.id)); }
         });
 

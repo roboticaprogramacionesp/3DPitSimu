@@ -84,6 +84,33 @@ class WireManager {
 
     }
 
+    // Las 3 opciones que puede elegir el usuario en el panel de
+    // propiedades del cable (ver PropertyPanel._renderWire()) -- para
+    // armar el circuito FÍSICO real con el conector correcto.
+    static CONNECTOR_TYPES = ["hembra-hembra", "hembra-macho", "macho-macho"];
+
+    // Componentes que se conectan por un borne/terminal en vez de un
+    // pin header (ver también ReportGenerator, que agrupa el
+    // checklist de cables por connectorType) -- estos arrancan en
+    // "macho-macho" en vez de "hembra-hembra" porque conectarse a un
+    // simple borne normalmente necesita una punta de cable pelada o un
+    // pin macho, no un socket hembra.
+    static TERMINAL_COMPONENT_TYPES = new Set(["battery_18650", "clavija_127v"]);
+
+    static defaultConnectorType(simulator, from, to) {
+
+        const cm = simulator.componentManager;
+        const fromComp = cm.get(from.componentId);
+        const toComp   = cm.get(to.componentId);
+
+        const isTerminal =
+            WireManager.TERMINAL_COMPONENT_TYPES.has(fromComp?.type) ||
+            WireManager.TERMINAL_COMPONENT_TYPES.has(toComp?.type);
+
+        return isTerminal ? "macho-macho" : "hembra-hembra";
+
+    }
+
 
     constructor(simulator) {
 
@@ -859,12 +886,12 @@ class WireManager {
 
         if (dx === 0 && dy === 0) return;
 
-        e.preventDefault();
-
         const selectedPoint = this.selectedPoint;
         const selectedWireId = this.selectedWire;
 
         if (selectedPoint) {
+            e.preventDefault();
+
             const wire = this.wires.find(w => w.id === selectedPoint.wireId);
             if (!wire || !wire.points[selectedPoint.pointIndex]) return;
 
@@ -883,24 +910,83 @@ class WireManager {
             return;
         }
 
-        if (!selectedWireId) return;
+        if (selectedWireId) {
+            e.preventDefault();
 
-        const wire = this.wires.find(w => w.id === selectedWireId);
-        if (!wire) return;
+            const wire = this.wires.find(w => w.id === selectedWireId);
+            if (!wire) return;
 
-        const beforePoints = wire.points.map(p => ({ ...p }));
-        const afterPoints = wire.points.map(p => ({
-            ...p,
-            x: Utils.snapToGrid(p.x + dx, this.simulator.gridSize, this.snapEnabled),
-            y: Utils.snapToGrid(p.y + dy, this.simulator.gridSize, this.snapEnabled)
+            const beforePoints = wire.points.map(p => ({ ...p }));
+            const afterPoints = wire.points.map(p => ({
+                ...p,
+                x: Utils.snapToGrid(p.x + dx, this.simulator.gridSize, this.snapEnabled),
+                y: Utils.snapToGrid(p.y + dy, this.simulator.gridSize, this.snapEnabled)
+            }));
+
+            wire.points = afterPoints;
+            this.renderAll();
+            this.simulator.history.push({
+                undo: () => { wire.points = beforePoints; this.renderAll(); },
+                redo: () => { wire.points = afterPoints; this.renderAll(); }
+            });
+            return;
+        }
+
+        // Sin cable/punto seleccionado: nudgear los componentes
+        // seleccionados (mismo criterio de movimiento que arrastrarlos
+        // con el mouse, ver DragManager.updateDrag/endDrag).
+        if (this._nudgeSelectedComponents(dx, dy)) {
+            e.preventDefault();
+        }
+
+    }
+
+    //------------------------------------------------------
+    // Mover por teclado el/los componente(s) actualmente
+    // seleccionados -- un solo comando de historial para todo el
+    // grupo, así Ctrl+Z deshace el nudge completo de una vez, no
+    // uno por componente.
+    //------------------------------------------------------
+
+    _nudgeSelectedComponents(dx, dy) {
+
+        if (this.simulator.isRunning) return false;
+
+        const components = this.simulator.selectionManager
+            .getSelectedComponents()
+            .filter(c => !c.locked);
+
+        if (components.length === 0) return false;
+
+        const gridSize    = this.simulator.gridSize || 20;
+        const snapEnabled = !!this.simulator.gridSize;
+
+        const moves = components.map(component => ({
+            component,
+            startX: component.x,
+            startY: component.y,
+            endX: Utils.snapToGrid(component.x + dx, gridSize, snapEnabled),
+            endY: Utils.snapToGrid(component.y + dy, gridSize, snapEnabled)
         }));
 
-        wire.points = afterPoints;
-        this.renderAll();
+        const applyEnd   = () => moves.forEach(({ component, endX, endY }) => component.setPosition(endX, endY));
+        const applyStart = () => moves.forEach(({ component, startX, startY }) => component.setPosition(startX, startY));
+
+        const refresh = () => {
+            this.renderAll();
+            this.simulator.selectionManager.renderHighlight();
+        };
+
+        applyEnd();
+        refresh();
+        this.simulator.eventBus.emit("component:dragend", moves[0].component);
+
         this.simulator.history.push({
-            undo: () => { wire.points = beforePoints; this.renderAll(); },
-            redo: () => { wire.points = afterPoints; this.renderAll(); }
+            undo: () => { applyStart(); refresh(); },
+            redo: () => { applyEnd(); refresh(); }
         });
+
+        return true;
 
     }
 
@@ -920,6 +1006,7 @@ class WireManager {
 
         this.tempLine.setAttribute("d", d);
         this.tempLine.style.stroke = color || "#4da3ff";
+        this.tempLine.style.fill = "none"; // ver el comentario en el <path> "wire-visual" de arriba
     }
 
     cancelWire() {
@@ -978,11 +1065,32 @@ class WireManager {
             id: Utils.generateId("wire"),
             from, to,
             points,
-            color: WireManager.colorForPins(pinFrom, pinTo)
+            color: WireManager.colorForPins(pinFrom, pinTo),
+            // Tipo de conector real para armar el circuito FÍSICO (ver
+            // PropertyPanel._renderWire() -- el usuario lo puede
+            // cambiar en cualquier momento, esto es solo el valor
+            // inicial). Casi todo acá son pines tipo header (macho),
+            // la propia ESP32 incluida, así que un jumper entre dos de
+            // ellos por default es hembra-hembra; las excepciones son
+            // batería/clavija, que van a un borne/terminal en vez de
+            // un header.
+            connectorType: WireManager.defaultConnectorType(this.simulator, from, to),
         };
         this.wires.push(wire);
         this.renderAll();
         this.simulator.eventBus.emit("wire:added", wire);
+
+        // Aviso INMEDIATO (no hace falta abrir "Validar" y acordarse de
+        // mirarlo) si este cable en particular ata GND a un pin de
+        // alimentación -- ver ValidationEngine._groundPowerMismatch()
+        // (misma lógica que usa el chequeo completo bajo demanda, para
+        // no repetirla). Encontrado en la práctica: pasó desapercibido
+        // varias veces porque nada avisaba en el momento del cableado.
+        const mismatch = this.simulator.validationEngine?._groundPowerMismatch(wire);
+        if (mismatch) {
+            this.simulator.eventBus.emit("wire:invalidPolarity", { wire, message: mismatch });
+        }
+
         return wire;
     }
 
@@ -1102,6 +1210,15 @@ class WireManager {
             path.setAttribute("data-wire-id", wire.id);
             path.setAttribute("d", allPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x},${p.y}`).join(" "));
             path.style.stroke = wire.color;
+            // fill:none YA está en .wire-visual (simulator.css), pero
+            // repetido acá inline a propósito: un <path> sin fill
+            // explícito lo defaultea a NEGRO SÓLIDO (relleno del área
+            // que encierra el trazo, no solo el trazo), y ese CSS
+            // externo no viaja cuando este layer se clona/serializa
+            // para exportarlo a PNG (captura de circuito, reporte) --
+            // ahí el cable se veía como un cuadrilátero negro enorme
+            // en vez de una línea fina de su color real.
+            path.style.fill = "none";
             // El path visual NUNCA debe capturar clicks: es puramente
             // decorativo y va DIBUJADO ENCIMA de las <line class="wire-segment">
             // invisibles (zona de click ancha). Si no le sacamos pointer-events,

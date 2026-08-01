@@ -12,6 +12,19 @@
     --accent-strong:#2f80ed;
 }
 
+/* Modo "noche" del lienzo (btnCanvasTheme, ver Toolbar.js) -- solo
+   afecta el fondo del canvas/workspace, no el resto de la UI (que ya
+   es oscura de por sí). Se activa poniendo data-theme="dark" en
+   <html>, persistido en localStorage. */
+:root[data-theme="dark"]{
+    --canvas-bg:#1b1e24;
+    --grid-line:rgba(255,255,255,0.07);
+}
+
+:root[data-theme="dark"] .component-name-label{
+    fill:#ccc;
+}
+
 *{
     margin:0;
     padding:0;
@@ -187,8 +200,6 @@ body{
 
     background:#2ecc71 !important;
 
-    margin-left:auto;
-
 }
 
 .btn-sim-toggle:hover{
@@ -200,6 +211,19 @@ body{
 .btn-sim-toggle.running{
 
     background:#e74c3c !important;
+
+}
+
+/* Botón de tema del lienzo (☀ día / 🌙 noche), junto a Simular --
+   el margin-left:auto vive acá (y no en .btn-sim-toggle) para que
+   ambos botones queden empujados juntos al extremo derecho. */
+.btn-canvas-theme{
+
+    margin-left:auto;
+
+    padding:8px 12px !important;
+
+    font-size:15px !important;
 
 }
 
@@ -451,7 +475,11 @@ body{
 
     display:flex;
 
-    align-items:center;
+    flex-direction:column;
+
+    align-items:flex-start;
+
+    gap:2px;
 
     background:rgba(43,45,49,.85);
 
@@ -474,6 +502,101 @@ body{
        selección, etc.) -- es puramente informativo. */
     pointer-events:none;
 
+}
+
+/* Segunda línea, debajo de "Listo" -- ej. "hay 2 ESP32 en el lienzo"
+   (ver Toolbar.bindSimToggle()). Oculta por defecto. */
+.status-warning{
+
+    color:#ffb84d;
+
+    font-size:11px;
+
+}
+
+.status-warning.hidden{
+
+    display:none;
+
+}
+
+
+/* ==========================================================
+   Barra flotante del lienzo: Deshacer / Rehacer / Screenshot
+   (arriba a la derecha -- ver Toolbar.bindCanvasTools())
+========================================================== */
+
+#canvasTools{
+
+    position:absolute;
+
+    top:12px;
+    right:12px;
+
+    z-index:150;
+
+    display:flex;
+    flex-direction:column;
+
+    gap:6px;
+
+    background:rgba(43,45,49,.85);
+
+    backdrop-filter:blur(4px);
+    -webkit-backdrop-filter:blur(4px);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    border-radius:12px;
+
+    padding:6px;
+
+    box-shadow:0 4px 14px rgba(0,0,0,.3);
+
+}
+
+.canvas-tool-btn{
+
+    width:34px;
+    height:34px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:#fff;
+    color:#333;
+
+    border:none;
+    border-radius:8px;
+
+    font-size:16px;
+
+    cursor:pointer;
+
+    transition:background .15s, opacity .15s;
+
+}
+
+.canvas-tool-btn img{
+
+    width:22px;
+    height:22px;
+
+    /* Los .png son objetos sueltos (sin fondo propio) -- pointer-events
+       en "none" para que el click siempre lo reciba el <button>, nunca
+       la imagen suelta adentro. */
+    pointer-events:none;
+
+}
+
+.canvas-tool-btn:hover{
+    background:#e6e6e6;
+}
+
+.canvas-tool-btn:disabled{
+    opacity:.35;
+    cursor:default;
 }
 
 
@@ -594,6 +717,24 @@ body{
     stroke-width:2;
 
     stroke-dasharray:4 2;
+
+    pointer-events:none;
+
+}
+
+/* Rectángulo de selección múltiple (Shift + arrastrar sobre el
+   lienzo vacío, ver SelectionManager._startBoxSelect) -- mismo azul
+   que .selection-outline, con relleno semi-transparente para
+   distinguirlo del marco de cada componente ya seleccionado. */
+.selection-box{
+
+    fill:rgba(77,163,255,0.12);
+
+    stroke:#4da3ff;
+
+    stroke-width:1.5;
+
+    stroke-dasharray:5 3;
 
     pointer-events:none;
 
@@ -1094,6 +1235,36 @@ body{
     background:#4da3ff;
 
     border-color:#4da3ff;
+
+}
+
+/* Selector genérico del panel de propiedades (ej. tipo de cable) --
+   mismo look que .property-flip-btn, para que no desentone. */
+.property-select{
+
+    background:#1e1f22;
+
+    border:1px solid #444;
+
+    border-radius:4px;
+
+    color:#fff;
+
+    padding:6px 8px;
+
+    font-size:13px;
+
+    cursor:pointer;
+
+    width:100%;
+
+}
+
+.property-select:hover, .property-select:focus{
+
+    border-color:#4da3ff;
+
+    outline:none;
 
 }
 

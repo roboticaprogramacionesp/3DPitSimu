@@ -48,6 +48,11 @@ function makeDriver(id, gpioPinId = "io2") {
   return {
     id,
     type: "esp32_wroom",
+    // El ESP32 real declara esto en esp32_wroom.json (ver
+    // SignalEngine._isPowerSourceComponent) -- sin esto,
+    // isKeyConnectedToGnd/isKeyConnectedToPower ya no reconocen sus
+    // pines gnd_0/3v3 como una fuente real.
+    properties: { isPowerSource: true },
     pins: [
       { id: gpioPinId, type: "gpio" },
       { id: "gnd_0", type: "ground" },

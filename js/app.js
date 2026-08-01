@@ -49,9 +49,23 @@
     // 6. PropertyPanel (panel derecho: propiedades del componente seleccionado)
     const propertyPanel = new PropertyPanel(sim);
 
-    // 7. Exponer globalmente para debug en consola del navegador
-    window.sim         = sim;
-    window.replPanel   = replPanel;
+    // 7. Selector de tutoriales + modal flotante paso a paso (botón 🎓
+    //    junto al logo) -- necesita replPanel para el último paso
+    //    ("abrí el editor y escribí tu código"), por eso se crea
+    //    después de él.
+    const tutorialManager = new TutorialManager(sim, replPanel);
+
+    // 8. Generador de reporte de la práctica (botón 📄 junto al nombre
+    //    del proyecto) -- necesita toolbar (captura del circuito) y
+    //    replPanel (código del editor), por eso se crea después de ambos.
+    const reportGenerator = new ReportGenerator(sim, replPanel, toolbar);
+
+    // 9. Exponer globalmente para debug en consola del navegador
+    window.sim             = sim;
+    window.replPanel       = replPanel;
+    window.tutorialManager = tutorialManager;
+    window.toolbar         = toolbar;
+    window.reportGenerator = reportGenerator;
 
     console.log("✅ PitSimulator listo. REPL panel activo.");
     console.log("   Atajo: Ctrl+` para abrir/cerrar el REPL");

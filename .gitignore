@@ -22,3 +22,8 @@ desktop/build/*.spec
 # distribución final ande en cualquier PC sin instalar nada -- ver
 # desktop/vendor/README.md. Demasiado grande/binario para versionar.
 desktop/vendor/
+
+# Windows: algun comando con "2>nul" mal interpretado por Git Bash
+# termina creando un archivo literal llamado "nul" en la raiz -- no
+# es contenido real, se regenera solo si vuelve a pasar.
+nul

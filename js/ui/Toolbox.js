@@ -45,7 +45,11 @@ class Toolbox {
         if (Array.isArray(raw)) {
             this.entries = raw.map(type => ({ type, name: type, category: "General" }));
         } else if (raw.components && Array.isArray(raw.components)) {
-            this.entries = raw.components;
+            // "hidden": true -- componente que sigue existiendo (json/svg/
+            // hal.py intactos, se puede seguir cargando con createFromDefinition
+            // si algún proyecto viejo lo usaba) pero no aparece en la lista
+            // para arrastrar -- ej. bmp180 mientras se prioriza bmp280.
+            this.entries = raw.components.filter(entry => !entry.hidden);
         } else {
             this.entries = [];
         }
