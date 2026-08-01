@@ -1,0 +1,30 @@
+{
+    "type": "rc522",
+    "name": "Lector RFID RC522",
+    "category": "RFID",
+
+    "width": 40,
+    "height": 36,
+
+    "svgPath": "components/rc522/rc522.svg",
+
+    "pinShape": "square",
+    "pinSize": 1.4,
+
+    "pins": [
+        { "id": "sda",  "name": "SDA/SS",  "x": 4.5,  "y": 33, "type": "signal" },
+        { "id": "sck",  "name": "SCK",     "x": 9,    "y": 33, "type": "signal" },
+        { "id": "mosi", "name": "MOSI",    "x": 13.5, "y": 33, "type": "signal" },
+        { "id": "miso", "name": "MISO",    "x": 18,   "y": 33, "type": "signal" },
+        { "id": "irq",  "name": "IRQ",     "x": 22.5, "y": 33, "type": "signal", "optional": true },
+        { "id": "gnd",  "name": "GND",     "x": 27,   "y": 33, "type": "ground", "signal": "ground" },
+        { "id": "rst",  "name": "RST",     "x": 31.5, "y": 33, "type": "signal" },
+        { "id": "vcc",  "name": "3.3V",    "x": 36,   "y": 33, "type": "power",  "signal": "power" }
+    ],
+
+    "properties": {
+        "modelo": "RC522 (13.56MHz, SPI) -- mfrc522.py real",
+        "cardIndex": 0,
+        "holding": false
+    }
+}
