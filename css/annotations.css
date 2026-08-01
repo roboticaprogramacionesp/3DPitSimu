@@ -1,0 +1,122 @@
+/* ==========================================================
+   PitSimulator — annotations.css
+   Notas de colores en el lienzo (ver AnnotationManager.js) --
+   info (azul), recomendación/tip (verde), importante/problema
+   (roja) y advertencia/sugerencia (amarilla).
+   ========================================================== */
+
+.annotation {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .25));
+}
+
+.annotation.dragging {
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .35));
+}
+
+.annotation-rect {
+    stroke-width: 2;
+}
+
+.annotation-header {
+    cursor: grab;
+    stroke: none;
+}
+
+.annotation.dragging .annotation-header {
+    cursor: grabbing;
+}
+
+.annotation-grip {
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-anchor: middle;
+    pointer-events: none;
+    user-select: none;
+    opacity: .6;
+}
+
+/* Info */
+.annotation-blue .annotation-rect   { fill: #dbeeff; stroke: #4da3ff; }
+.annotation-blue .annotation-header { fill: #bfe0ff; }
+.annotation-blue .annotation-text   { color: #1a3a5c; }
+
+/* Recomendación / tip */
+.annotation-green .annotation-rect  { fill: #e1f7e1; stroke: #4caf50; }
+.annotation-green .annotation-header { fill: #bfe8bf; }
+.annotation-green .annotation-text  { color: #1b4d1b; }
+
+/* Importante / problema, no ignorar */
+.annotation-red .annotation-rect    { fill: #fde1e1; stroke: #e53935; }
+.annotation-red .annotation-header  { fill: #f8bcbc; }
+.annotation-red .annotation-text    { color: #6b1414; }
+
+/* Advertencia / sugerencia */
+.annotation-yellow .annotation-rect { fill: #fff8d6; stroke: #d9a600; }
+.annotation-yellow .annotation-header { fill: #f5e59a; }
+.annotation-yellow .annotation-text { color: #6b5600; }
+
+.annotation-text {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    overflow-y: auto;
+    font-family: Segoe UI, Arial, sans-serif;
+    font-size: 12.5px;
+    line-height: 1.4;
+    outline: none;
+    cursor: text;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.annotation-text:empty::before {
+    content: attr(data-placeholder);
+    opacity: .55;
+}
+
+.annotation-toolbar {
+    cursor: default;
+}
+
+.annotation-swatch {
+    stroke: rgba(0, 0, 0, .25);
+    stroke-width: 1;
+    cursor: pointer;
+}
+
+.annotation-swatch.active {
+    stroke: #1a1a1a;
+    stroke-width: 2;
+}
+
+.annotation-delete {
+    font-size: 12px;
+    fill: #777;
+    cursor: pointer;
+    user-select: none;
+}
+
+.annotation-delete:hover {
+    fill: #e53935;
+}
+
+.annotation-resize-handle {
+    cursor: nwse-resize;
+}
+
+.annotation-resize-grip {
+    fill: none;
+    stroke: rgba(0, 0, 0, .35);
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    pointer-events: none;
+}
+
+.annotation.resizing {
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .35));
+}
+
+.annotation.resizing .annotation-resize-grip {
+    stroke: rgba(0, 0, 0, .6);
+}

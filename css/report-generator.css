@@ -1,0 +1,208 @@
+/* ==========================================================
+   PitSimulator — report-generator.css
+   Modal del botón 📄 (junto al nombre del proyecto, ver
+   ReportGenerator.js) que junta los datos para el reporte de la
+   práctica (SVG imprimible: título, qué se va a aprender, lista de
+   componentes, captura del circuito, código y notas).
+   ========================================================== */
+
+.report-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    background: rgba(0, 0, 0, .5);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.report-modal-overlay.hidden { display: none; }
+
+.report-modal {
+    width: 420px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+
+    background: #1e1f22;
+    border: 1px solid #444;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+
+    padding: 16px 18px;
+
+    font-family: Segoe UI, Arial, sans-serif;
+    color: #e6e6e6;
+}
+
+.report-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.report-modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.report-modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.report-modal-close:hover { color: #fff; background: #333; }
+
+.report-modal-field { margin-bottom: 12px; }
+
+.report-modal-field label {
+    display: block;
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 4px;
+}
+
+.report-modal-field input[type="text"],
+.report-modal-field input[type="date"],
+.report-modal-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: #2b2d31;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #e6e6e6;
+    font-size: 13px;
+    font-family: inherit;
+    padding: 7px 9px;
+}
+
+.report-modal-field input:focus,
+.report-modal-field textarea:focus {
+    outline: none;
+    border-color: #4da3ff;
+}
+
+.report-modal-field textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.report-modal-field-row {
+    display: flex;
+    gap: 10px;
+}
+
+.report-modal-field-row > div { flex: 1; }
+
+.report-modal-file-hidden { display: none; }
+
+.report-modal-code-image-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.report-modal-load-image {
+    padding: 6px 10px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #2b2d31;
+    color: #e6e6e6;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.report-modal-load-image:hover { background: #3a3c42; }
+
+.report-modal-code-image-name {
+    font-size: 11.5px;
+    color: #9ecbff;
+    word-break: break-all;
+}
+
+.report-modal-clear-image {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.report-modal-clear-image:hover { color: #fff; background: #333; }
+
+.report-modal-clear-image.hidden { display: none; }
+
+.report-modal-checkbox-field label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    color: #ccc;
+    cursor: pointer;
+}
+
+.report-modal-checkbox-field input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: #4da3ff;
+}
+
+.report-modal-hint {
+    font-size: 11px;
+    color: #777;
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+.report-modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.report-modal-actions button {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #2b2d31;
+    color: #e6e6e6;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.report-modal-actions button:hover { background: #3a3c42; }
+
+.report-modal-generate {
+    background: #2e7d32 !important;
+    border-color: #2e7d32 !important;
+    color: #fff;
+    font-weight: 600;
+}
+
+.report-modal-generate:hover { background: #37944b !important; }
+
+.report-modal-generate:disabled,
+.report-modal-preview:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.report-modal-preview {
+    border-color: #4da3ff !important;
+    color: #9ecbff;
+}
+
+.report-modal-preview:hover { background: #2a3a4d !important; }

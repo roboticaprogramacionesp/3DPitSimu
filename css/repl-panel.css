@@ -103,6 +103,28 @@
 }
 .repl-btn-send:hover { background: #3a9fff; border-color: #3a9fff; }
 
+/* ---- Tamaño de fuente S/M/L (ver ReplPanel._applyFontSize) ---- */
+
+.repl-font-size-group {
+    display: flex;
+    gap: 2px;
+    margin-right: 6px;
+    padding-right: 6px;
+    border-right: 1px solid #2d2d4e;
+}
+
+.repl-font-btn {
+    min-width: 20px;
+    padding: 2px 6px;
+    font-weight: 700;
+}
+
+.repl-font-btn.active {
+    background: #0a84ff;
+    border-color: #0a84ff;
+    color: #fff;
+}
+
 .repl-btn-run {
     background: #00c853; border-color: #00c853;
     color: #000; padding: 3px 14px; font-size: 12px; font-weight: 600;
@@ -205,29 +227,63 @@
 
 .repl-editor-actions { display: flex; gap: 6px; align-items: center; }
 
-.repl-editor {
+/* ---- Cuerpo del editor: CodeMirror (ver lib/codemirror/) ---- */
+
+.repl-editor-body {
+    display: flex;
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    background: #0d0f1a;
+}
+
+/* El <textarea> original queda escondido por CodeMirror.fromTextArea()
+   mismo (display:none inline) -- esta regla ya no importa mucho, pero
+   se deja por si algún navegador tarda un tick en aplicar ese estilo. */
+.repl-editor { display: none; }
+
+/* CodeMirror inserta su propio <div class="CodeMirror"> como hermano
+   del textarea escondido -- acá se lo hace ocupar todo repl-editor-body
+   y se lo destiñe un poco para calzar con la paleta oscura del panel
+   (el tema "dracula" trae su propio fondo/bordes, ver
+   lib/codemirror/dracula.css) sin perder los colores de sintaxis. */
+.repl-editor-body .CodeMirror {
     flex: 1;
     width: 100%;
     height: 100%;
-    background: #0d0f1a;
-    color: #e2e8f0;
-    border: none;
-    outline: none;
-    resize: none;
-    padding: 10px 14px;
+    background: #0d0f1a !important;
     font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
     font-size: 13px;
     line-height: 1.6;
-    caret-color: #00ff88;
-    tab-size: 4;
-    box-sizing: border-box;
 }
 
-.repl-editor::-webkit-scrollbar       { width: 6px; }
-.repl-editor::-webkit-scrollbar-track { background: #0d0f1a; }
-.repl-editor::-webkit-scrollbar-thumb { background: #2d2d4e; border-radius: 3px; }
+.repl-editor-body .CodeMirror-gutters {
+    background: #0d0f1a !important;
+    border-right: 1px solid #1e2140 !important;
+}
 
-.repl-editor::placeholder { color: #2a2a4a; }
+.repl-editor-body .CodeMirror-linenumber { color: #3a3a5e; }
+.repl-editor-body .CodeMirror-cursor    { border-left-color: #00ff88; }
+
+.repl-editor-placeholder {
+    position: absolute;
+    top: 0;
+    left: 46px;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 4px 14px;
+    color: #2a2a4a;
+    background: transparent;
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre;
+    pointer-events: none;
+    user-select: none;
+}
+
+.repl-editor-placeholder.hidden { display: none; }
 
 @media (max-height: 600px) {
     #replPanel.repl-open { height: 220px; }

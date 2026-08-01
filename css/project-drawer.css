@@ -57,22 +57,49 @@
 .logo .current-file-label {
 
     background: none;
-    padding: 0;
-    border-radius: 0;
+    padding: 2px 4px;
+    border: 1px solid transparent;
+    border-radius: 4px;
 
     color: #888;
     font-size: 13px;
     font-weight: 400;
+    font-family: inherit;
 
     max-width: 220px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 
+    cursor: text;
+    transition: background .15s, border-color .15s;
+
+}
+
+.logo .current-file-label:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.logo .current-file-label:focus {
+    outline: none;
+    background: #1e1f22;
+    border-color: var(--accent);
+    color: #fff;
 }
 
 .logo .current-file-label.dirty {
     color: #f2c94c;
+}
+
+.logo .current-file-label-dirty {
+    color: #f2c94c;
+    font-size: 13px;
+    margin-left: -6px;
+    visibility: hidden;
+}
+
+.logo .current-file-label-dirty.visible {
+    visibility: visible;
 }
 
 /* --------------------------------------------------------
