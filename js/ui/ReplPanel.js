@@ -1930,7 +1930,20 @@ class ReplPanel {
             delete this._halRetryCounts[type]; // exito -- si vuelve a fallar mas adelante, cuenta de nuevo desde 0
         });
 
-        await this._enqueuePaste(() => this._pasteBlock(halBlock, 0, { silent: true }));
+        if (this.simulator.qemuBridge?.isWasmBridge) {
+            // Mismo motivo que en runEditorCode(): no hay paste mode
+            // acá, se manda directo. Sin esta rama, un componente ya
+            // en el lienzo AL CONECTAR (ej. DHT11) nunca recibía su
+            // .hal.py hasta el primer "Ejecutar" -- cualquier valor
+            // empujado desde el panel ANTES de eso (slider de
+            // temperatura, etc.) se perdía en silencio: register_line_handler
+            // todavía no había corrido, así que process_line() no
+            // tenía a quién avisarle (reportado por el usuario, DHT11
+            // devolviendo siempre el default).
+            await this.simulator.qemuBridge.sendData(halBlock);
+        } else {
+            await this._enqueuePaste(() => this._pasteBlock(halBlock, 0, { silent: true }));
+        }
 
     }
 
@@ -2428,13 +2441,24 @@ class ReplPanel {
                 // _base_wasm.py -- confirmado en la práctica
                 // (AttributeError). Marcarlos "sent" de entrada evita
                 // que _buildPendingHal() los toque.
-                ReplPanel.ALWAYS_HAL_TYPES.forEach(type => this._halSentToFirmware.add(type));
+                this._halRetryCounts = {};
+                this._halSentToFirmware = new Set(ReplPanel.ALWAYS_HAL_TYPES);
 
                 this._replReady = true;
                 this.input.disabled   = false;
                 this.sendBtn.disabled = false;
                 const runBtn = document.getElementById("replBtnRun");
                 if (runBtn) runBtn.disabled = false;
+
+                // Mismo motivo que preloadHal() en QEMU (ver
+                // _resyncHalAfterBoot): un componente que YA está en
+                // el lienzo al conectar necesita su .hal.py cargado
+                // DE UNA, no recién en el primer "Ejecutar" -- si no,
+                // cualquier valor empujado desde el panel antes de
+                // eso (slider de temperatura, lux, etc.) se pierde en
+                // silencio.
+                await this.preloadHal();
+
                 this.simulator.signalEngine.resyncAllComponents();
                 return;
             }
