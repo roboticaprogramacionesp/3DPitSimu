@@ -1,0 +1,25 @@
+{
+    "type": "qmc5883l",
+    "name": "QMC5883L Magnetómetro/Brújula (I2C)",
+    "category": "Sensores",
+
+    "width": 67.6,
+    "height": 85.8,
+
+    "svgPath": "components/qmc5883l/qmc5883l.svg",
+
+    "pinShape": "square",
+    "pinSize": 4,
+
+    "pins": [
+        { "id": "gnd", "name": "GND", "x": 13,   "y": 75.4, "type": "ground", "signal": "ground" },
+        { "id": "vcc", "name": "VCC", "x": 24.7, "y": 75.4, "type": "power",  "signal": "power"  },
+        { "id": "scl", "name": "SCL", "x": 36.4, "y": 75.4, "type": "input",  "signal": "i2c" },
+        { "id": "sda", "name": "SDA", "x": 48.1, "y": 75.4, "type": "input",  "signal": "i2c" }
+    ],
+
+    "properties": {
+        "modelo": "QMC5883L (módulo GY-271): magnetómetro de 3 ejes / brújula digital, I2C dirección fija 0x2C (también se responde en 0x0D). El heading se elige desde el panel de propiedades",
+        "heading": 0
+    }
+}

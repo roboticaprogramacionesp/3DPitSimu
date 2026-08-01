@@ -12,14 +12,14 @@
     "pinSize": 4,
 
     "pins": [
-        { "id": "vcc", "name": "VCC",  "x": 43.7, "y": 6.73,  "type": "power",  "signal": "power", "voltage": 3.3 },
-        { "id": "gnd", "name": "GND",  "x": 43.7, "y": 14.64, "type": "ground", "signal": "ground" },
-        { "id": "scl", "name": "SCL",  "x": 43.7, "y": 26.0,  "type": "input",  "signal": "i2c" },
-        { "id": "sda", "name": "SDA",  "x": 43.7, "y": 33.33, "type": "input",  "signal": "i2c" },
-        { "id": "xda", "name": "XDA",  "x": 43.7, "y": 42.32, "type": "signal", "optional": true },
-        { "id": "xcl", "name": "XCL",  "x": 43.7, "y": 51.31, "type": "signal", "optional": true },
-        { "id": "ad0", "name": "AD0",  "x": 43.7, "y": 57.86, "type": "signal", "optional": true },
-        { "id": "int", "name": "INT",  "x": 43.7, "y": 72.98, "type": "signal", "optional": true }
+        { "id": "vcc", "name": "VCC",  "x": 4.25, "y": 4.47,  "type": "power",  "signal": "power", "voltage": 3.3 },
+        { "id": "gnd", "name": "GND",  "x": 4.25, "y": 13.78, "type": "ground", "signal": "ground" },
+        { "id": "scl", "name": "SCL",  "x": 4.25, "y": 22.81, "type": "input",  "signal": "i2c" },
+        { "id": "sda", "name": "SDA",  "x": 4.25, "y": 32.38, "type": "input",  "signal": "i2c" },
+        { "id": "xda", "name": "XDA",  "x": 4.25, "y": 41.64, "type": "signal", "optional": true },
+        { "id": "xcl", "name": "XCL",  "x": 4.25, "y": 50.96, "type": "signal", "optional": true },
+        { "id": "ad0", "name": "AD0",  "x": 4.25, "y": 60.11, "type": "signal", "optional": true },
+        { "id": "int", "name": "INT",  "x": 4.25, "y": 69.93, "type": "signal", "optional": true }
     ],
 
     "properties": {

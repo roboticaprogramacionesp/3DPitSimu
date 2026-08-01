@@ -67,7 +67,21 @@ const tempSensorBehavior = {
                 font-variant-numeric: tabular-nums;
                 transition: color 0.3s;
             `;
-            tempDisplay.textContent = `${celsius.toFixed(1)}°C`;
+            // DHT11 real solo tiene resolución de °C ENTEROS (limitación
+            // real del sensor, no un atajo de la simulación --
+            // dht11.hal.py ya trunca con int(self._temp) para reflejar
+            // eso, ver _DHT11.temperature() ahí). Mostrar acá "15.5°C"
+            // con un decimal que el firmware JAMÁS va a ver en su
+            // print() es lo que generaba la confusión reportada
+            // ("mando 15.5, el print me da 15"). DS18B20 (ky_001) sí
+            // tiene resolución fraccionaria real, así que mantiene el
+            // decimal.
+            // Math.trunc(), no Math.round(): dht11.hal.py usa int(),
+            // que trunca hacia cero (int(15.9) == 15), no redondea
+            // (round(15.9) == 16) -- si acá redondeáramos, "15.9°C"
+            // se vería como "16°C" en el panel pero el print() del
+            // firmware seguiría diciendo 15.
+            tempDisplay.textContent = isDHT ? `${Math.trunc(celsius)}°C` : `${celsius.toFixed(1)}°C`;
 
             const barTrack = document.createElement("div");
             barTrack.style.cssText = `
@@ -104,8 +118,12 @@ const tempSensorBehavior = {
             slider.type  = "range";
             slider.min   = "-55";
             slider.max   = "125";
-            slider.step  = "0.5";
-            slider.value = celsius;
+            // Mismo motivo que el display de arriba: DHT11 no tiene
+            // resolución fraccionaria real, así que el slider tampoco
+            // debería dejar elegir "15.5" para después mostrar "15" en
+            // el print() del firmware.
+            slider.step  = isDHT ? "1" : "0.5";
+            slider.value = isDHT ? Math.trunc(celsius) : celsius;
             slider.style.cssText = `
                 width: 100%;
                 margin-top: 6px;
@@ -114,7 +132,7 @@ const tempSensorBehavior = {
             `;
 
             slider.addEventListener("input", () => {
-                const val = parseFloat(slider.value);
+                const val = isDHT ? Math.trunc(parseFloat(slider.value)) : parseFloat(slider.value);
                 panel._updateTempDisplay(val);
                 panel.simulator.signalEngine.setTemperature(component.id, val);
             });

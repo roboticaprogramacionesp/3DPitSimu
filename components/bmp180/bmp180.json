@@ -1,0 +1,27 @@
+{
+    "type": "bmp180",
+    "name": "BMP180 Sensor de Presión y Temperatura (I2C)",
+    "category": "Sensores",
+
+    "width": 50.4,
+    "height": 54.36,
+
+    "svgPath": "components/bmp180/bmp180.svg",
+
+    "pinShape": "square",
+    "pinSize": 4,
+
+    "pins": [
+        { "id": "vin", "name": "VIN", "x": 10.8, "y": 50.4, "type": "power",  "signal": "power" },
+        { "id": "3vo", "name": "3Vo", "x": 18.0, "y": 50.4, "type": "signal", "optional": true },
+        { "id": "gnd", "name": "GND", "x": 25.2, "y": 50.4, "type": "ground", "signal": "ground" },
+        { "id": "scl", "name": "SCL", "x": 32.4, "y": 50.4, "type": "input",  "signal": "i2c" },
+        { "id": "sda", "name": "SDA", "x": 39.6, "y": 50.4, "type": "input",  "signal": "i2c" }
+    ],
+
+    "properties": {
+        "modelo": "BMP180: sensor de presión barométrica + temperatura, I2C (dirección fija 0x77)",
+        "temperature": 22.0,
+        "pressure": 101325.0
+    }
+}

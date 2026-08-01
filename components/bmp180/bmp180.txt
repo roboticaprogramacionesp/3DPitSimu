@@ -1,0 +1,19 @@
+from machine import Pin, I2C
+from time import sleep
+import bmp180
+import math
+
+def bmp_calcular_altitud(presion, base=81000):
+    try:
+        return 44330 * (1.0 - (presion / base) ** 0.1903)
+    except:
+        return 0
+
+bmp180.BMP180._bmp_addr = 0x77   # monkeypatch, no toca bmp180.py
+i2c_bmp = I2C(1, scl=Pin(22), sda=Pin(21))
+bmp = bmp180.BMP180(i2c_bmp)
+while True:
+  print(bmp.temperature)
+  print(bmp.pressure)
+  print(bmp_calcular_altitud(bmp.pressure))
+  sleep(1)

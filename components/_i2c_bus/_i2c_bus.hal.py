@@ -45,7 +45,7 @@ def _i2c_registry():
     return state.setdefault("i2c_registry", {"out": {}, "in": {}})
 
 
-def register_i2c_device(address, on_write=None, on_read=None, on_read_mem=None, on_write_mem=None):
+def register_i2c_device(address, on_write=None, on_read=None, on_read_mem=None, on_write_mem=None, on_write_buf=None):
     """
     Llamado por el hal.py de CADA componente I2C (LCD, teclado,
     OLED, el que venga) para anunciar "esta dirección me
@@ -59,11 +59,14 @@ def register_i2c_device(address, on_write=None, on_read=None, on_read_mem=None, 
     decodificar el byte como comando/dato HD44780) en vez de
     depender de que algo del lado JS le mande un "I2CR:" de vuelta.
 
-    on_read(): opcional. Si lo definís, se llama para CALCULAR el
-    byte a devolver en un readfrom(), en vez de usar el registro
-    común -- para dispositivos como el teclado I2C, que necesitan
-    preguntarle al simulador (vía "I2CR:") qué está pasando en el
-    canvas, no solo repetir el último valor conocido.
+    on_read(): opcional. Si lo definís, se llama para CALCULAR lo
+    que devuelve un readfrom(), en vez de usar el registro común --
+    para dispositivos como el teclado I2C, que necesitan preguntarle
+    al simulador (vía "I2CR:") qué está pasando en el canvas, no
+    solo repetir el último valor conocido. Puede devolver un int
+    (se repite nbytes veces, como siempre) o bytes/bytearray CRUDOS
+    (se usan directo, sin repetir -- para chips como el BH1750, que
+    responden 2 bytes DISTINTOS en un readfrom() plano).
 
     on_read_mem(reg, nbytes) / on_write_mem(reg, buf): igual que
     on_read/on_write, pero para readfrom_mem()/writeto_mem() --
@@ -75,6 +78,25 @@ def register_i2c_device(address, on_write=None, on_read=None, on_read_mem=None, 
     este agregado, register_i2c_device() no tenía forma de atender
     esto -- todo era "un byte por dirección", suficiente para LCD/
     teclado pero no para un sensor con mapa de registros real.
+
+    on_write_buf(buf): variante de on_write PENSADA PARA LIBRERÍAS
+    QUE ARMAN SU PROPIO PROTOCOLO DE REGISTRO A MANO en vez de usar
+    writeto_mem()/readfrom_mem() -- ej. qmc5883l.py real:
+        i2c.writeto(addr, bytes([reg]) + buf)          # escribir
+        i2c.writeto(addr, bytes([reg])); i2c.readfrom(addr, n)  # leer
+    Acá el "valor" real vive en buf[1:], no en buf[0] (que es el
+    puntero de registro) -- on_write(value) normal solo expone
+    buf[0], insuficiente para este patrón. on_write_buf(buf) recibe
+    el buffer COMPLETO tal cual llegó a writeto(), sin filtrar nada;
+    quien lo registra decide cómo separar puntero de registro y
+    datos (ver qmc5883l.hal.py, que además usa on_read() -- sin
+    argumentos -- para responder según qué registro fue el último
+    seleccionado por un writeto() previo, ya que este driver hace
+    select-then-read con dos llamadas separadas, no readfrom_mem).
+    Se llama SIEMPRE que haya buf (a diferencia de on_write, que solo
+    dispara cuando buf[0] cambia respecto al último valor) porque acá
+    cada escritura puede tener un significado distinto aunque el
+    primer byte se repita.
     """
     _known_addrs.add(address)
     _devices[address] = {
@@ -82,6 +104,7 @@ def register_i2c_device(address, on_write=None, on_read=None, on_read_mem=None, 
         "on_read": on_read,
         "on_read_mem": on_read_mem,
         "on_write_mem": on_write_mem,
+        "on_write_buf": on_write_buf,
     }
 
 
@@ -142,16 +165,38 @@ class I2C:
         self.kwargs = kwargs
         _declare_i2c_pins(kwargs)
 
+    def start(self):
+        # Primitiva real de machine.I2C (control manual del bus, ver
+        # la sección "primitive I2C operations" de la doc oficial) --
+        # encontrado con una librería bmp180.py real que la llama
+        # sola, sin start()/stop() emparejados alrededor de nada más.
+        # No modelamos líneas SDA/SCL de verdad, así que no hay nada
+        # que hacer acá -- pero FALTABA el método (AttributeError),
+        # cuando en un ESP32 real esta llamada es válida y no hace
+        # nada visible tampoco.
+        pass
+
+    def stop(self):
+        pass
+
     def writeto(self, addr, buf, stop=True):
         if not buf:
             return
         value = buf[0]
         reg = _i2c_registry()
 
+        device = _devices.get(addr)
+
+        # on_write_buf: SIEMPRE, con el buffer completo -- ver su
+        # docstring en register_i2c_device(). Independiente del resto
+        # de esta función (que sigue igual, para no romper LCD/
+        # teclado/BH1750, todos "un byte por dirección").
+        if device and device.get("on_write_buf"):
+            device["on_write_buf"](bytes(buf))
+
         if reg["out"].get(addr) != value:
             reg["out"][addr] = value
 
-            device = _devices.get(addr)
             if device and device.get("on_write"):
                 device["on_write"](value)
 
@@ -168,11 +213,40 @@ class I2C:
         device = _devices.get(addr)
         if device and device.get("on_read"):
             value = device["on_read"]()
+            # A partir de bh1750_hal.py: on_read() puede devolver
+            # bytes/bytearray CRUDOS (ej. un valor de 16 bits con 2
+            # bytes distintos) en vez de un solo entero repetido --
+            # antes solo existía el caso "un entero -> bytes([value]
+            # * nbytes)", suficiente para LCD/teclado (1 byte por
+            # dirección) pero no para un chip como el BH1750 que
+            # responde 2 bytes DIFERENTES en un readfrom() plano
+            # (sin readfrom_mem, que es para chips con mapa de
+            # registros como el MPU6050).
+            if isinstance(value, (bytes, bytearray)):
+                data = bytes(value)
+                if len(data) < nbytes:
+                    data = data + bytes(nbytes - len(data))
+                return data[:nbytes]
+            return bytes([value] * nbytes)
         else:
             reg = _i2c_registry()
             value = reg["in"].get(addr, 0xFF)
 
         return bytes([value] * nbytes)
+
+    def readfrom_into(self, addr, buf, stop=True):
+        """
+        Variante "sin allocar" de readfrom() -- en vez de devolver un
+        bytes nuevo, llena el buffer (bytearray) que le pasaron. Real
+        en MicroPython (evita crear un objeto por lectura); FALTABA
+        acá -- encontrado con la librería bh1750.py real del usuario
+        (BH1750.measurement la usa en vez de readfrom()), reventaba
+        con AttributeError. Reutiliza toda la lógica de readfrom()
+        (on_read, bytes crudos, etc.) en vez de duplicarla.
+        """
+        data = self.readfrom(addr, len(buf))
+        for i in range(len(buf)):
+            buf[i] = data[i]
 
     def readfrom_mem(self, addr, memaddr, nbytes, addrsize=8):
         """
@@ -202,6 +276,19 @@ class I2C:
             value = reg["in"].get(addr, 0xFF)
 
         return bytes([value] * nbytes)
+
+    def readfrom_mem_into(self, addr, memaddr, buf, addrsize=8):
+        """
+        Variante "sin allocar" de readfrom_mem() -- mismo motivo que
+        readfrom_into() de arriba (evita crear un objeto por lectura),
+        FALTABA acá -- encontrado con la librería ds3231.py real del
+        usuario (DS3231.datetime()/_OSF_reset() la usan en vez de
+        readfrom_mem()), reventaba con AttributeError. Reutiliza toda
+        la lógica de readfrom_mem() en vez de duplicarla.
+        """
+        data = self.readfrom_mem(addr, memaddr, len(buf), addrsize=addrsize)
+        for i in range(len(buf)):
+            buf[i] = data[i]
 
     def writeto_mem(self, addr, memaddr, buf, addrsize=8):
         """
@@ -246,3 +333,14 @@ register_line_handler("I2CR:", _on_i2c_read_line)
 # hal.py de componente, así que siempre es esta clase la que gana.
 import machine as _machine_module
 _machine_module.I2C = I2C
+
+# SoftI2C (I2C por bit-banging, mismo protocolo/API que I2C real)
+# NO estaba reemplazada -- encontrada con una librería mpu6050.py
+# real que usa "SoftI2C(scl=Pin(22), sda=Pin(21))" en vez de I2C()
+# a secas. Sin este reemplazo, quedaba la SoftI2C REAL de QEMU, que
+# rechaza esos pines con "ValueError: invalid pin" -- mismo síntoma
+# y misma causa raíz que el ValueError de sg90.hal.py (un periférico
+# real de QEMU que no acepta el pin en este build), resuelto acá con
+# el mismo criterio: no heredar de la clase real, usar esta dummy
+# para ambos nombres.
+_machine_module.SoftI2C = I2C
