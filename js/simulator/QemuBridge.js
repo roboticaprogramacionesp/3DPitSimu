@@ -29,9 +29,25 @@ class QemuBridge {
         this.connected = false;
         this.buffer    = "";
 
+        // Traba de paste mode -- ver beginPasteLock()/endPasteLock()
+        // más abajo, y ReplPanel._pasteBlock() (quien la usa).
+        this._pasteLockActive = false;
+        this._deferredSends   = [];
+
+        // Ventana de gracia tras un Ctrl+C -- ver interrupt() más abajo
+        // para el bug real que esto arregla.
+        this._interruptGraceActive = false;
+        this._interruptGraceTimer  = null;
+
         this.init();
 
-        this.simulator.eventBus.on("qemu:send",       (text) => this.send(text));
+        // ReplPanel emite "qemu:send" para TODO lo que manda (líneas
+        // de paste, Ctrl+C/D, comandos sueltos del REPL) -- eso pasa
+        // directo por _sendImmediate(), sin pasar por la traba: es el
+        // propio dueño de la traba, su tráfico nunca debe esperarse a
+        // sí mismo. send()/sendData() (usado por SignalEngine para
+        // RTC:/TEMP:/DIST:/ADC:/etc., ver más abajo) sí la respeta.
+        this.simulator.eventBus.on("qemu:send",       (text) => this._sendImmediate(text));
 
         // El botón "▶ Simular" ahora solo conecta/desconecta el WS
         // (QEMU ya está corriendo por separado, lanzado por
@@ -136,14 +152,114 @@ class QemuBridge {
 
     send(text) {
 
+        // Mientras ReplPanel tiene un paste (Ctrl+E...Ctrl+D) en
+        // curso, cualquier OTRO envío (RTC:/TEMP:/DIST:/ADC:/IN:/etc.,
+        // ver sendData() más abajo) tiene que esperar -- confirmado en
+        // la práctica con el DS3231 (setInterval de 1s en
+        // ds3231.behavior.js): su "RTC:104:<epoch>" se colaba ENTRE
+        // dos líneas del bloque pegado, y MicroPython -- que en paste
+        // mode toma cualquier línea que le llegue como parte del
+        // código -- terminaba con un SyntaxError real, sin importar
+        // que el pacing línea a línea ya estuviera bien (ver
+        // project_hal_transmission_corruption.md, esto es un bug
+        // DISTINTO a la falta de pacing: acá el pacing estaba bien,
+        // el problema es que otro emisor totalmente ajeno escribía al
+        // mismo canal en el medio). Se reintenta en orden (FIFO) apenas
+        // termina el paste -- ver endPasteLock().
+        // Ver el comentario grande en interrupt() -- misma idea que el
+        // paste lock de arriba, pero para la ventana corta después de
+        // un Ctrl+C.
+        if (this._pasteLockActive || this._interruptGraceActive) {
+            this._deferredSends.push(text);
+            return;
+        }
+
+        this._sendImmediate(text);
+
+    }
+
+    _sendImmediate(text) {
+
         if (!this.connected || !this.ws) return;
         const line = text.endsWith("\n") ? text : text + "\r\n";
         this.ws.send(line);
 
     }
 
-    interrupt() { if (this.connected) this.ws.send("\x03"); }
+    // BUG REAL encontrado (reportado por el usuario, traceback real):
+    // un Ctrl+C que interrumpe al firmware justo DENTRO de _settle()/
+    // poll_input() (ej. a mitad de una escritura I2C real, esperando
+    // el "SYNC:\n" de confirmación que manda QemuBridge al procesar
+    // el "GPIO:"/"I2CW:" correspondiente, ver el listener de "GPIO:"
+    // más abajo) puede dejar ese "SYNC:\n" -- que se manda de forma
+    // asincrónica, sin ninguna relación con cuándo el usuario aprieta
+    // Interrumpir -- en tránsito hacia QEMU. El KeyboardInterrupt
+    // corta poll_input() a mitad de camino (por diseño, para que
+    // Interrumpir pueda desatascar justo esto), pero eso significa
+    // que esos bytes NO los consume poll_input() -- quedan crudos en
+    // el pty, y el REPL interactivo (que ya volvió a su prompt ">>> ")
+    // los lee como si el usuario los hubiera tipeado él mismo:
+    //   >>> SYNC:
+    //   SyntaxError: invalid syntax
+    // No hay forma de "cancelar" bytes que ya viajaron por el WS/pty,
+    // así que la mitigación es evitar que se MANDEN más mientras el
+    // interrupt está asentándose: send() (ver arriba) ya sabe diferir
+    // cualquier envío mientras _interruptGraceActive esté prendido,
+    // reusando el mismo mecanismo de cola que ya tenía el paste lock
+    // -- acá solo lo prendemos por una ventana corta después de cada
+    // Ctrl+C y lo apagamos (con flush de lo que se haya acumulado)
+    // pasado ese margen. No es 100% infalible (un SYNC: que ya haya
+    // salido ANTES de este Ctrl+C sigue pudiendo colisionar), pero
+    // cubre el caso real reportado: la propia respuesta AL escribir
+    // que se está interrumpiendo.
+    static INTERRUPT_GRACE_MS = 250;
+
+    interrupt() {
+
+        if (!this.connected) return;
+
+        this.ws.send("\x03");
+
+        this._interruptGraceActive = true;
+        clearTimeout(this._interruptGraceTimer);
+        this._interruptGraceTimer = setTimeout(() => {
+            this._interruptGraceActive = false;
+            this._flushDeferredSends();
+        }, QemuBridge.INTERRUPT_GRACE_MS);
+
+    }
+
     softReset()  { if (this.connected) this.ws.send("\x04"); }
+
+    // Ver la nota grande en send() -- llamado por
+    // ReplPanel._pasteBlock() antes/después de cada paste Ctrl+E...
+    // Ctrl+D para que ningún otro emisor (RTC/TEMP/DIST/ADC/IN/etc.)
+    // pueda meter una línea propia en el medio del bloque.
+    beginPasteLock() {
+        this._pasteLockActive = true;
+    }
+
+    endPasteLock() {
+
+        this._pasteLockActive = false;
+        this._flushDeferredSends();
+
+    }
+
+    // Compartido por endPasteLock() y el timer de interrupt() -- solo
+    // vacía _deferredSends si NINGUNA de las dos trabas sigue activa
+    // (si una terminó pero la otra sigue en pie, hay que esperar a
+    // que también termine esa).
+    _flushDeferredSends() {
+
+        if (this._pasteLockActive || this._interruptGraceActive) return;
+        if (this._deferredSends.length === 0) return;
+
+        const pending = this._deferredSends;
+        this._deferredSends = [];
+        pending.forEach((text) => this._sendImmediate(text));
+
+    }
 
     // REVERTIDO -- el experimento del canal de datos por UART1 (ver
     // historial) hizo que QEMU mezclara los dos "-serial" sobre el
@@ -211,6 +327,21 @@ class QemuBridge {
 
         const text = msg.data;
 
+        // Historial de salida que server.js manda apenas se conecta
+        // (prefijo \x00HISTORY:, ver la nota grande junto a
+        // OUTPUT_HISTORY_MAX_BYTES en server.js) -- texto VIEJO
+        // (posiblemente de antes de que este cliente existiera), así
+        // que se muestra por un canal aparte ("qemu:history") en vez
+        // de "qemu:output": ReplPanel no debe tratarlo como actividad
+        // en vivo del intérprete (ver por qué en su propio listener).
+        if (text.startsWith("\x00HISTORY:")) {
+            try {
+                const history = JSON.parse(text.slice(9));
+                if (history) this.simulator.eventBus.emit("qemu:history", history);
+            } catch (e) {}
+            return;
+        }
+
         // Mensajes de estado internos del bridge (prefijo \x00STATUS:)
         if (text.startsWith("\x00STATUS:")) {
             try {
@@ -256,6 +387,49 @@ class QemuBridge {
 
         lines.forEach(line => this.parseLine(line.trim()));
 
+        this._schedulePromptFlush();
+
+    }
+
+    // BUG REAL encontrado (2026-07-31, reportado como "después de
+    // Detener y volver a Simular, el REPL/editor ya no responde" --
+    // en la práctica no es específico de reconectar, pasa cada vez
+    // que no llega NADA de tráfico después del prompt, algo bastante
+    // común con HAL congelado -- ver firmware/frozen_hal/ -- ya que
+    // ahí preloadHal() no necesita pastear nada extra tras confirmar
+    // un warm boot). El prompt ">>> " de MicroPython NUNCA termina en
+    // "\n" -- es solo texto esperando que el usuario escriba algo a
+    // continuación. Bajo el esquema de arriba ("this.buffer" solo se
+    // vacía hacia "qemu:output" cuando se completa una línea con su
+    // propio "\n"), ese prompt se queda atascado en this.buffer PARA
+    // SIEMPRE si nada más llega después -- "qemu:output" nunca vuelve
+    // a ver un ">>>" en vivo, ReplPanel._onReplReady() jamás se
+    // dispara, y el REPL/editor quedan deshabilitados para siempre en
+    // esa conexión. Confirmado con un log real: tras el eco+respuesta
+    // de _probeWarmBoot() (que SÍ contienen ">>>", pero se filtran
+    // enteros por matchear PROBE_MARK), el próximo ">>> " que imprime
+    // MicroPython nunca llegó a emitirse en 20+ segundos de espera.
+    //
+    // Fix: si lo único que queda pendiente en el buffer (sin "\n"
+    // todavía) es EXACTAMENTE el prompt, se fuerza su emisión después
+    // de una pausa corta -- acotado a ese patrón EXACTO (no cualquier
+    // resto pendiente) para no arriesgarse a cortar a la mitad una
+    // línea de datos real que legítimamente esté demorando un poco en
+    // completarse (ej. un framebuffer grande llegando en varios
+    // paquetes WS).
+    _schedulePromptFlush() {
+
+        clearTimeout(this._promptFlushTimer);
+
+        if (this.buffer.trim() !== ">>>") return;
+
+        this._promptFlushTimer = setTimeout(() => {
+            if (this.buffer.trim() === ">>>") {
+                this.simulator.eventBus.emit("qemu:output", this.buffer);
+                this.buffer = "";
+            }
+        }, 250);
+
     }
 
     // Mismos prefijos que reconoce parseLine() más abajo -- si se
@@ -272,9 +446,20 @@ class QemuBridge {
                trimmed.startsWith("TM1637:") ||
                trimmed.startsWith("TFT:")    ||
                trimmed.startsWith("NEO:")    ||
+               trimmed.startsWith("NEOR:")   ||
                trimmed.startsWith("I2CW:")   ||
                trimmed.startsWith("PININFO:") ||
-               trimmed.startsWith("PWM:");
+               trimmed.startsWith("PWM:")     ||
+               trimmed.startsWith("SERVOOUT:") ||
+               // Agregados en sesiones posteriores a este chequeo (se
+               // habían olvidado acá, quedaban visibles crudos en el
+               // panel REPL igual que el bug histórico de TFT -- ver
+               // el comentario grande arriba): MAG (qmc5883l), RTC
+               // (ds3231), TCS (tcs34725), UART (gps).
+               trimmed.startsWith("MAG:")    ||
+               trimmed.startsWith("RTC:")    ||
+               trimmed.startsWith("TCS:")    ||
+               trimmed.startsWith("UART:");
     }
 
     // ====================================================
@@ -349,6 +534,27 @@ class QemuBridge {
                 const duty = parseInt(parts[3], 10);
                 if (!isNaN(gpio) && !isNaN(freq)) {
                     this.applyPwmChange(gpio, freq, duty);
+                }
+            }
+            return;
+        }
+
+        if (line.startsWith("SERVOOUT:")) {
+            // Formato: SERVOOUT:<gpio>:<angulo> -- lo manda
+            // sg90.hal.py cada vez que el firmware llama a
+            // servo.duty()/duty_u16() (ver ese archivo). FIX real:
+            // SignalEngine.applyServoAngleFromFirmware() ya existía
+            // (documentado como "llamado desde QemuBridge al recibir
+            // SERVOOUT:"), pero acá nunca se parseaba esta línea --
+            // el servo cargaba sin error y mandaba el ángulo bien,
+            // pero nada del lado del navegador lo escuchaba nunca.
+            // <angulo> es float (ej. "92.8"), no entero como gpio.
+            const parts = line.split(":");
+            if (parts.length >= 3) {
+                const gpio = parseInt(parts[1], 10);
+                const angle = parseFloat(parts[2]);
+                if (!isNaN(gpio) && !isNaN(angle)) {
+                    this.simulator.signalEngine.applyServoAngleFromFirmware(gpio, angle);
                 }
             }
             return;
@@ -507,6 +713,24 @@ class QemuBridge {
                     const height = parseInt(dims[2], 10);
                     const hex    = parts.slice(2).join(":");
                     this.simulator.signalEngine.applyNeopixelFramebuffer(hex, width, height);
+                }
+            }
+            return;
+        }
+
+        if (line.startsWith("NEOR:")) {
+            // Formato: NEOR:<n>:<RGB888 por pixel en hex, 6 hex chars cada
+            // uno, en el orden lógico i=0..n-1 que usó el firmware>
+            // (lo manda neopixel_ring.hal.py cada vez que el firmware llama
+            // a NeoPixel.write() -- ver ese archivo. A diferencia de "NEO:"
+            // (matriz 2D, framebuf), acá es una tira 1D lisa -- el índice
+            // YA es el orden final, no hace falta ningún x/y).
+            const parts = line.split(":");
+            if (parts.length >= 3) {
+                const n = parseInt(parts[1], 10);
+                if (!Number.isNaN(n)) {
+                    const hex = parts.slice(2).join(":");
+                    this.simulator.signalEngine.applyNeopixelRingFrame(hex, n);
                 }
             }
             return;

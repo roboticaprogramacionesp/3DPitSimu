@@ -49,6 +49,16 @@ class ReplPanel {
         // recién arrancado, sin nada pegado todavía).
         this._halSentToFirmware = new Set();
 
+        // Tipos cuyo .hal.py está CONGELADO en el firmware conectado
+        // (ver firmware/frozen_hal/README.md) -- se descubre con un
+        // probe de una sola línea al conectar (ver
+        // _probeFrozenTypes()/FROZEN_PROBE_MARK), vacío si el
+        // firmware no tiene nada de esto (compatibilidad total con
+        // firmware viejo, o corriendo sin firmware custom). Mismo
+        // lifecycle que _halSentToFirmware -- se resetea en cada
+        // conexión nueva (_resyncHalAfterBoot).
+        this._frozenHalTypes = new Set();
+
         // Cuántas veces se reintentó automáticamente el HAL de cada
         // "type" tras un HAL_ERROR (ver _retryHalAfterError) -- para
         // no reintentar por siempre si algo está genuinamente roto
@@ -83,13 +93,34 @@ class ReplPanel {
         //     para el mismo pin (ver _lastGpioLogged), que era buena
         //     parte del ruido
         // El estado se guarda en localStorage para no tener que
-        // volver a silenciarlo en cada sesión.
-        this._gpioLogMuted = localStorage.getItem("pit_gpio_log_muted") === "1";
+        // volver a silenciarlo en cada sesión. Silenciado POR DEFECTO
+        // (a pedido) -- solo se muestra si el usuario lo activó a
+        // propósito alguna vez (valor guardado explícitamente "0").
+        this._gpioLogMuted = localStorage.getItem("pit_gpio_log_muted") !== "0";
         this._lastGpioLogged = {};
+
+        // true recién cuando el REPL de MicroPython mostró su propio
+        // prompt ">>> " -- distinto de "el WebSocket está conectado"
+        // (qemu:connected dispara apenas abre la conexión, pero QEMU
+        // puede tardar un rato real en terminar de bootear antes de
+        // llegar a un prompt interactivo de verdad). Mientras esto es
+        // false, Ctrl+Enter/▶ Ejecutar (correr código) y Enter/Enviar
+        // del REPL quedan bloqueados -- ver _onReplReady()/bindBusEvents.
+        this._replReady = false;
+
+        // Portapapeles nativo (app de escritorio, ver desktop/main.py
+        // clase Api) -- stub por default, no-op fuera de ese entorno
+        // (navegador normal). _bindNativeClipboard() los reemplaza si
+        // corresponde. _pasteFromClipboard queda null hasta entonces
+        // a propósito (los callers ya chequean su existencia antes de
+        // usarlo).
+        this._copyToClipboard = () => false;
+        this._pasteFromClipboard = null;
 
         this.buildDOM();
         this.bindEvents();
         this.bindBusEvents();
+        this._bindNativeClipboard();
 
     }
 
@@ -113,8 +144,14 @@ class ReplPanel {
                 <span id="qemuStatus" class="repl-status">🔴 Desconectado</span>
             </div>
             <div class="repl-header-right">
+                <div class="repl-font-size-group" title="Tamaño de fuente">
+                    <button class="repl-btn repl-font-btn" data-size="S">S</button>
+                    <button class="repl-btn repl-font-btn" data-size="M">M</button>
+                    <button class="repl-btn repl-font-btn" data-size="L">L</button>
+                    <button class="repl-btn repl-font-btn" data-size="XL">XL</button>
+                </div>
                 <button class="repl-btn" id="replBtnInterrupt" title="Interrumpir (Ctrl+C)">■</button>
-                <button class="repl-btn" id="replBtnReset"     title="Soft Reset (Ctrl+D)">↺</button>
+                <button class="repl-btn" id="replBtnReset"     title="Soft Reset (Ctrl+D) -- reinicia el firmware, no el simulador">↺</button>
                 <button class="repl-btn" id="replBtnGpioLog"   title="Silenciar actividad de pines (📌 GPIOxx)">📌</button>
                 <button class="repl-btn" id="replBtnClear"     title="Limpiar output">⌫</button>
                 <button class="repl-btn repl-btn-toggle" id="replBtnToggle">▲</button>
@@ -137,9 +174,13 @@ class ReplPanel {
         this.replPane = document.createElement("div");
         this.replPane.className = "repl-pane";
 
+        // Contenedor de la terminal real (xterm.js) -- se inicializa
+        // en _initTerminal(), llamado al final de buildDOM() una vez
+        // que this.panel ya está adjunto al documento (xterm.js
+        // necesita medir un elemento YA visible para calcular filas/
+        // columnas la primera vez).
         this.output = document.createElement("div");
         this.output.className = "repl-output";
-        this.output.setAttribute("aria-live", "polite");
 
         const inputRow = document.createElement("div");
         inputRow.className = "repl-input-row";
@@ -154,10 +195,15 @@ class ReplPanel {
         this.input.placeholder = "Escribe código MicroPython...";
         this.input.setAttribute("autocomplete", "off");
         this.input.setAttribute("spellcheck", "false");
+        // Arranca deshabilitado -- recién se habilita en _onReplReady()
+        // (ver bindBusEvents), no hay ninguna conexión todavía al
+        // construir el panel.
+        this.input.disabled = true;
 
         this.sendBtn = document.createElement("button");
         this.sendBtn.className = "repl-btn repl-btn-send";
         this.sendBtn.textContent = "Enviar";
+        this.sendBtn.disabled = true;
 
         inputRow.appendChild(this.prompt);
         inputRow.appendChild(this.input);
@@ -175,9 +221,23 @@ class ReplPanel {
         editorToolbar.innerHTML = `
             <span class="repl-editor-label">editor.py</span>
             <div class="repl-editor-actions">
-                <button class="repl-btn repl-btn-run" id="replBtnRun">▶ Ejecutar</button>
+                <button class="repl-btn" id="replBtnLoadCode" title="Abrir código desde un archivo .py de tu computadora">📂 Abrir</button>
+                <button class="repl-btn" id="replBtnSaveCode" title="Guardar el código del editor a un archivo .py">💾 Guardar</button>
+                <button class="repl-btn repl-btn-run" id="replBtnRun" disabled title="Esperando a que el simulador esté corriendo y listo (>>>)">▶ Ejecutar</button>
             </div>
         `;
+
+        // -- Cuerpo del editor: CodeMirror (resaltado de sintaxis real,
+        // ver lib/codemirror/) sobre un <textarea> de respaldo. --
+        // CodeMirror.fromTextArea() reemplaza visualmente el textarea
+        // por su propio editor (con su propio gutter de números de
+        // línea, ya no hace falta uno hecho a mano) pero deja el
+        // textarea original escondido en el DOM y sincronizado en
+        // cada cambio (ver el .on("change", ...) más abajo) -- así
+        // TODO el resto de esta clase puede seguir leyendo/escribiendo
+        // this.editor.value exactamente igual que antes.
+        this.editorBody = document.createElement("div");
+        this.editorBody.className = "repl-editor-body";
 
         this.editor = document.createElement("textarea");
         this.editor.className = "repl-editor";
@@ -185,7 +245,37 @@ class ReplPanel {
         this.editor.setAttribute("autocomplete",   "off");
         this.editor.setAttribute("autocorrect",    "off");
         this.editor.setAttribute("autocapitalize", "off");
-        this.editor.placeholder = [
+
+        this.editorBody.appendChild(this.editor);
+
+        this.editorPane.appendChild(editorToolbar);
+        this.editorPane.appendChild(this.editorBody);
+
+        this.codeMirror = CodeMirror.fromTextArea(this.editor, {
+            mode: "python",
+            theme: "dracula",
+            lineNumbers: true,
+            lineWrapping: true,
+            indentUnit: 4,
+            tabSize: 4,
+            indentWithTabs: false,
+            viewportMargin: Infinity,
+            extraKeys: {
+                "Ctrl-Enter": () => { this.runEditorCode(); },
+            },
+        });
+        // Mantiene this.editor.value (el textarea escondido) al día
+        // en cada tecleo -- el resto de la clase nunca se enteró de
+        // que ahora hay un CodeMirror de por medio.
+        this.codeMirror.on("change", () => this.codeMirror.save());
+
+        // Placeholder propio -- CodeMirror core no trae uno (eso es
+        // un addon aparte que no está vendorizado acá, ver
+        // lib/codemirror/), así que se simula con un <pre> superpuesto
+        // que se esconde apenas hay contenido o foco.
+        this._editorPlaceholder = document.createElement("pre");
+        this._editorPlaceholder.className = "repl-editor-placeholder";
+        this._editorPlaceholder.textContent = [
             "# Escribe tu código MicroPython aquí",
             "# Ctrl+Enter o ▶ Ejecutar para correrlo",
             "",
@@ -199,9 +289,12 @@ class ReplPanel {
             "    led.value(btn.value())",
             "    sleep(0.02)",
         ].join("\n");
-
-        this.editorPane.appendChild(editorToolbar);
-        this.editorPane.appendChild(this.editor);
+        this.editorBody.appendChild(this._editorPlaceholder);
+        const syncPlaceholder = () => {
+            this._editorPlaceholder.classList.toggle("hidden", this.codeMirror.getValue().length > 0);
+        };
+        this.codeMirror.on("change", syncPlaceholder);
+        syncPlaceholder();
 
         // ---- Ensamblar ----
         this.body.appendChild(this.replPane);
@@ -222,6 +315,206 @@ class ReplPanel {
         const workspace = document.getElementById("workspace") || document.body;
         workspace.appendChild(this.panel);
 
+        this._initTerminal();
+
+    }
+
+    // ====================================================
+    // Tamaño de fuente del panel (S/M/L) -- mismo mecanismo que ya
+    // usa el monitor serie de 3DPitBlocks (AppBlock3/serial-monitor.js,
+    // SM_SIZES/SM_FONTSIZES aplicados a smTerm.options.fontSize):
+    // botones discretos en vez de su slider, pero la misma idea --
+    // afecta tanto la salida (xterm) como el editor (textarea + su
+    // gutter de números de línea, que tienen que moverse JUNTOS o el
+    // número de cada línea deja de alinear con su línea real).
+    // Persistido en localStorage para no tener que re-elegirlo cada
+    // sesión.
+    // ====================================================
+
+    static FONT_SIZES = {
+        S:  { term: 11,   editor: 12 },
+        M:  { term: 12.5, editor: 13 }, // default -- mismos valores que ya tenía el panel antes de este control
+        L:  { term: 15,   editor: 16 },
+        XL: { term: 19,   editor: 20 }, // mismo tope que SM_FONTSIZES=[10,12,15,19] de 3DPitBlocks
+    };
+
+    _applyFontSize(size) {
+
+        const cfg = ReplPanel.FONT_SIZES[size] || ReplPanel.FONT_SIZES.M;
+        this._fontSize = size in ReplPanel.FONT_SIZES ? size : "M";
+
+        if (this.terminal) {
+            this.terminal.options.fontSize = cfg.term;
+            this._safeFit();
+        }
+
+        this.codeMirror.getWrapperElement().style.fontSize = `${cfg.editor}px`;
+        this._editorPlaceholder.style.fontSize = `${cfg.editor}px`;
+        this.codeMirror.refresh();
+
+        this._fontSizeBtns?.forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.size === this._fontSize);
+        });
+
+        localStorage.setItem("pit_repl_font_size", this._fontSize);
+
+    }
+
+    // ====================================================
+    // Cargar / Guardar el código del editor como archivo .py en el
+    // disco del usuario -- mismo patrón (File System Access API con
+    // fallback a <input type=file>/<a download>) que ya usa
+    // ProjectManager para abrir/guardar el proyecto .json.
+    // ====================================================
+
+    async _loadCodeFromDisk() {
+
+        try {
+
+            let file = null;
+
+            if (window.showOpenFilePicker) {
+
+                const [handle] = await window.showOpenFilePicker({
+                    multiple: false,
+                    types: [{
+                        description: "Código MicroPython",
+                        accept: { "text/x-python": [".py"] }
+                    }]
+                });
+                file = await handle.getFile();
+
+            } else {
+
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = ".py";
+                file = await new Promise((resolve) => {
+                    input.onchange = () => resolve(input.files?.[0] || null);
+                    input.click();
+                });
+
+            }
+
+            if (!file) return;
+
+            this.codeMirror.setValue(await file.text());
+            this.switchTab("editor");
+            this.codeMirror.focus();
+
+        } catch (err) {
+
+            if (err?.name !== "AbortError") {
+                alert("❌ Error abriendo el archivo: " + err.message);
+            }
+
+        }
+
+    }
+
+    async _saveCodeToDisk() {
+
+        const blob = new Blob([this.editor.value], { type: "text/x-python" });
+        // Usa el nombre de proyecto definido arriba en el toolbar
+        // (#currentFileLabel, ver index.html -- lo maneja
+        // Toolbar.bindCurrentFileLabel()/ProjectManager.currentFileName)
+        // en vez de un "editor.py" fijo -- ese campo guarda el nombre
+        // CON extensión del proyecto (ej. "proyecto_2026-07-31.json"),
+        // así que se le saca esa extensión y se pone ".py". Si todavía
+        // no hay proyecto guardado (default "Sin guardar", o vacío),
+        // cae al nombre genérico de siempre.
+        const projectLabel = document.getElementById("currentFileLabel")?.value?.trim();
+        const baseName = (projectLabel && projectLabel !== "Sin guardar")
+            ? projectLabel.replace(/\.[^./\\]+$/, "")
+            : "editor";
+        const suggestedName = `${baseName}.py`;
+
+        if (window.showSaveFilePicker) {
+
+            try {
+
+                const handle = await window.showSaveFilePicker({
+                    suggestedName,
+                    types: [{
+                        description: "Código MicroPython",
+                        accept: { "text/x-python": [".py"] }
+                    }]
+                });
+
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                return;
+
+            } catch (err) {
+
+                if (err?.name === "AbortError") return;
+                console.warn("[ReplPanel] No se pudo abrir el selector de guardado:", err);
+
+            }
+
+        }
+
+        // Fallback sin File System Access API (Firefox, Safari)
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = suggestedName;
+        a.click();
+        URL.revokeObjectURL(url);
+
+    }
+
+    // ====================================================
+    // Terminal real (xterm.js) para la salida del REPL
+    // ====================================================
+    //
+    // Por qué: la salida venía siendo un <div> de texto plano al que
+    // le íbamos agregando <span> (ver el viejo appendOutput()) -- sin
+    // ningún manejo real de secuencias ANSI, sin scrollback propio, y
+    // con una estética de "log" en vez de una terminal serie de
+    // verdad. xterm.js (ya vendorizado en lib/xterm/, antes suelto en
+    // la raíz del repo sin usar) es el mismo motor de terminal que
+    // usa VS Code -- lo usamos acá SOLO como SUPERFICIE DE SALIDA.
+    //
+    // La ENTRADA de comandos sigue siendo this.input/sendInput() tal
+    // cual estaba (historial con flechas propio, envío de línea
+    // completa, Ctrl+C manual) -- probado y confiable durante toda
+    // esta sesión. Por eso `disableStdin: true`: esta terminal no
+    // recibe foco de teclado directo, es un visor.
+    _initTerminal() {
+
+        this.terminal = new Terminal({
+            convertEol: false, // normalizamos \r\n nosotros mismos, ver appendOutput()
+            disableStdin: true,
+            cursorBlink: false,
+            fontSize: 12.5,
+            fontFamily: "'Cascadia Code', Consolas, 'Courier New', monospace",
+            scrollback: 5000,
+            theme: {
+                background: "#0d0f1a",
+                foreground: "#00ff88", // mismo verde que tenía .repl-output por defecto
+            },
+        });
+
+        this._fitAddon = new FitAddon.FitAddon();
+        this.terminal.loadAddon(this._fitAddon);
+        this.terminal.loadAddon(new WebLinksAddon.WebLinksAddon());
+
+        this.terminal.open(this.output);
+        this._safeFit();
+
+        window.addEventListener("resize", () => {
+            if (this.open) this._safeFit();
+        });
+
+    }
+
+    // fit() puede tirar si el contenedor todavía mide 0x0 (panel
+    // cerrado/pestaña oculta) -- pasa en el primer render, antes de
+    // que el usuario abra el panel por primera vez.
+    _safeFit() {
+        try { this._fitAddon?.fit(); } catch (_) { /* contenedor sin medidas aún, ver toggle()/switchTab() */ }
     }
 
     // ====================================================
@@ -248,32 +541,92 @@ class ReplPanel {
         this.sendBtn.addEventListener("click", () => this.sendInput());
         this.input.addEventListener("keydown", (e) => {
             if (e.key === "Enter")     { e.preventDefault(); this.sendInput(); return; }
-            if (e.key === "ArrowUp")   { e.preventDefault(); this.navigateHistory(-1); return; }
-            if (e.key === "ArrowDown") { e.preventDefault(); this.navigateHistory(1);  return; }
+            // BUG REAL encontrado (usuario reportó "las flechas no
+            // navegan el historial"): this.history usa unshift() --
+            // índice 0 es el comando MÁS RECIENTE, índices más altos son
+            // más viejos, -1 es "sin selección" (input vacío/en blanco).
+            // Con eso, "↑" (ir a comandos más viejos) tiene que SUMAR al
+            // índice, no restar -- con el signo como estaba, arrancando
+            // en -1, "↑" calculaba -1+(-1)=-2, el clamp de abajo lo
+            // dejaba pegado en -1 para siempre (nunca mostraba nada).
+            if (e.key === "ArrowUp")   { e.preventDefault(); this.navigateHistory(1);  return; }
+            if (e.key === "ArrowDown") { e.preventDefault(); this.navigateHistory(-1); return; }
             if (e.ctrlKey && e.key === "c") {
+                // Mismo Ctrl+C, dos sentidos posibles -- si el usuario
+                // tiene texto SELECCIONADO (típicamente del output del
+                // REPL, para copiarlo), gana copiar. Si no hay nada
+                // seleccionado, es el Ctrl+C de "interrumpir" de
+                // siempre. Sin esto, seleccionar una línea del output
+                // y copiarla con el foco todavía en el input mandaría
+                // un Ctrl+C real al firmware en vez de copiar.
+                const selected = window.getSelection().toString();
+                if (selected && this._copyToClipboard(selected)) {
+                    e.preventDefault();
+                    return;
+                }
                 e.preventDefault();
-                this.simulator.eventBus.emit("qemu:send", "\x03");
+                this.simulator.qemuBridge?.interrupt();
                 this.appendOutput("^C\n", "repl-ctrl");
+                return;
+            }
+            if (e.ctrlKey && e.key === "v" && this._pasteFromClipboard) {
+                e.preventDefault();
+                this._pasteFromClipboard((text) => {
+                    const start = this.input.selectionStart ?? this.input.value.length;
+                    const end = this.input.selectionEnd ?? this.input.value.length;
+                    this.input.setRangeText(text, start, end, "end");
+                });
             }
         });
 
         // Botones cabecera
         document.getElementById("replBtnInterrupt").addEventListener("click", () => {
-            this.simulator.eventBus.emit("qemu:send", "\x03");
+            this.simulator.qemuBridge?.interrupt();
             this.appendOutput("^C\n", "repl-ctrl");
         });
         document.getElementById("replBtnReset").addEventListener("click", () => {
-            this.simulator.eventBus.emit("qemu:send", "\x04");
-            this.appendOutput("↺ Soft reset...\n", "repl-ctrl");
+
+            // A diferencia de "■ Interrumpir" (Ctrl+C, que SÍ tiene
+            // que poder cortar algo trabado incluso a mitad de un
+            // paste), este Ctrl+D no tiene apuro real -- y mandarlo
+            // directo, sin encolar, es justo lo que podía cortar un
+            // preloadHal()/_pasteBlock() en curso a mitad de camino
+            // (bug real: el usuario reclickeaba "Soft Reset" viendo
+            // que "no pasaba nada" mientras el HAL se estaba
+            // repasteando solo tras un reinicio, y ese segundo Ctrl+D
+            // caía DENTRO del paste mode todavía abierto, cortándolo
+            // -- las líneas que quedaban en la cola de ese paste se
+            // mandaban sueltas al prompt ya interactivo, disparando
+            // IndentationError en cascada). Encolado detrás de
+            // _pasteQueue, este Ctrl+D espera a que cualquier paste en
+            // curso termine solo, en vez de interrumpirlo.
+            this._enqueuePaste(async () => {
+                this.simulator.qemuBridge?.softReset();
+                this.appendOutput("↺ Soft reset...\n", "repl-ctrl");
+            });
+
         });
         document.getElementById("replBtnClear").addEventListener("click", () => {
-            this.output.innerHTML = "";
+            this.terminal?.clear();
         });
+
+        // Tamaño de fuente (S/M/L) -- ver _applyFontSize()
+        this._fontSizeBtns = Array.from(this.header.querySelectorAll(".repl-font-btn"));
+        this._fontSizeBtns.forEach((btn) => {
+            btn.addEventListener("click", () => this._applyFontSize(btn.dataset.size));
+        });
+        const savedFontSize = localStorage.getItem("pit_repl_font_size");
+        this._applyFontSize(savedFontSize in ReplPanel.FONT_SIZES ? savedFontSize : "M");
 
         // Silenciar/activar actividad de pines -- ver el comentario
         // largo en el constructor sobre por qué esto es 100% seguro
         // de tocar (no afecta LEDs ni detección de botones/teclado).
+        // El botón en sí es una herramienta de DIAGNÓSTICO, no algo
+        // pensado para el usuario final (alumno/profesor) -- oculto
+        // salvo que se active window.PIT_DEBUG (mismo flag que ya usa
+        // el resto del proyecto para logs de desarrollo, ver app.js).
         this._gpioLogBtn = document.getElementById("replBtnGpioLog");
+        this._gpioLogBtn.style.display = window.PIT_DEBUG ? "" : "none";
         this._updateGpioLogBtn();
         this._gpioLogBtn.addEventListener("click", () => {
             this._gpioLogMuted = !this._gpioLogMuted;
@@ -283,25 +636,266 @@ class ReplPanel {
 
         // Editor
         document.getElementById("replBtnRun").addEventListener("click", () => this.runEditorCode());
-        this.editor.addEventListener("keydown", (e) => {
-            if (e.key === "Tab") {
-                e.preventDefault();
-                const s = this.editor.selectionStart;
-                this.editor.value =
-                    this.editor.value.substring(0, s) + "    " +
-                    this.editor.value.substring(s);
-                this.editor.selectionStart = this.editor.selectionEnd = s + 4;
-            }
-            if (e.ctrlKey && e.key === "Enter") {
-                e.preventDefault();
-                this.runEditorCode();
-            }
-        });
+        document.getElementById("replBtnLoadCode").addEventListener("click", () => this._loadCodeFromDisk());
+        document.getElementById("replBtnSaveCode").addEventListener("click", () => this._saveCodeToDisk());
+
+        // Tab (4 espacios), Ctrl+Enter (ejecutar) y auto-indentación
+        // tras ":" ahora los maneja CodeMirror nativamente (modo
+        // "python" + indentUnit/tabSize/indentWithTabs, ver
+        // buildDOM() -- "Ctrl-Enter" está en extraKeys ahí mismo).
+        // Ya no hace falta ningún listener a mano sobre el textarea.
 
         // Atajo global
         window.addEventListener("keydown", (e) => {
             if (e.ctrlKey && e.key === "`") { e.preventDefault(); this.toggle(); }
         });
+
+    }
+
+    // ====================================================
+    // Portapapeles nativo (solo dentro de la app de escritorio,
+    // window.pywebview -- ver desktop/main.py, clase Api). El
+    // copy/paste NATIVO del navegador (eventos "copy"/"paste", Ctrl+C/
+    // Ctrl+V normales) no resultó confiable dentro del motor WebView2
+    // que usa pywebview -- mismo síntoma que ya se había resuelto así
+    // en la otra app de escritorio del proyecto (3DPit Blocks), con
+    // un helper de Python vía PowerShell Get-Clipboard/Set-Clipboard
+    // expuesto como js_api. Acá se conecta ESE helper a los dos
+    // lugares donde hace falta: el input del REPL (ver bindEvents) y
+    // el editor CodeMirror.
+    //
+    // window.pywebview.api se inyecta recién DESPUÉS de que la página
+    // termina de cargar (evento "pywebvieready") -- si para cuando
+    // este método corre todavía no está, se espera ese evento. Fuera
+    // de la app de escritorio (navegador normal, como en desarrollo
+    // con "npx serve") window.pywebview nunca existe -- los stubs del
+    // constructor (_copyToClipboard siempre false, _pasteFromClipboard
+    // null) dejan el comportamiento nativo del navegador intacto.
+    // ====================================================
+
+    _bindNativeClipboard() {
+
+        const setup = () => {
+
+            if (!window.pywebview?.api) return;
+
+            this._copyToClipboard = (text) => {
+                window.pywebview.api.set_clipboard(text).catch((err) =>
+                    console.error("[ReplPanel] No se pudo copiar al portapapeles:", err)
+                );
+                return true;
+            };
+
+            this._pasteFromClipboard = (callback) => {
+                window.pywebview.api.get_clipboard()
+                    .then((text) => { if (text) callback(text); })
+                    .catch((err) => console.error("[ReplPanel] No se pudo leer el portapapeles:", err));
+            };
+
+            // CodeMirror: mismo problema, mismo fix -- vía extraKeys
+            // (ya tenía "Ctrl-Enter" ahí, ver buildDOM()).
+            this.codeMirror.setOption("extraKeys", {
+                ...this.codeMirror.getOption("extraKeys"),
+                "Ctrl-V": () => {
+                    this._pasteFromClipboard((text) => this.codeMirror.replaceSelection(text));
+                },
+                "Ctrl-C": (cm) => {
+                    const selected = cm.getSelection();
+                    if (selected) this._copyToClipboard(selected);
+                },
+            });
+
+            // Caso restante: texto seleccionado con el mouse en el
+            // OUTPUT del REPL (xterm.js) -- ahí el foco de teclado no
+            // está ni en this.input ni en CodeMirror, así que ninguno
+            // de los dos handlers de arriba se dispara. Un listener a
+            // nivel de ventana cubre ese caso (y cualquier otro
+            // selectable de la página) sin duplicar el manejo de
+            // Ctrl+C específico del input (ver bindEvents -- ese ya
+            // hace su propio preventDefault + copia/interrumpe).
+            window.addEventListener("keydown", (e) => {
+                if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "c") return;
+                if (e.target === this.input || e.target.closest?.(".CodeMirror")) return;
+                // xterm.js NO usa la selección nativa del navegador (la
+                // pinta/gestiona con su propio SelectionService interno)
+                // -- window.getSelection() siempre vuelve vacío para
+                // texto seleccionado con el mouse en el output del REPL,
+                // por eso hay que preguntarle a la terminal primero.
+                const selected = (this.terminal?.hasSelection() && this.terminal.getSelection())
+                    || window.getSelection().toString();
+                if (selected) this._copyToClipboard(selected);
+            });
+
+            // Menú contextual PROPIO (clic derecho) -- WebView2
+            // deshabilita el menú nativo del navegador (Cortar/Copiar/
+            // Pegar/etc.) salvo que la app corra con debug=True, que
+            // también expondría DevTools al usuario final (no
+            // queremos eso). Mismo lenguaje visual que el menú del
+            // canvas (ver ContextMenu.js -- reutiliza sus mismas
+            // clases CSS .context-menu/.context-menu-item/etc., ver
+            // simulator.css).
+            this._bindClipboardContextMenu();
+
+        };
+
+        if (window.pywebview?.api) setup();
+        else window.addEventListener("pywebviewready", setup, { once: true });
+
+    }
+
+    // Adaptador chico: mismas 5 acciones (cortar/copiar/pegar/
+    // eliminar/seleccionar todo), traducidas a la API real de cada
+    // widget -- el <input> del REPL (selectionStart/End nativos) o
+    // CodeMirror (getSelection/replaceSelection propios).
+    _clipboardAdapterFor(kind) {
+
+        if (kind === "input") {
+            const sel = () => this.input.value.substring(this.input.selectionStart, this.input.selectionEnd);
+            return {
+                getSelection: sel,
+                cut: () => {
+                    const text = sel();
+                    if (text) this._copyToClipboard(text);
+                    this.input.setRangeText("", this.input.selectionStart, this.input.selectionEnd, "end");
+                },
+                copy: () => { const text = sel(); if (text) this._copyToClipboard(text); },
+                paste: () => this._pasteFromClipboard((text) => {
+                    const start = this.input.selectionStart, end = this.input.selectionEnd;
+                    this.input.setRangeText(text, start, end, "end");
+                }),
+                del: () => this.input.setRangeText("", this.input.selectionStart, this.input.selectionEnd, "end"),
+                selectAll: () => this.input.select(),
+            };
+        }
+
+        if (kind === "terminal") {
+            // Salida del REPL (xterm.js, disableStdin:true) -- solo
+            // lectura. getSelection() es la API PROPIA de xterm.js (no
+            // window.getSelection(), ver el listener de Ctrl+C más
+            // arriba: la terminal no expone su selección vía DOM
+            // Selection nativa). Cortar/Pegar/Eliminar no aplican acá
+            // -- readOnly:true hace que showMenu() los deshabilite.
+            return {
+                getSelection: () => this.terminal?.getSelection() || "",
+                cut: () => {},
+                copy: () => {
+                    const text = this.terminal?.getSelection();
+                    if (text) this._copyToClipboard(text);
+                },
+                paste: () => {},
+                del: () => {},
+                selectAll: () => this.terminal?.selectAll(),
+                readOnly: true,
+            };
+        }
+
+        return {
+            getSelection: () => this.codeMirror.getSelection(),
+            cut: () => {
+                const text = this.codeMirror.getSelection();
+                if (text) this._copyToClipboard(text);
+                this.codeMirror.replaceSelection("");
+            },
+            copy: () => { const text = this.codeMirror.getSelection(); if (text) this._copyToClipboard(text); },
+            paste: () => this._pasteFromClipboard((text) => this.codeMirror.replaceSelection(text)),
+            del: () => this.codeMirror.replaceSelection(""),
+            selectAll: () => this.codeMirror.execCommand("selectAll"),
+        };
+
+    }
+
+    _bindClipboardContextMenu() {
+
+        const showMenu = (e, adapter) => {
+
+            e.preventDefault();
+
+            document.querySelector(".repl-clipboard-menu")?.remove();
+
+            const hasSelection = !!adapter.getSelection();
+
+            const items = [
+                { label: "Cortar",           shortcut: "Ctrl+X", action: adapter.cut,      disabled: !hasSelection || adapter.readOnly },
+                { label: "Copiar",           shortcut: "Ctrl+C", action: adapter.copy,     disabled: !hasSelection },
+                { label: "Pegar",            shortcut: "Ctrl+V", action: adapter.paste,    disabled: adapter.readOnly },
+                { label: "Eliminar",         shortcut: "Del",    action: adapter.del,      disabled: !hasSelection || adapter.readOnly },
+                "separator",
+                { label: "Seleccionar todo", shortcut: "Ctrl+A", action: adapter.selectAll },
+            ];
+
+            const menu = document.createElement("div");
+            // Mismas clases que ContextMenu.js (canvas) para el mismo
+            // look -- "repl-clipboard-menu" aparte solo para poder
+            // encontrar/cerrar ESTE menú puntual sin pisar el del canvas.
+            menu.className = "context-menu repl-clipboard-menu";
+
+            items.forEach((item) => {
+
+                if (item === "separator") {
+                    const sep = document.createElement("div");
+                    sep.className = "context-menu-separator";
+                    menu.appendChild(sep);
+                    return;
+                }
+
+                const row = document.createElement("div");
+                row.className = "context-menu-item" + (item.disabled ? " disabled" : "");
+
+                const label = document.createElement("span");
+                label.textContent = item.label;
+                row.appendChild(label);
+
+                const kbd = document.createElement("span");
+                kbd.className = "context-menu-shortcut";
+                kbd.textContent = item.shortcut;
+                row.appendChild(kbd);
+
+                if (!item.disabled) {
+                    row.addEventListener("click", () => { item.action(); close(); });
+                }
+
+                menu.appendChild(row);
+
+            });
+
+            document.body.appendChild(menu);
+
+            // Clampeo simple para no salirse de la pantalla (mismo
+            // criterio que ContextMenu.positionElement).
+            const rect = menu.getBoundingClientRect();
+            let left = e.clientX, top = e.clientY;
+            if (left + rect.width  > window.innerWidth)  left = window.innerWidth  - rect.width  - 8;
+            if (top  + rect.height > window.innerHeight) top  = window.innerHeight - rect.height - 8;
+            menu.style.left = `${Math.max(4, left)}px`;
+            menu.style.top  = `${Math.max(4, top)}px`;
+
+            const onPointerDown = (ev) => { if (!menu.contains(ev.target)) close(); };
+            const onKeydown     = (ev) => { if (ev.key === "Escape") close(); };
+
+            function close() {
+                menu.remove();
+                document.removeEventListener("pointerdown", onPointerDown);
+                window.removeEventListener("keydown", onKeydown);
+            }
+
+            // Se registra en el siguiente tick -- si no, el mismo
+            // pointerdown del clic derecho que abrió el menú lo
+            // cerraría de inmediato.
+            setTimeout(() => {
+                document.addEventListener("pointerdown", onPointerDown);
+                window.addEventListener("keydown", onKeydown);
+            }, 0);
+
+        };
+
+        this.input.addEventListener("contextmenu", (e) => showMenu(e, this._clipboardAdapterFor("input")));
+        this.codeMirror.getWrapperElement().addEventListener(
+            "contextmenu", (e) => showMenu(e, this._clipboardAdapterFor("codemirror"))
+        );
+        // Salida del REPL (xterm.js) -- este era el que faltaba: el
+        // menú solo estaba conectado al input y al editor, nunca al
+        // output, así que clic derecho ahí no mostraba nada.
+        this.output.addEventListener("contextmenu", (e) => showMenu(e, this._clipboardAdapterFor("terminal")));
 
     }
 
@@ -458,7 +1052,7 @@ class ReplPanel {
     // writeToQemuThrottled en server.js), así que agregar más
     // módulos compartidos NO vuelve a pagar ese costo en cada
     // corrida, solo la primera vez después de un boot/reconexión.
-    static ALWAYS_HAL_TYPES = ["_base", "_i2c_bus", "_adc_bus"];
+    static ALWAYS_HAL_TYPES = ["_base", "_i2c_bus", "_adc_bus", "_uart_bus"];
 
     // ====================================================
     // Aislamiento de fallas entre componentes
@@ -664,20 +1258,103 @@ class ReplPanel {
         // prolijo no depender de eso).
         const rawBlock = rawLines.join("\n");
 
+        // Localización de la corrupción: el checksum global (arriba)
+        // dice QUE algo se perdió pero no DÓNDE -- con archivos chicos
+        // (ky_001, dht11) fallando casi siempre en el primer intento,
+        // necesitamos saber en qué offset del base64 ocurre la
+        // divergencia para poder diffear contra el fuente real y ver
+        // si es el mismo patrón ya arreglado o uno nuevo. Iniciales
+        // en 64 chars cada uno, sobre el string base64 SIN los "\n" de
+        // breakRepeatedPatterns (equivalente a "".join(_hal_raw.split())
+        // del lado Python) -- overhead de unos pocos cientos de bytes,
+        // insignificante contra los ~1-3KB típicos de estos HAL chicos.
+        const CHUNK = 64;
+        const chunkSums = [];
+        for (let i = 0; i < b64.length; i += CHUNK) {
+            let s = 0;
+            for (let j = i; j < Math.min(i + CHUNK, b64.length); j++) {
+                s = (s + b64.charCodeAt(j)) % 65536;
+            }
+            chunkSums.push(s);
+        }
+        const chunkSumsLit = "[" + chunkSums.join(",") + "]";
+
         return (
             `# -- HAL: ${type} (aislado) --\n` +
             `try:\n` +
             `    import ubinascii as _ub_iso\n` +
             `    _hal_raw = """` + rawBlock + `"""\n` +
-            `    _hal_bytes = _ub_iso.a2b_base64("".join(_hal_raw.split()))\n` +
+            `    _hal_joined = "".join(_hal_raw.split())\n` +
+            `    _hal_cs = 64\n` +
+            `    _hal_exp = ${chunkSumsLit}\n` +
+            `    _hal_bad = -1\n` +
+            `    for _hal_ci in range(len(_hal_exp)):\n` +
+            `        _hal_chunk = _hal_joined[_hal_ci*_hal_cs:(_hal_ci+1)*_hal_cs]\n` +
+            `        _hal_s = 0\n` +
+            `        for _hal_c in _hal_chunk:\n` +
+            `            _hal_s = (_hal_s + ord(_hal_c)) % 65536\n` +
+            `        if _hal_s != _hal_exp[_hal_ci]:\n` +
+            `            _hal_bad = _hal_ci\n` +
+            `            break\n` +
+            `    try:\n` +
+            `        _hal_bytes = _ub_iso.a2b_base64(_hal_joined)\n` +
+            `    except Exception as _hal_decerr:\n` +
+            `        raise ValueError("b64 decode fallo: %s b64len=%d esperado=%d chunk_malo=%d offset~%d" % (repr(_hal_decerr), len(_hal_joined), ${b64.length}, _hal_bad, _hal_bad*_hal_cs))\n` +
             `    _hal_sum = sum(_hal_bytes) % 65536\n` +
-            `    if len(_hal_bytes) != ${expectedLen} or _hal_sum != ${checksum}:\n` +
-            `        raise ValueError("transmision corrupta: len=%d sum=%d (esperado len=${expectedLen} sum=${checksum})" % (len(_hal_bytes), _hal_sum))\n` +
+            `    if len(_hal_bytes) != ${expectedLen} or _hal_sum != ${checksum} or _hal_bad != -1:\n` +
+            `        raise ValueError("transmision corrupta: len=%d sum=%d chunk_malo=%d offset~%d (esperado len=${expectedLen} sum=${checksum})" % (len(_hal_bytes), _hal_sum, _hal_bad, _hal_bad*_hal_cs))\n` +
             `    exec(_hal_bytes.decode(), globals())\n` +
             `except Exception as _hal_err:\n` +
             `    print("HAL_ERROR:${type}: " + repr(_hal_err))\n`
         );
 
+    }
+
+    // ====================================================
+    // Camino RÁPIDO: el firmware conectado ya tiene el .hal.py de
+    // este tipo CONGELADO (ver firmware/frozen_hal/README.md y
+    // _probeFrozenTypes() más abajo) -- en vez de pastear ~100-200
+    // líneas de base64 por el pty serial emulado, mandamos un
+    // "import _pit_hal_<tipo>" de una sola línea. Mismo aislamiento
+    // try/except que _wrapHalForIsolation() (así HAL_ERROR:<tipo> y
+    // el reintento automático de _retryHalAfterError() funcionan
+    // idéntico), pero sin checksum/base64 -- no hace falta: un
+    // import normal de MicroPython no viaja por ningún medio
+    // propenso a corrupción, ya está adentro del firmware.
+    //
+    // sanitizeType() tiene que coincidir EXACTO con la de
+    // firmware/frozen_hal/build_components.js (mismo nombre de
+    // módulo de los dos lados) -- único caracter que un `type` puede
+    // traer inválido para un identificador Python es "-" (ej.
+    // "ky-018").
+    _sanitizeHalType(type) {
+        return type.replace(/-/g, "_");
+    }
+
+    _wrapFrozenImport(type) {
+
+        const modName = `_pit_hal_${this._sanitizeHalType(type)}`;
+
+        return (
+            `# -- HAL: ${type} (congelado) --\n` +
+            `try:\n` +
+            `    import ${modName}\n` +
+            `except Exception as _hal_err:\n` +
+            `    print("HAL_ERROR:${type}: " + repr(_hal_err))\n`
+        );
+
+    }
+
+    // "Modo desarrollo de HAL" -- ver firmware/frozen_hal/README.md.
+    // Herramienta para iterar sobre un .hal.py sin recompilar
+    // firmware en cada cambio: fuerza el camino dinámico de siempre
+    // (fetch + paste) aunque el firmware conectado tenga ese tipo
+    // congelado. Pensado para activarse a mano desde la consola del
+    // navegador (localStorage.setItem("pit_hal_dev_mode","1")), no
+    // hay UI -- es una herramienta de desarrollo de ESTE proyecto,
+    // no algo para el usuario final.
+    _halDevMode() {
+        return localStorage.getItem("pit_hal_dev_mode") === "1";
     }
 
     async _buildPendingHal() {
@@ -739,6 +1416,18 @@ class ReplPanel {
 
             if (this._halSentToFirmware.has(type)) continue; // ya está en el firmware, no lo repetimos
 
+            // Camino rápido: el firmware conectado ya tiene este tipo
+            // congelado (ver _wrapFrozenImport) -- nos ahorramos el
+            // fetch Y el paste completo, mandamos solo el import.
+            // _halDevMode() es la válvula de escape para iterar sobre
+            // un .hal.py sin recompilar firmware (ver el comentario
+            // grande de _halDevMode()).
+            if (this._frozenHalTypes.has(type) && !this._halDevMode()) {
+                parts.push(this._wrapFrozenImport(type));
+                newlySent.push(type);
+                continue;
+            }
+
             const hal = await this._loadHal(type);
 
             if (hal) {
@@ -798,31 +1487,29 @@ class ReplPanel {
         return run;
     }
 
-    // Delay entre línea y línea al pegar en paste mode.
-    //
-    // ANTES: 60ms fijo por línea (después bajado a 20ms) -- pero un
-    // número fijo no tiene en cuenta que server.js (writeToQemuThrottled)
-    // parte cada línea en trozos de SEND_CHUNK_SIZE bytes con
-    // SEND_CHUNK_DELAY_MS entre trozo y trozo. Una línea corta
-    // ("import sys") entra en un trozo y el delay fijo sobraba. Pero
-    // una línea de "def" larga/indentada podía pesar 3-4 trozos --
-    // más tiempo real en el servidor que lo que nosotros esperábamos
-    // acá. Como server.js procesa todo en una cola en orden (nunca
-    // pierde nada, pero tampoco salta líneas), el resultado era que
-    // la cola se iba acumulando línea a línea: arrancaba rápido
-    // (líneas cortas al principio) y se iba poniendo cada vez más
-    // lento a medida que aparecían líneas largas dentro de los "def".
-    //
-    // AHORA: calculamos cuánto va a tardar REALMENTE server.js en
-    // mandar esa línea puntual (según su tamaño en bytes) y esperamos
-    // al menos eso -- así nunca se forma cola, sea la línea corta o
-    // larga. Estos dos valores tienen que coincidir con los de
-    // server.js (SEND_CHUNK_SIZE / SEND_CHUNK_DELAY_MS) -- si se
+    // REVERTIDO -- se había sacado el pacing línea a línea de acá
+    // (ver historial/memoria del proyecto) confiando en que la
+    // sendQueue de server.js sola bastaba para evitar corrupción,
+    // ahorrándose la doble espera. CONFIRMADO EN LA PRÁCTICA que NO
+    // alcanza: reportado con un script de RC522 de ~15 líneas,
+    // corrupción real perdiendo el PRINCIPIO de una línea corta
+    // ("    rst=22,\n" llegó como "22,\n", "if status == rfid.OK:\n"
+    // llegó como "s == rfid.OK:\n") -- mismo síntoma exacto que la
+    // corrupción de HAL ya documentada, solo que esta vez en código
+    // del USUARIO, que no tiene el checksum/aislamiento que sí
+    // protege a los .hal.py (por eso se veía como un SyntaxError
+    // confuso en vez de un HAL_ERROR claro). Como acá arriba mismo
+    // quedó anotado como la señal a esperar, se vuelve a la espera
+    // por línea, calculada contra los mismos SEND_CHUNK_SIZE/
+    // SEND_CHUNK_DELAY_MS reales de server.js -- si esos valores
     // cambian de un lado, cambiar del otro también.
-    
-    static SEND_CHUNK_SIZE      = 256; //32; // bytes -- debe igualar a server.js
-    static SEND_CHUNK_DELAY_MS  =  2; //8;  // ms    -- debe igualar a server.js
+    static SEND_CHUNK_SIZE      = 8;  // debe igualar a server.js
+    static SEND_CHUNK_DELAY_MS  = 25; // ms -- debe igualar a server.js
     static PASTE_LINE_DELAY_MS  = 20; // piso mínimo, para líneas cortas
+
+    // Tope de espera post-Ctrl+D para pegados SILENCIOSOS (preloadHal)
+    // -- ver _pasteBlock()/_waitForNextPrompt() más abajo.
+    static PASTE_FINISH_TIMEOUT_MS = 6000;
 
     // Bytes reales (no caracteres JS) que va a pesar la línea al
     // viajar por el WS -- importante si hay UTF-8 multibyte, aunque
@@ -843,31 +1530,75 @@ class ReplPanel {
     // Ejecutar, donde sí queremos ver correr el código del usuario).
     async _pasteBlock(fullCode, halLineCount, { silent = false } = {}) {
 
-        // Interrumpe lo que estuviera corriendo antes y da un margen
-        // para que MicroPython vuelva al prompt ">>>" antes del Ctrl+E.
-        this.simulator.eventBus.emit("qemu:send", "\x03");
-        await this._sleep(150);
+        // Traba: mientras dure este bloque Ctrl+E...Ctrl+D, ningún otro
+        // emisor (RTC:/TEMP:/DIST:/ADC:/IN:/etc. -- ver la nota grande
+        // en QemuBridge.send()) puede meter una línea propia en medio
+        // del paste. Se libera SIEMPRE en el finally, incluso si algo
+        // de acá adentro tira una excepción.
+        this.simulator.qemuBridge?.beginPasteLock();
 
-        this._suppressEcho = true;
-        this.simulator.eventBus.emit("qemu:send", "\x05"); // Ctrl+E: paste mode
+        try {
 
-        const lines = fullCode.split("\n");
+            // Interrumpe lo que estuviera corriendo antes y da un margen
+            // para que MicroPython vuelva al prompt ">>>" antes del Ctrl+E.
+            // qemuBridge.interrupt() (no "qemu:send" -> _sendImmediate,
+            // que le agrega "\r\n" y le hace perder el bypass rápido de
+            // server.js para Ctrl+C/D -- ver el comentario grande en
+            // _probeWarmBoot()) para que esto corte YA lo que sea que
+            // esté trabado, sin quedar haciendo fila detrás de nada.
+            this.simulator.qemuBridge?.interrupt();
+            await this._sleep(150);
 
-        for (let i = 0; i < lines.length; i++) {
-            await this._sleep(this._lineDelayMs(lines[i]));
-            if (!silent && i === halLineCount) {
-                // A partir de acá lo que se pega es código del
-                // usuario: dejamos de ocultar el eco.
-                this._suppressEcho = false;
+            this._suppressEcho = true;
+            this.simulator.eventBus.emit("qemu:send", "\x05"); // Ctrl+E: paste mode
+
+            const lines = fullCode.split("\n");
+
+            for (let i = 0; i < lines.length; i++) {
+                await this._sleep(this._lineDelayMs(lines[i]));
+                if (!silent && i === halLineCount) {
+                    // A partir de acá lo que se pega es código del
+                    // usuario: dejamos de ocultar el eco.
+                    this._suppressEcho = false;
+                }
+                this.simulator.eventBus.emit("qemu:send", lines[i] + "\n");
             }
-            this.simulator.eventBus.emit("qemu:send", lines[i] + "\n");
+
+            await this._sleep(ReplPanel.PASTE_LINE_DELAY_MS);
+            this.simulator.eventBus.emit("qemu:send", "\x04"); // Ctrl+D: ejecutar
+
+            // BUG REAL encontrado (reportado por el usuario: código
+            // "oculto" -- el wrapper del HAL -- apareciendo crudo en
+            // el panel): en un pegado SILENCIOSO (preloadHal, HAL
+            // grande como el del LCD I2C con ~3KB de base64),
+            // _suppressEcho se apagaba acá con un delay FIJO de solo
+            // 20ms -- pero MicroPython todavía puede estar
+            // ecoando/ejecutando el bloque (el checksum, el decode,
+            // el exec real) bastante más de 20ms después de recibir
+            // el Ctrl+D. La COLA de esa salida (las últimas líneas
+            // del wrapper) llegaba DESPUÉS de que ya habíamos
+            // destapado el eco -- se mostraba cruda, aunque el resto
+            // del mismo pegado sí había quedado oculto.
+            //
+            // En un pegado NO silencioso (Ejecutar código del
+            // usuario), _suppressEcho ya se destapó ANTES, a mitad
+            // del loop de arriba (ver "!silent && i === halLineCount")
+            // -- ahí este delay fijo sigue alcanzando, y esperar un
+            // ">>>" real no serviría de nada si el código del usuario
+            // es un "while True" infinito (nunca vuelve al prompt).
+            if (silent) {
+                await this._waitForNextPrompt(ReplPanel.PASTE_FINISH_TIMEOUT_MS);
+            } else {
+                await this._sleep(ReplPanel.PASTE_LINE_DELAY_MS);
+            }
+
+            this._suppressEcho = false;
+
+        } finally {
+
+            this.simulator.qemuBridge?.endPasteLock();
+
         }
-
-        await this._sleep(ReplPanel.PASTE_LINE_DELAY_MS);
-        this.simulator.eventBus.emit("qemu:send", "\x04"); // Ctrl+D: ejecutar
-        await this._sleep(ReplPanel.PASTE_LINE_DELAY_MS);
-
-        this._suppressEcho = false;
 
     }
 
@@ -879,9 +1610,19 @@ class ReplPanel {
     // usuario lo tipeara a mano) preguntando si sys.modules ya tiene
     // "_pit_state" sembrado por una corrida anterior de _base_hal.py.
     //
-    // Se oculta con _suppressEcho para que este comando de
-    // diagnóstico no ensucie el panel -- se restaura apenas se
-    // resuelve la promesa (por respuesta o por timeout).
+    // ANTES se ocultaba con _suppressEcho (igual que el paste mode del
+    // HAL) para que este comando de diagnóstico no ensuciara el panel
+    // -- pero _suppressEcho tapa TODO lo que llegue mientras está
+    // prendido, sin importar la fuente. Esto se manda apenas se abre
+    // la conexión (ver "qemu:connected" en bindBusEvents), justo
+    // cuando QEMU/MicroPython puede estar todavía imprimiendo su
+    // propio banner de arranque real (rst:0x1, boot:0x12, "MicroPython
+    // vX.Y.Z on ...") -- con _suppressEcho de por medio, esa salida
+    // real se comía en silencio, sin ninguna forma de verla. Ahora en
+    // vez de tapar todo, se deja pasar todo tal cual y solo se filtra
+    // la línea puntual de ESTE print() de diagnóstico (ver
+    // PROBE_MARK) en el filtro de "qemu:output" de bindBusEvents(),
+    // igual que ya se filtran las líneas de protocolo (GPIO:/IN:/etc).
     //
     // PROBE_TIMEOUT_MS: tope de seguridad. Si no llega nada a
     // tiempo (REPL trabado, desconexión rara, primera vez que
@@ -894,7 +1635,56 @@ class ReplPanel {
     static PROBE_TIMEOUT_MS = 800;
     static PROBE_MARK = "_PIT_WARM_";
 
-    _probeWarmBoot() {
+    // Probe de tipos con HAL congelado (ver _probeFrozenTypes() más
+    // abajo y firmware/frozen_hal/README.md) -- mismo criterio que
+    // PROBE_MARK: un print() de una sola línea, nunca lanza excepción
+    // sea cual sea el firmware conectado (firmware viejo sin nada de
+    // esto → imprime el marcador solo, lista vacía).
+    static FROZEN_PROBE_MARK = "_PIT_FROZEN_";
+
+    // BUG REAL encontrado (reportado por el usuario: "el botón de
+    // Ejecutar no se activa después de correr el simulador", pero SÍ
+    // se activaba en cuanto pegaba el HAL de algún componente): esta
+    // sonda antes mandaba el print() de diagnóstico DIRECTO, sin
+    // interrumpir nada antes. Si la sesión anterior de QEMU había
+    // quedado con un programa del usuario corriendo (ej. un
+    // "while True" que no llegó a interrumpirse del todo antes de
+    // que disconnectWs() cerrara el socket -- 100ms de margen no
+    // siempre alcanza), el intérprete no está en su prompt
+    // interactivo: el print() de la sonda cae en saco roto, nunca
+    // hay respuesta, _probeWarmBoot() agota el timeout sin ver nunca
+    // un ">>>" real, y _onReplReady() jamás se dispara -- el REPL/
+    // Ejecutar quedan deshabilitados para siempre en esa conexión.
+    // _pasteBlock() (el que SÍ manda HAL) ya mandaba Ctrl+C + una
+    // pausa antes de su propio trabajo, por eso agregar un componente
+    // "arreglaba" el síntoma -- no por casualidad, sino porque ESO
+    // interrumpía el programa viejo. Ahora la sonda hace lo mismo:
+    // Ctrl+C primero, para llegar a un prompt de verdad sin importar
+    // en qué quedó la sesión anterior.
+    async _probeWarmBoot() {
+
+        // BUG REAL encontrado (2026-07-31, reportado como "después de
+        // Detener y volver a Simular, el REPL/editor ya no responde"):
+        // este Ctrl+C se mandaba con eventBus.emit("qemu:send", "\x03")
+        // -> QemuBridge._sendImmediate(), que le agrega "\r\n" a
+        // cualquier texto que no termine en salto de línea -- "\x03"
+        // se convertía en "\x03\r\n" (3 bytes), y server.js SOLO manda
+        // directo a stdin (bypaseando su cola con pausa entre trozos)
+        // los mensajes de UN byte exacto que sean 0x03/0x04 (ver
+        // ws.on("message") en server.js). Al dejar de calificar para
+        // ese bypass, este Ctrl+C cae en la MISMA cola lenta que
+        // cualquier paste normal -- si la sesión anterior dejó algo
+        // sin drenar del todo (ej. el reset de disconnectWs() no
+        // alcanzó a interrumpir un "while True" a tiempo), este
+        // segundo intento de interrumpir queda haciendo fila DETRÁS
+        // de eso en vez de cortarlo YA, la sonda nunca ve un ">>>"
+        // real, _onReplReady() nunca se dispara, y el input/Ejecutar
+        // quedan deshabilitados para siempre en esa conexión -- el
+        // síntoma exacto reportado. QemuBridge.interrupt() manda el
+        // byte crudo de un solo golpe (this.ws.send("\x03") directo,
+        // sin pasar por _sendImmediate), preservando el bypass real.
+        this.simulator.qemuBridge?.interrupt();
+        await this._sleep(150);
 
         return new Promise((resolve) => {
 
@@ -903,7 +1693,6 @@ class ReplPanel {
                 if (settled) return;
                 settled = true;
                 this._warmProbe = null;
-                this._suppressEcho = false;
                 resolve(false);
             }, ReplPanel.PROBE_TIMEOUT_MS);
 
@@ -911,15 +1700,120 @@ class ReplPanel {
                 if (settled) return;
                 settled = true;
                 clearTimeout(timer);
-                this._suppressEcho = false;
                 resolve(isWarm);
             };
 
-            this._suppressEcho = true;
             this.simulator.eventBus.emit(
                 "qemu:send",
                 `print("${ReplPanel.PROBE_MARK}" + ("1" if "_pit_state" in __import__("sys").modules else "0"))`
             );
+
+        });
+
+    }
+
+    // ====================================================
+    // ¿Qué tipos de componente tienen su HAL CONGELADO en el
+    // firmware conectado? (ver firmware/frozen_hal/README.md). Un
+    // solo print() interactivo (no paste), expresión ternaria para
+    // que NUNCA lance una excepción sea cual sea el firmware --
+    // firmware viejo (sin _pit_frozen_components) o corriendo sin
+    // firmware custom en absoluto simplemente no tiene ese nombre en
+    // sys.modules, cae en la rama "else" y contesta el marcador con
+    // la lista vacía. boot_snippet.py importa _pit_frozen_components
+    // incondicionalmente (junto con los otros 4 módulos siempre
+    // presentes) -- si ese import corrió, ya está en sys.modules
+    // para cuando este probe se manda.
+    //
+    // Se llama DESPUÉS de que _resyncHalAfterBoot() resuelve el
+    // warm-boot probe (mismo prompt real ya alcanzado, mismo
+    // criterio de "no mandar nada mientras el intérprete no esté
+    // listo" que ya vale para _probeWarmBoot()).
+    // ====================================================
+
+    async _probeFrozenTypes() {
+
+        return new Promise((resolve) => {
+
+            let settled = false;
+            const timer = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                this._frozenProbe = null;
+                resolve(new Set());
+            }, ReplPanel.PROBE_TIMEOUT_MS);
+
+            this._frozenProbe = (typesCsv) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                const types = typesCsv ? typesCsv.split(",").filter(Boolean) : [];
+                resolve(new Set(types));
+            };
+
+            // BUG REAL encontrado probando esto con QEMU real: la
+            // terminal ecoa de vuelta el propio comando tal cual se
+            // tipeó (comportamiento normal de cualquier REPL
+            // interactivo) -- ese eco llega ANTES que el resultado
+            // real del print(), y como el código fuente de abajo
+            // contiene el string "_PIT_FROZEN_" literal (entre
+            // comillas, para construir el marcador), el chequeo
+            // "text.includes(FROZEN_PROBE_MARK)" de bindBusEvents()
+            // matcheaba contra ESE eco -- agarrando basura (un
+            // fragmento del código fuente) como si fuera la lista de
+            // tipos, antes de que llegara la línea real.
+            //
+            // _probeWarmBoot() no sufre esto porque valida el
+            // caracter siguiente al marcador (solo acepta "0"/"1") --
+            // en el eco de SU fuente, el caracter siguiente es una
+            // comilla, así que ese chequeo lo descarta solo, por
+            // suerte de cómo está escrito ese comando puntual. Acá,
+            // en vez de depender de una validación así de frágil,
+            // partimos el marcador en dos literales Python
+            // ADYACENTES (concatenación implícita en tiempo de
+            // parseo) -- el substring "_PIT_FROZEN_" completo nunca
+            // aparece tal cual en el CÓDIGO FUENTE que se ecoa, solo
+            // en el RESULTADO real del print().
+            const markMid = Math.ceil(ReplPanel.FROZEN_PROBE_MARK.length / 2);
+            const markA = ReplPanel.FROZEN_PROBE_MARK.slice(0, markMid);
+            const markB = ReplPanel.FROZEN_PROBE_MARK.slice(markMid);
+
+            this.simulator.eventBus.emit(
+                "qemu:send",
+                `print("${markA}" "${markB}" + (",".join(sorted(__import__("sys").modules["_pit_frozen_components"].FROZEN_TYPES)) if "_pit_frozen_components" in __import__("sys").modules else ""))`
+            );
+
+        });
+
+    }
+
+    // ====================================================
+    // Esperar a que aparezca un ">>>" real en la salida cruda -- ver
+    // _pasteBlock() (rama "silent"). Igual que _warmProbe, el chequeo
+    // vive en el listener de "qemu:output" de bindBusEvents(), ANTES
+    // del "if (this._suppressEcho) return;" -- tiene que poder
+    // detectar el prompt mientras el eco sigue oculto, que es
+    // exactamente el estado en el que se usa esto.
+    // ====================================================
+
+    _waitForNextPrompt(timeoutMs) {
+
+        return new Promise((resolve) => {
+
+            let settled = false;
+            const timer = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                this._promptWatcher = null;
+                resolve(false);
+            }, timeoutMs);
+
+            this._promptWatcher = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                resolve(true);
+            };
 
         });
 
@@ -936,6 +1830,90 @@ class ReplPanel {
     // Completamente silenciosa -- no se ve nada en el panel, ni
     // "Ejecutando...", ni el eco del paste mode.
     // ====================================================
+
+    // ====================================================
+    // Decidir qué HAL hace falta (re)pastear después de que el
+    // intérprete arrancó -- sea por una conexión WS nueva o por un
+    // soft reboot (Ctrl+D en el prompt, que reinicia MicroPython sin
+    // cerrar la conexión) -- y precargarlo. Compartido por ambos
+    // casos (ver "qemu:connected" y el detector de "MPY: soft reboot"
+    // en bindBusEvents) para que los dos apliquen EXACTAMENTE la
+    // misma lógica -- antes el de soft reboot vaciaba
+    // _halSentToFirmware a ciegas (incluidos _base/_i2c_bus/_adc_bus/
+    // _uart_bus) y volvía a mandar TODO por paste mode, aunque el
+    // firmware ya los tuviera CONGELADOS (ver firmware/frozen_hal/
+    // boot.py) y se recargaran solos en cada boot sin que hiciera
+    // falta pastear nada -- un repasteo grande e innecesario, que
+    // además corría el riesgo real de chocar con un segundo click de
+    // "↺ Soft Reset" del usuario a mitad de camino (ver el comentario
+    // grande en el detector de soft reboot).
+    //
+    // _probeWarmBoot() manda un solo comando de REPL (sin paste mode)
+    // que pregunta si "_pit_state" ya está en sys.modules -- eso es
+    // justo lo que deja sembrado _base.hal.py (pegado o congelado, da
+    // igual) apenas corre una vez. Si dice que SÍ, los 4 "siempre
+    // presentes" ya están activos -- se marcan como enviados sin
+    // pastear nada. Si dice que NO (o no responde a tiempo), se
+    // asume que hace falta pastearlos de cero, igual que un arranque
+    // realmente frío.
+    // ====================================================
+
+    async _resyncHalAfterBoot() {
+
+        const warmBoot = await this._probeWarmBoot();
+
+        // En AMBOS casos hay que olvidar qué HAL "por componente" se
+        // había mandado antes -- un reboot (frío o "tibio") borra
+        // todo el estado de Python que no esté congelado en boot.py,
+        // y ahí SOLO viven _base/_i2c_bus/_adc_bus/_uart_bus
+        // (ALWAYS_HAL_TYPES). El HAL propio de cada componente
+        // (lcd_16x2_i2c.hal.py, l298n.hal.py, etc.) nunca está
+        // congelado, así que sigue perdido después de un soft
+        // reboot aunque warmBoot haya dado true -- si acá solo
+        // agregábamos ALWAYS_HAL_TYPES sin tocar el resto del Set,
+        // preloadHal() los seguía viendo como "ya enviados" y nunca
+        // los volvía a pastear (bug real: tras un soft reset, los
+        // componentes con hal.py propio quedaban sin su driver).
+        this._halRetryCounts = {};
+
+        if (!warmBoot) {
+            this._halSentToFirmware.clear();
+        } else {
+            this._halSentToFirmware = new Set(ReplPanel.ALWAYS_HAL_TYPES);
+        }
+
+        // Qué tipos de componente tiene congelados ESTE firmware --
+        // se resetea en cada conexión nueva (podría ser un firmware
+        // distinto de la vez anterior). Independiente de warmBoot: un
+        // soft reboot no "descongela" nada (lo congelado sigue
+        // congelado pase lo que pase), pero repreguntamos igual para
+        // no asumir de más -- es un solo print() barato.
+        this._frozenHalTypes = await this._probeFrozenTypes();
+
+        await this.preloadHal();
+
+    }
+
+    // ====================================================
+    // Igual que _resyncHalAfterBoot(), pero para el caso puntual de
+    // un SOFT REBOOT (Ctrl+D en el prompt) -- ver el comentario
+    // grande en bindBusEvents(), rama "MPY: soft reboot", sobre por
+    // qué hace falta este paso extra acá y no alcanza con llamar
+    // directo a _resyncHalAfterBoot(): boot.py (donde vive el HAL
+    // congelado, si el firmware lo tiene) recién EMPIEZA a correr
+    // cuando aparece el texto "MPY: soft reboot" -- el Ctrl+C que
+    // manda _probeWarmBoot() lo interrumpiría a mitad de camino. Acá
+    // se espera (sin mandar nada) a que el propio reinicio termine
+    // solo y vuelva a un prompt ocioso de verdad, y RECIÉN AHÍ se
+    // corre la sonda -- en ese momento su Ctrl+C ya es inofensivo.
+    // ====================================================
+
+    async _resyncAfterSoftReboot() {
+
+        await this._waitForNextPrompt(ReplPanel.PASTE_FINISH_TIMEOUT_MS);
+        await this._resyncHalAfterBoot();
+
+    }
 
     async preloadHal() {
 
@@ -1015,6 +1993,20 @@ class ReplPanel {
 
     async runEditorCode() {
 
+        // Ver _onReplReady() -- "▶ Ejecutar"/Ctrl+Enter no tienen que
+        // poder mandar nada mientras el simulador no esté realmente
+        // corriendo y el intérprete no haya mostrado su prompt ">>> "
+        // todavía (aunque el botón ya queda deshabilitado en el DOM
+        // en ese estado, ver bindBusEvents, Ctrl+Enter es un atajo de
+        // teclado aparte que no pasa por ese disabled).
+        if (!this._replReady) {
+            this.appendOutput(
+                "\n⚠️ Todavía no está listo -- esperá a que el REPL muestre \">>>\" (o presioná ▶ Simular si no está corriendo).\n",
+                "repl-error"
+            );
+            return;
+        }
+
         const userCode = this.editor.value.trim();
         if (!userCode) return;
 
@@ -1070,8 +2062,24 @@ class ReplPanel {
         this.replPane.classList.toggle("repl-pane-hidden",   tab !== "repl");
         this.editorPane.classList.toggle("repl-pane-hidden", tab !== "editor");
 
-        if (tab === "repl")   this.input.focus();
-        if (tab === "editor") this.editor.focus();
+        if (tab === "repl") {
+            this.input.focus();
+            // El contenedor de xterm.js estaba con display:none
+            // (repl-pane-hidden) mientras se veía el Editor -- había
+            // que remedir/reajustar filas y columnas recién ahora que
+            // vuelve a ser visible, si no quedaba con la última medida
+            // (posiblemente 0x0) de antes de esconderse.
+            this._safeFit();
+        }
+        if (tab === "editor") {
+            // Igual que _safeFit() para xterm arriba: el editor estaba
+            // con display:none (repl-pane-hidden) mientras se veía el
+            // REPL, así que CodeMirror necesita un refresh() recién
+            // ahora que vuelve a ser visible o el resaltado/cursor
+            // queda mal medido.
+            this.codeMirror.refresh();
+            this.codeMirror.focus();
+        }
 
     }
 
@@ -1090,7 +2098,14 @@ class ReplPanel {
 
         if (this.open) {
             if (this.activeTab === "repl")   this.input.focus();
-            if (this.activeTab === "editor") this.editor.focus();
+            if (this.activeTab === "editor") { this.codeMirror.refresh(); this.codeMirror.focus(); }
+            // #replPanel anima su "height" con CSS (0.25s, ver
+            // repl-panel.css) -- medir el contenedor ACÁ MISMO, en el
+            // mismo tick que recién disparó esa transición, todavía
+            // ve la altura VIEJA (32px, colapsado) y calculaba una
+            // terminal de 1 sola fila. Hay que esperar a que la
+            // transición termine antes de volver a medir.
+            setTimeout(() => this._safeFit(), 260);
             this.scrollToBottom();
         }
 
@@ -1106,10 +2121,46 @@ class ReplPanel {
         // por stdout para que el simulador los interprete (ver
         // SignalEngine/QemuBridge), no texto que el usuario espere ver
         // en su consola.
-        const PROTOCOL_PREFIXES = ["GPIO:", "IN:", "ADC:", "I2C:", "DBG:", "OLED:", "LCD:", "TEMP:", "DIST:", "SERVOOUT:"];
+        // "HAL_ERROR:" se suma acá porque ya existe un mensaje amigable
+        // que lo reemplaza ("🔄 Se detectó ruido en la transmisión...",
+        // ver el listener de "qemu:hal-error") -- sin este filtro, el
+        // repr() crudo de la excepción también se mostraba (en verde,
+        // como si fuera código normal), duplicado y más confuso que útil.
+        const PROTOCOL_PREFIXES = ["GPIO:", "IN:", "ADC:", "I2C:", "DBG:", "OLED:", "LCD:", "TEMP:", "DIST:", "SERVOOUT:", "HAL_ERROR:"];
+
+        // Mensajes de arranque del propio firmware (no del HAL) que
+        // tampoco le sirven al alumno -- "Performing initial setup" lo
+        // imprime el port esp32 de MicroPython cuando el filesystem de
+        // flash está vacío y hace falta formatearlo (nuestro caso: el
+        // filesystem nunca tuvo un boot.py real, ver
+        // firmware/frozen_hal/README.md -- solo pasa la primera vez que
+        // arranca un flash_image.bin nuevo/en blanco). Se filtra igual
+        // que las líneas de protocolo, no como "prefijo de HAL".
+        const FIRMWARE_BOOT_NOISE = ["Performing initial setup"];
 
         const isProtocolLine = (line) => {
             const t = line.trim();
+            // La línea que imprime _probeWarmBoot() (ver más abajo) no
+            // es un prefijo fijo al INICIO de la línea como los de
+            // arriba -- puede venir precedida por el eco del propio
+            // print(...) que la generó -- así que se busca en
+            // cualquier parte de la línea, no solo al principio.
+            if (t.includes(ReplPanel.PROBE_MARK)) return true;
+            if (t.includes(ReplPanel.FROZEN_PROBE_MARK)) return true;
+            // BUG REAL encontrado (el usuario veía el print() del probe
+            // de tipos congelados crudo en el panel): _probeFrozenTypes()
+            // parte FROZEN_PROBE_MARK en dos literales Python adyacentes
+            // ("_PIT_F" "ROZEN_") a propósito, para que el ECO del
+            // comando (lo que la terminal repite mientras se tipea, ANTES
+            // de que llegue el resultado real) no contenga el substring
+            // contiguo "_PIT_FROZEN_" -- eso evitaba un bug de parseo
+            // real (ver el comentario grande en _probeFrozenTypes()), pero
+            // como efecto secundario ese eco dejó de calzar acá, así que
+            // se mostraba crudo. El nombre del módulo SÍ aparece entero
+            // (sin partir) en el código fuente del probe -- filtrarlo por
+            // ahí cubre tanto el eco como el resultado real.
+            if (t.includes("_pit_frozen_components")) return true;
+            if (FIRMWARE_BOOT_NOISE.some(p => t.startsWith(p))) return true;
             return PROTOCOL_PREFIXES.some(p => t.startsWith(p));
         };
 
@@ -1121,6 +2172,13 @@ class ReplPanel {
         const looksLikeProtocolStart = (fragment) => {
             const t = fragment.replace(/^\r+/, "");
             if (!t) return false;
+            if (ReplPanel.PROBE_MARK.startsWith(t) || t.includes(ReplPanel.PROBE_MARK)) return true;
+            if (ReplPanel.FROZEN_PROBE_MARK.startsWith(t) || t.includes(ReplPanel.FROZEN_PROBE_MARK)) return true;
+            // Mismo motivo que en isProtocolLine() -- cubre el eco del
+            // comando partido.
+            const FROZEN_PROBE_NEEDLE = "_pit_frozen_components";
+            if (FROZEN_PROBE_NEEDLE.startsWith(t) || t.includes(FROZEN_PROBE_NEEDLE)) return true;
+            if (FIRMWARE_BOOT_NOISE.some(p => p.startsWith(t) || t.startsWith(p))) return true;
             return PROTOCOL_PREFIXES.some(p => p.startsWith(t) || t.startsWith(p));
         };
 
@@ -1138,6 +2196,94 @@ class ReplPanel {
                     this._warmProbe(flag === "1");
                     this._warmProbe = null;
                 }
+            }
+
+            // Marcador de _probeFrozenTypes() -- mismo criterio que
+            // _warmProbe de arriba (chequeado antes del corte de
+            // _suppressEcho). El resto de la línea, hasta el próximo
+            // "\n" o el final de este chunk, es la lista CSV de tipos
+            // (puede venir vacía).
+            if (this._frozenProbe && text.includes(ReplPanel.FROZEN_PROBE_MARK)) {
+                const idx = text.indexOf(ReplPanel.FROZEN_PROBE_MARK) + ReplPanel.FROZEN_PROBE_MARK.length;
+                const rest = text.slice(idx);
+                const nl = rest.indexOf("\n");
+                const csv = (nl === -1 ? rest : rest.slice(0, nl)).replace(/\r/g, "").trim();
+                // Defensa extra (ver el comentario grande en
+                // _probeFrozenTypes() sobre el eco del propio comando):
+                // una lista real de tipos solo tiene letras/dígitos/
+                // "_"/"-"/",". Cualquier otra cosa (comillas,
+                // paréntesis, espacios -- señal de haber matcheado
+                // contra código fuente en vez del resultado real) se
+                // descarta sin resolver, esperando la línea de verdad.
+                if (/^[\w,-]*$/.test(csv)) {
+                    this._frozenProbe(csv);
+                    this._frozenProbe = null;
+                }
+            }
+
+            // Marcador de _waitForNextPrompt() (ver _pasteBlock()) --
+            // mismo criterio que _warmProbe de arriba: se chequea
+            // ANTES del "if (this._suppressEcho) return;", porque
+            // esto se usa justo MIENTRAS el eco sigue oculto.
+            if (this._promptWatcher && text.includes(">>>")) {
+                this._promptWatcher();
+                this._promptWatcher = null;
+            }
+
+            // Un reinicio de MicroPython (Ctrl+D en el prompt en vez
+            // de en medio de un paste -- el botón "↺ Soft Reset", o
+            // cualquiera que lo dispare) borra TODOS los módulos que
+            // NO estén congelados en el firmware -- el HAL POR
+            // COMPONENTE (bmp180, lcd_16x2_i2c, etc., pegado por
+            // paste mode) se pierde entero. Sin esto, el próximo
+            // "Ejecutar" mandaba SOLO el código del usuario (asumiendo
+            // que el HAL seguía cargado) y fallaba con NameError.
+            //
+            // OJO -- bug real de la primera versión de este fix: acá
+            // se limpiaba _halSentToFirmware A CIEGAS (incluidos
+            // _base/_i2c_bus/_adc_bus/_uart_bus) y se volvía a mandar
+            // TODO por paste mode. Con el firmware que ya los tiene
+            // CONGELADOS (ver firmware/frozen_hal/boot.py), esos 4
+            // ya se recargan solos en CADA boot -- cold o soft, da lo
+            // mismo, boot.py corre siempre -- así que repastearlos
+            // era 100% innecesario. Peor: mientras ese repasteo grande
+            // estaba en curso, el usuario (viendo que "no pasaba
+            // nada") volvía a apretar "↺ Soft Reset" -- ese click
+            // manda su Ctrl+D DIRECTO (ver replBtnReset más abajo,
+            // ahora encolado por la misma razón), que caía a mitad
+            // del paste en curso y lo cortaba -- de ahí la cascada de
+            // "IndentationError"/"SyntaxError" reportada (líneas del
+            // HAL, huérfanas de su paste mode, ejecutándose sueltas
+            // en el prompt interactivo).
+            //
+            // Ahora se usa el mismo mecanismo que una conexión nueva
+            // (_resyncHalAfterBoot -- sonda primero, recién después
+            // decide qué repastear), así que en firmware con HAL
+            // congelado esto no manda NADA de más.
+            //
+            // BUG REAL encontrado (reportado con un log real): esto NO
+            // podía llamar a _resyncHalAfterBoot() directo -- esa
+            // función arranca con _probeWarmBoot(), que manda un
+            // Ctrl+C ANTES de preguntar. El texto "MPY: soft reboot"
+            // llega apenas EMPIEZA el reinicio, mientras boot.py
+            // (que en el firmware congelado importa _pit_base ->
+            // machine, etc.) TODAVÍA se está ejecutando -- un Ctrl+C
+            // ahí lo interrumpe a mitad de camino con un
+            // KeyboardInterrupt REAL (confirmado en el log: "File
+            // boot.py... File _pit_base.py, line 71... File
+            // machine.py... KeyboardInterrupt"), así que _pit_state
+            // nunca termina de armarse y la sonda reporta "no está" --
+            // aunque el firmware SÍ tenga el HAL congelado. Es decir,
+            // el propio código de este simulador causaba el problema
+            // que decía estar evitando.
+            //
+            // Arreglo: esperar a que el reinicio termine SOLO (sin
+            // mandar nada, ver _waitForNextPrompt) antes de recién
+            // ahí correr la sonda -- una vez que MicroPython ya volvió
+            // a un prompt ocioso de verdad, el Ctrl+C de la sonda es
+            // inofensivo (mismo caso que una conexión nueva normal).
+            if (text.includes("MPY: soft reboot")) {
+                this._resyncAfterSoftReboot();
             }
 
             // Mientras se está pegando el HAL (ver runEditorCode),
@@ -1183,56 +2329,83 @@ class ReplPanel {
 
             if (out) this.appendOutput(out);
 
+            // Recién ACÁ se considera "listo de verdad" -- ver
+            // _replReady en el constructor y _onReplReady() más abajo.
+            // ">>> " es el prompt real que imprime MicroPython, sea
+            // porque terminó de bootear (banner completo) o porque
+            // respondió el print() de _probeWarmBoot() -- cualquiera
+            // de los dos casos significa que el intérprete YA puede
+            // recibir comandos de verdad.
+            if (!this._replReady && out.includes(">>>")) {
+                this._onReplReady();
+            }
+
+        });
+
+        // Historial que server.js manda apenas se conecta (ver la nota
+        // grande en server.js/OUTPUT_HISTORY_MAX_BYTES) -- por ejemplo,
+        // el banner real de arranque (rst:0x1, "MicroPython vX.Y.Z on
+        // ..."), que QEMU imprime UNA sola vez al bootear, mucho antes
+        // de que el navegador llegue a conectarse. Se muestra igual que
+        // "qemu:output" (mismo filtro de líneas de protocolo), pero
+        // NUNCA dispara _onReplReady(): es texto VIEJO, puede incluir
+        // un ">>>" de hace rato aunque el intérprete esté ocupado
+        // ahora mismo -- la sonda real (_probeWarmBoot) sigue siendo la
+        // única fuente de verdad sobre si se puede mandar código YA.
+        this.simulator.eventBus.on("qemu:history", (text) => {
+
+            if (!text) return;
+
+            const shown = text
+                .split("\n")
+                .filter(line => !isProtocolLine(line))
+                .join("\n");
+
+            if (shown.trim()) this.appendOutput(shown, "repl-info");
+
         });
 
         this.simulator.eventBus.on("qemu:connected", async () => {
-            this.appendOutput("\n✅ Conectado a QEMU — MicroPython listo\n", "repl-info");
-            this.input.disabled   = false;
-            this.sendBtn.disabled = false;
-            this.prompt.style.color = "#00ff88";
+            this.appendOutput("\n✅ ESP32 conectada — esperando que MicroPython termine de arrancar...\n", "repl-info");
+
+            // Todavía NO se habilita el input/Ejecutar acá -- recién
+            // cuando se vea el prompt ">>> " de verdad (_onReplReady).
+            // "Conectado" solo dice que el WebSocket abrió, no que el
+            // intérprete ya esté listo para recibir comandos (el
+            // arranque real de QEMU/MicroPython puede tardar bastante
+            // más que el WebSocket en sí).
+            this._replReady = false;
+            this.input.disabled   = true;
+            this.sendBtn.disabled = true;
+            const runBtn = document.getElementById("replBtnRun");
+            if (runBtn) runBtn.disabled = true;
 
             this._lastGpioLogged = {};
 
-            // ANTES: cualquier reconexión de WebSocket vaciaba
-            // _halSentToFirmware sin preguntar nada, asumiendo
-            // "nueva conexión = firmware recién arrancado". Pero
-            // node server.js lanza QEMU UNA sola vez -- si el
-            // usuario solo apretó "Detener" y volvió a "Simular"
-            // (sin reiniciar el server), MicroPython del otro lado
-            // sigue vivo con todo el HAL ya cargado en memoria, y
-            // repastearlo entero es tiempo perdido (varios segundos
-            // con muchos componentes en el canvas).
-            //
-            // AHORA: le preguntamos primero. _probeWarmBoot() manda
-            // un solo comando de REPL (sin pasar por paste mode) que
-            // imprime si sys.modules["_pit_state"] ya existe -- eso
-            // es justo lo que _base_hal.py deja sembrado la primera
-            // vez que corre (ver el truco de "estado persistente
-            // entre re-pasteos" en su propio archivo). Si dice que
-            // SÍ, no tocamos _halSentToFirmware (nada para repastear).
-            // Si dice que NO -- o no llega respuesta a tiempo, ver
-            // PROBE_TIMEOUT_MS -- asumimos arranque limpio, igual que
-            // antes: ante la duda, preferimos repastear de más que
-            // dejar al firmware sin HAL.
-            const warmBoot = await this._probeWarmBoot();
-            if (!warmBoot) {
-                this._halSentToFirmware.clear();
-                this._halRetryCounts = {};
-            }
+            // Ver _resyncHalAfterBoot() -- sondea primero (¿ya está
+            // "_pit_state" en sys.modules, sea por reconexión en
+            // caliente o por HAL congelado en el firmware?) y recién
+            // después decide qué repastear, en vez de asumir "conexión
+            // nueva = arrancar de cero" a ciegas.
+            await this._resyncHalAfterBoot();
 
-            // Precargar el HAL pendiente en segundo plano YA, sin
-            // esperar al primer "Ejecutar" -- para cuando el usuario
-            // termine de escribir su código, el HAL (que puede
-            // tardar varios segundos con muchos componentes en el
-            // canvas) ya debería estar cargado, y "Ejecutar" solo
-            // manda el código propiamente dicho.
-            this.preloadHal();
+            // Re-enviar estado de componentes tipo RC522 (tarjeta
+            // "Hold" prendida desde un proyecto recién cargado, o
+            // desde antes de esta reconexión) -- ver la nota "resync"
+            // en ComponentBehaviorRegistry.js. Tiene que ir DESPUÉS
+            // de preloadHal(): si el mensaje llega antes de que el
+            // .hal.py del componente registre su protocolo, se
+            // pierde igual que cualquier mensaje sin listener.
+            this.simulator.signalEngine.resyncAllComponents();
         });
 
         this.simulator.eventBus.on("qemu:disconnected", () => {
-            this.appendOutput("\n🔴 Desconectado de QEMU\n", "repl-error");
+            this.appendOutput("\n🔴 ESP32 desconectada\n", "repl-error");
+            this._replReady = false;
             this.input.disabled   = true;
             this.sendBtn.disabled = true;
+            const runBtn = document.getElementById("replBtnRun");
+            if (runBtn) runBtn.disabled = true;
             this.prompt.style.color = "#666";
         });
 
@@ -1244,6 +2417,21 @@ class ReplPanel {
         // comportamiento de antes: sin esto, un HAL corrupto una vez
         // quedaba roto hasta un F5 completo de la página).
         this.simulator.eventBus.on("qemu:hal-error", (type) => {
+
+            // Aviso corto y claro -- justo antes de esto, el usuario
+            // suele ver el eco crudo del wrapper Python (líneas de
+            // código, no una traza real) porque la corrupción de
+            // transmisión también desincroniza el mecanismo normal de
+            // "ocultar el eco mientras se pega" (_suppressEcho). Sin
+            // este mensaje, ese ruido se ve como si algo se hubiera
+            // roto de verdad -- pero _retryHalAfterError() ya lo
+            // reintenta solo, en segundo plano, así que esto es solo
+            // contexto, no dispara ningún reintento nuevo por sí mismo.
+            this.appendOutput(
+                `\n🔄 Se detectó ruido en la transmisión del HAL de "${type}" -- reintentando solo, no hace falta hacer nada.\n`,
+                "repl-info"
+            );
+
             this._halSentToFirmware.delete(type);
             this._retryHalAfterError(type);
         });
@@ -1281,10 +2469,39 @@ class ReplPanel {
     }
 
     // ====================================================
+    // Se vio el prompt ">>> " real por primera vez desde que se
+    // conectó -- ver el listener de "qemu:output" en bindBusEvents().
+    // Recién acá se habilitan de verdad el REPL y "▶ Ejecutar"/
+    // Ctrl+Enter (ver el guard correspondiente en sendInput()/
+    // runEditorCode()) -- estar "conectado" (WebSocket abierto) no es
+    // lo mismo que estar "listo" (intérprete recibiendo comandos).
+    // ====================================================
+
+    _onReplReady() {
+
+        this._replReady = true;
+
+        this.input.disabled   = false;
+        this.sendBtn.disabled = false;
+        this.prompt.style.color = "#00ff88";
+
+        const runBtn = document.getElementById("replBtnRun");
+        if (runBtn) runBtn.disabled = false;
+
+    }
+
+    // ====================================================
     // REPL helpers
     // ====================================================
 
     sendInput() {
+
+        // Ver _onReplReady() -- sin esto, Enter/"Enviar" mandarían
+        // texto a un intérprete que todavía puede estar a mitad de
+        // bootear. En la práctica this.input.disabled ya bloquea la
+        // interacción real del usuario (ver bindBusEvents), pero este
+        // guard cubre también una llamada programática directa.
+        if (!this._replReady) return;
 
         const text = this._sanitizeForSerial(this.input.value.trim());
         if (!text) return;
@@ -1319,27 +2536,40 @@ class ReplPanel {
 
     }
 
+    // Paleta simplificada a pedido: VERDE para todo lo que sea código
+    // (salida normal, ✅ conectado, ▶ Ejecutando, ^C, GPIO, etc.) y ROJO
+    // solo para errores/advertencias (⚠️, 🔴 desconectado). Antes había
+    // 4 colores (azul/rojo/amarillo/violeta para info/error/ctrl/gpio)
+    // -- ahora solo "repl-error" tiene código ANSI propio; cualquier
+    // otra clase (incluidas repl-info/repl-ctrl/repl-gpio, que se
+    // siguen usando como etiquetas semánticas aunque ya no cambien de
+    // color) cae al default de la terminal, que YA es el verde de
+    // siempre (ver _initTerminal(), foreground: "#00ff88").
+    static _ANSI_COLORS = {
+        "repl-error": "\x1b[38;2;255;82;82m",
+    };
+
     appendOutput(text, cssClass = "") {
 
-        if (!text) return;
+        if (!text || !this.terminal) return;
 
-        const span = document.createElement("span");
-        if (cssClass) span.className = cssClass;
-        span.textContent = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        // xterm.js es una terminal real: "\n" (LF) solo baja una fila
+        // SIN volver a la columna 0 (igual que una terminal serie de
+        // verdad) -- hace falta "\r\n" para un salto de línea "normal".
+        // El texto que llega acá puede traer cualquiera de los dos
+        // (crudo de QEMU, o literales JS con solo "\n"), así que
+        // normalizamos siempre a "\r\n".
+        const normalized = text.replace(/\r\n/g, "\n").replace(/\n/g, "\r\n");
 
-        this.output.appendChild(span);
-
-        // Limitar historial del output para no llenar la memoria
-        while (this.output.childNodes.length > 2000) {
-            this.output.removeChild(this.output.firstChild);
-        }
+        const color = ReplPanel._ANSI_COLORS[cssClass];
+        this.terminal.write(color ? `${color}${normalized}\x1b[0m` : normalized);
 
         this.scrollToBottom();
 
     }
 
     scrollToBottom() {
-        this.output.scrollTop = this.output.scrollHeight;
+        this.terminal?.scrollToBottom();
     }
 
 }

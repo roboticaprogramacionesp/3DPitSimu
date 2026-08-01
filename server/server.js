@@ -119,6 +119,54 @@ const CONFIG = {
 // tener que pasarla como parámetro por todos lados.
 let qemuProc = null;
 
+// ============================================
+// Historial de salida de QEMU -- a pedido: "quiero que el REPL
+// muestre esto al conectarse" (el banner real de arranque:
+// rst:0x1, boot:0x12, "MicroPython vX.Y.Z on ..."). QEMU arranca
+// UNA vez cuando corrés "node server.js" y sigue corriendo de fondo
+// -- el navegador recién se conecta cuando el usuario aprieta
+// "▶ Simular", que puede ser mucho después. broadcastRaw() de
+// siempre solo manda a los clientes YA conectados en ese momento,
+// así que el banner (impreso apenas arranca QEMU) se perdía para
+// cualquiera que se conectara después -- no había ningún bug de
+// supresión del lado del navegador, el texto ya no existía en
+// ningún lado para cuando el WS se conectaba.
+//
+// IMPORTANTE -- se CONGELA apenas se conecta el primer cliente (ver
+// wss.on("connection", ...) más abajo), no es un buffer que sigue
+// creciendo para siempre. Dos problemas reales con la primera
+// versión de esto (reportados después de probarlo):
+//   1. Cada reconexión mostraba TODO lo pasado desde que arrancó
+//      QEMU (soft-reboots viejos, prompts de sesiones anteriores...),
+//      cada vez más largo -- un historial "vivo" no es lo que se
+//      pidió, era el banner de arranque puntual.
+//   2. Mucho más grave: una vez que un cliente pega el HAL de un
+//      componente (Ctrl+E...Ctrl+D), QEMU ECOA ese paste completo
+//      por stdout -- incluyendo el bloque base64 entero -- y ese eco
+//      terminaba adentro del buffer igual que cualquier otra cosa.
+//      El navegador SIEMPRE ocultó ese eco en la sesión que lo pegó
+//      (_suppressEcho), pero el historial reenviado a una conexión
+//      NUEVA no tenía ninguna forma de saber qué ocultar -- se veía
+//      crudo el código completo del HAL (base64 y todo) en la
+//      próxima reconexión.
+// Solución: solo se guarda lo que sale ANTES de que exista ninguna
+// conexión de navegador -- en ese momento lo ÚNICO que puede estar
+// saliendo por stdout es el arranque real de QEMU/MicroPython (nadie
+// pegó código ni HAL todavía, eso requiere un cliente conectado). En
+// cuanto se conecta el primer cliente, se congela para siempre: ya
+// no se agrega nada más, pase lo que pase de ahí en adelante.
+const OUTPUT_HISTORY_MAX_BYTES = 32 * 1024;
+let outputHistory = "";
+let outputHistoryFrozen = false;
+
+function appendOutputHistory(text) {
+    if (outputHistoryFrozen) return;
+    outputHistory += text;
+    if (outputHistory.length > OUTPUT_HISTORY_MAX_BYTES) {
+        outputHistory = outputHistory.slice(-OUTPUT_HISTORY_MAX_BYTES);
+    }
+}
+
 function startQemu(wss) {
 
     const args = [
@@ -168,6 +216,7 @@ function startQemu(wss) {
     proc.stdout.on("data", (chunk) => {
         process.stdout.write(chunk);            // se sigue viendo en la terminal
         broadcastRaw(wss, chunk.toString());     // y ahora también en el navegador
+        appendOutputHistory(chunk.toString());   // y se guarda para el próximo que se conecte -- ver OUTPUT_HISTORY_MAX_BYTES
     });
 
     proc.stderr.on("data", (chunk) => {
@@ -313,6 +362,61 @@ function looksLikeBulkSource(text) {
     return newlineCount >= BULK_SOURCE_MIN_NEWLINES;
 }
 
+// BUG REAL encontrado investigando la corrupción de HAL (ver memoria
+// del proyecto): ReplPanel._pasteBlock() manda el código LÍNEA POR
+// LÍNEA -- cada línea es su propio mensaje WS con 1 sola "\n", así
+// que TODAS caían en la rama "no bulk" de acá abajo sin importar
+// cuán larga fuera esa línea puntual, escribiéndose entera de un
+// solo stdin.write() sin ningún trozeo/pausa interna. Confirmado con
+// evidencia real: una línea Python de ~170 bytes (un
+// "raise ValueError(...)" con formato largo, agregado por el
+// diagnóstico de chunk_malo/offset) perdía SIEMPRE la misma cola de
+// caracteres, en el mismo punto exacto, en intentos independientes
+// -- consistente con que la UART emulada de QEMU (con un FIFO chico,
+// como el de 128 bytes del hardware real del ESP32) no puede
+// absorber una ráfaga larga de un solo saque aunque haya esperado
+// bastante ANTES de que arrancara esa escritura puntual. Cualquier
+// mensaje más largo que esto también pasa ahora por el mismo
+// trozeo+pausa que ya usan los pegados grandes, sea cual sea su
+// cantidad de saltos de línea -- los mensajes cortos reales de
+// runtime (IN:4:1, SYNC:, ADC:34:20000) están muy por debajo de este
+// umbral y siguen yendo directo, sin pagar ninguna pausa de más.
+//
+// EXPERIMENTO EN CURSO (2026-07-25) -- ese umbral de 32 bytes NO
+// alcanzó: se reportó una corrupción real en una línea de apenas 15
+// bytes ("        return\n", perdió su propia cola "turn\n") que iba
+// por la rama corta SIN pasar por el trozeo. Bajado a 0 a propósito
+// (todo mensaje no vacío pasa por el camino trozeado+con callback de
+// escritura confirmado) para aislar la variable: si con esto la
+// corrupción desaparece del todo, el problema vive en cómo este
+// archivo escribe a stdin (y se puede volver a subir el umbral con
+// cuidado, dándole a los mensajes cortos de runtime -- teclado
+// matricial, etc. -- al menos ALGO de pausa en vez de cero). Si
+// sigue fallando IGUAL con esto, el problema no es de acá, y hay que
+// mirar QEMU/el bridge GDB en vez de seguir ajustando este archivo.
+const LINE_CHUNK_THRESHOLD_BYTES = 0;
+
+// EXCEPCIÓN puntual al trozeado de arriba -- a pedido, después de
+// confirmar con una prueba real que el auto-reporte de GPIO
+// (experimento revertido, ver git history/_base.hal.py) no mejoraba
+// nada: el cuello de botella real no era detectar la transición, era
+// la espera de "SYNC:\n" en _settle() -- esa respuesta viaja de
+// vuelta a QEMU por ACÁ, pagando el mismo trozeado completo.
+//
+// "SYNC:\n" e "IN:<pin>:<valor>\n" tienen un perfil de riesgo
+// DISTINTO al de pegar código fuente: son mensajes de formato FIJO,
+// generados siempre por este mismo servidor (nunca texto arbitrario
+// del usuario/HAL), y TOLERANTES a la pérdida -- si alguno se corrompe
+// o se pierde, _settle()/poll_input() del otro lado simplemente hacen
+// timeout (1.5s) y siguen, sin SyntaxError ni HAL corrupto a mitad de
+// camino. Por eso está bien eximirlos puntualmente sin reabrir
+// LINE_CHUNK_THRESHOLD_BYTES en general (eso ya se probó en 32 y
+// volvió a corromperse, ver el comentario de arriba -- esto es más
+// angosto: dos formatos específicos, no "cualquier línea corta").
+function isSafeControlMessage(text) {
+    return /^SYNC:\r?\n$/.test(text) || /^IN:\d+:\d+\r?\n$/.test(text);
+}
+
 // Cola global (no por-conexión): si dos pegados llegaran casi
 // juntos (ej. navegador + terminal a la vez), esto evita que sus
 // trozos se intercalen entre sí en el stdin de QEMU.
@@ -360,7 +464,20 @@ function writeToQemuThrottled(data) {
         // lectura) casi no lo sufría. Sigue yendo por la misma
         // sendQueue (para no intercalarse a mitad de un pegado
         // grande en curso), solo que sin trocear+esperar.
-        if (!isBulk) {
+        //
+        // OJO -- "corto" ahora es por LARGO REAL en bytes
+        // (LINE_CHUNK_THRESHOLD_BYTES), no solo por no tener 3+
+        // saltos de línea: una línea sola larga (ver el comentario
+        // grande arriba de LINE_CHUNK_THRESHOLD_BYTES) necesita el
+        // mismo trozeo pausado que un pegado grande, aunque no
+        // "parezca" un pegado de archivo completo.
+        //
+        // isSafeControlMessage(): "SYNC:\n"/"IN:<pin>:<valor>\n" pasan
+        // DIRECTO aunque LINE_CHUNK_THRESHOLD_BYTES esté en 0 -- ver el
+        // comentario grande junto a esa función sobre por qué estos dos
+        // formatos fijos, tolerantes a pérdida, no comparten el riesgo
+        // real que justificó bajar el umbral general.
+        if (!isBulk && (buf.length <= LINE_CHUNK_THRESHOLD_BYTES || isSafeControlMessage(asText))) {
 
             if (qemuProc && qemuProc.stdin.writable) {
                 qemuProc.stdin.write(buf);
@@ -483,12 +600,52 @@ function startWebSocketServer() {
 
         console.log("[WS] PitSimulator conectado.");
 
+        // Ver el comentario grande junto a OUTPUT_HISTORY_MAX_BYTES --
+        // esto es lo que hace que el banner real de arranque aparezca
+        // en el panel apenas conecta, en vez de perderse para siempre.
+        // Se manda SOLO a este cliente nuevo (ws.send, no
+        // broadcastRaw) para no reenviarle el historial de nuevo a
+        // los que ya estaban conectados.
+        if (outputHistory) {
+            ws.send("\x00HISTORY:" + JSON.stringify(outputHistory));
+        }
+
+        // Se congela con la PRIMERA conexión que exista, sea esta
+        // misma u otra anterior -- de ahí en más nunca se agrega nada
+        // más (ver appendOutputHistory), así que todos los clientes
+        // futuros reciben siempre el mismo banner de arranque
+        // original, nunca nada de lo que haya pasado en sesiones de
+        // REPL/HAL después de esa primera conexión.
+        outputHistoryFrozen = true;
+
         // Todo lo que el navegador manda (lo que tipeás en el REPL de
         // la página, o mensajes IN:/TEMP:/DIST: que inyecta el
         // simulador) se reenvía al stdin real de QEMU, PERO ahora
         // throttled (ver writeToQemuThrottled arriba) para no perder
         // bytes en pegados grandes.
         ws.on("message", (data) => {
+
+            // EXCEPCIÓN: Ctrl+C/Ctrl+D (los botones ■ "Interrumpir" y
+            // ↺ "Soft Reset" del panel REPL) van DIRECTO a stdin, sin
+            // pasar por sendQueue -- a pedido: "le doy al ■ pero en
+            // ocasiones... se queda en el bloque infinito sin
+            // detenerse". La causa real: sendQueue es un FIFO estricto
+            // (ver writeToQemuThrottled) -- si el usuario interrumpe
+            // justo mientras hay un pegado de HAL grande en curso (o
+            // una ráfaga de "IN:" de un encoder/teclado escaneando),
+            // el byte de Ctrl+C quedaba haciendo cola DETRÁS de todo
+            // eso, a veces varios segundos, dando la sensación de que
+            // "no funciona" cuando en realidad solo estaba esperando su
+            // turno. Un botón de INTERRUMPIR tiene que poder
+            // saltarse la cola -- ese es el sentido de que exista.
+            const asBuf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+            if (asBuf.length === 1 && (asBuf[0] === 0x03 || asBuf[0] === 0x04)) {
+                if (qemuProc && qemuProc.stdin.writable) {
+                    qemuProc.stdin.write(asBuf);
+                }
+                return;
+            }
+
             writeToQemuThrottled(data);
         });
 
@@ -560,7 +717,19 @@ async function pollGpioLoop(gdb, wss) {
 
                 broadcastRaw(wss, `GPIO:${gpio}:${value ? 1 : 0}\n`);
 
-                console.log(`[GPIO] GPIO${gpio} -> ${value ? "HIGH" : "LOW"}`);
+                // Este console.log corría SIEMPRE, sin importar
+                // CONFIG.verbose (a diferencia del bloque de arriba,
+                // que sí lo respeta) -- con algo que escanea GPIOs
+                // seguido (ej. un teclado matricial, varias
+                // transiciones por get_key()) esto imprime a la
+                // terminal de Node docenas de veces por segundo. Un
+                // console.log de más no es gratis (I/O sincrónico a
+                // la terminal) y le compite tiempo real al bucle de
+                // eventos justo cuando más importa que el bridge
+                // responda rápido -- a pedido: "no se ve fluido".
+                if (CONFIG.verbose) {
+                    console.log(`[GPIO] GPIO${gpio} -> ${value ? "HIGH" : "LOW"}`);
+                }
             }
 
         } catch (err) {
@@ -1108,7 +1277,23 @@ async function runGpioEventBridge(gdb, wss, elfPath) {
 
                     lastState[gpio] = value;
                     broadcastRaw(wss, `GPIO:${gpio}:${value ? 1 : 0}\n`);
-                    console.log(`[GPIO] GPIO${gpio} -> ${value ? "HIGH" : "LOW"}`);
+
+                    // Este es el bridge basado en eventos (el que de
+                    // verdad usa este proyecto -- ver pollGpioLoop
+                    // más arriba, que es solo el fallback roto). Cada
+                    // gpio_set_level() real del firmware dispara este
+                    // breakpoint -- un teclado matricial escaneando
+                    // (varias columnas, cada una LOW y después HIGH
+                    // por cada vuelta de get_key()) puede disparar
+                    // esto docenas de veces por segundo. console.log
+                    // es I/O sincrónico a la terminal -- sin gate,
+                    // competía tiempo real contra el propio bucle de
+                    // eventos justo en el camino caliente de detectar
+                    // una tecla, hacieno que "no se viera fluido"
+                    // (a pedido del usuario).
+                    if (CONFIG.verbose) {
+                        console.log(`[GPIO] GPIO${gpio} -> ${value ? "HIGH" : "LOW"}`);
+                    }
 
                 }
 
