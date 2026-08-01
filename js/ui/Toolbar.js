@@ -38,8 +38,8 @@ class Toolbar {
         const isWasmMode = location.hash === "#modo=wasm";
         btn.classList.toggle("active", isWasmMode);
         btn.title = isWasmMode
-            ? "Modo navegador (WASM) activo -- clic para volver al modo escritorio (QEMU)"
-            : "Modo escritorio (QEMU) activo -- clic para probar el modo navegador (WASM, experimental)";
+            ? "Modo navegador activo -- clic para volver al modo escritorio"
+            : "Modo escritorio activo -- clic para probar el modo navegador (experimental)";
 
         btn.addEventListener("click", () => {
 

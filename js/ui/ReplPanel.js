@@ -2417,7 +2417,7 @@ class ReplPanel {
             // Worker ya cargó _base_wasm.py/_i2c_bus_wasm.py antes de
             // mandar "ready", así que queda listo de una.
             if (this.simulator.qemuBridge?.isWasmBridge) {
-                this.appendOutput("\n🌐 Listo (modo navegador -- sin QEMU real).\n", "repl-info");
+                this.appendOutput("\n🌐 Listo (modo navegador).\n", "repl-info");
 
                 // Los módulos "siempre presentes" (_base/_i2c_bus/etc.)
                 // NUNCA se fetchean/mandan acá -- wasmWorker.js ya cargó

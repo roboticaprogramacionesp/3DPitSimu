@@ -64,6 +64,7 @@ class WasmBridge {
         // ?modo=wasm en la URL, nunca en runtime), nunca hay dos
         // instancias escuchando el mismo evento a la vez.
         this.simulator.eventBus.on("simulation:start", () => this.connect());
+        this.simulator.eventBus.on("simulation:stop",  () => this.disconnect());
 
         // ReplPanel.sendInput() (el input de una línea + botón
         // "Enviar" del REPL, abajo del todo -- distinto de ▶ Ejecutar,
@@ -343,15 +344,11 @@ class WasmBridge {
 
     }
 
-    // "Interrumpir" real (ver limitación conocida arriba): mata el
-    // Worker y arranca uno nuevo. Pierde variables/estado del
-    // intérprete -- documentado a propósito, no es un bug. Mismo
-    // ciclo disconnected→connected que QemuBridge.onClose()/onOpen(),
-    // así que el resto de la UI (ReplPanel, LED power del ESP32) no
-    // necesita saber que esto es un bridge distinto.
-    interrupt() {
+    // Estado compartido entre interrupt() y disconnect(): apaga todo
+    // lo visual/de simulación, mismo criterio que QemuBridge.onClose().
+    _teardown() {
 
-        if (!this._connected) return;
+        if (!this._connected) return false;
 
         this._connected = false;
         this.updateStatus("disconnected");
@@ -366,7 +363,44 @@ class WasmBridge {
             this.simulator.renderer.setEsp32GpioLed(esp32, false);
         }
 
+        return true;
+
+    }
+
+    // "Interrumpir" real (ver limitación conocida arriba): mata el
+    // Worker y arranca uno nuevo DE UNA -- queda listo para la
+    // próxima corrida. Pierde variables/estado del intérprete --
+    // documentado a propósito, no es un bug. Mismo ciclo
+    // disconnected→connected que QemuBridge.onClose()/onOpen(), así
+    // que el resto de la UI (ReplPanel, LED power del ESP32) no
+    // necesita saber que esto es un bridge distinto.
+    interrupt() {
+
+        if (!this._teardown()) return;
         this._spawnWorker();
+
+    }
+
+    // "⏹ Detener" (botón de arriba, distinto de "■ Interrumpir" del
+    // panel REPL): mata el Worker y NO arranca uno nuevo -- queda
+    // desconectado de verdad hasta que el usuario le dé
+    // "▶ Simular" otra vez. Reportado por el usuario: antes nada
+    // escuchaba "simulation:stop" para WasmBridge, así que este
+    // botón no hacía nada (ver QemuBridge.disconnectWs(), mismo
+    // criterio acá pero matando el Worker en vez de cerrar un WS).
+    disconnect() {
+
+        if (!this._teardown()) return;
+
+        if (this.worker) {
+            try { this.worker.terminate(); } catch (err) { /* no-op */ }
+            this.worker = null;
+        }
+
+        if (this._pendingRunResolvers) {
+            this._pendingRunResolvers.forEach(resolve => resolve());
+            this._pendingRunResolvers.clear();
+        }
 
     }
 
