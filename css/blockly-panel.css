@@ -1,0 +1,109 @@
+/* ==========================================================
+   PitSimulator — blockly-panel.css
+   Overlay a pantalla completa del editor de bloques (BlocklyPanel.js,
+   botón 🧩 de la barra superior). A diferencia del modal chico y
+   centrado de ReportGenerator, este ocupa toda la pantalla -- Blockly
+   necesita bastante espacio real (toolbox ancho + workspace).
+   ========================================================== */
+
+.blockly-panel-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 600;
+
+    display: flex;
+    flex-direction: column;
+
+    background: #1e1f22;
+}
+
+.blockly-panel-overlay.hidden { display: none; }
+
+.blockly-panel-header {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 10px 16px;
+    background: #26282c;
+    border-bottom: 1px solid #444;
+
+    font-family: Segoe UI, Arial, sans-serif;
+}
+
+.blockly-panel-filemenu {
+    /* Ancla el .project-drawer (reusado tal cual de project-drawer.css)
+       debajo de este botón -- mismo criterio que .logo en el header
+       principal (ver comentario en css/project-drawer.css). */
+    position: relative;
+}
+
+.blockly-panel-file-toggle {
+    cursor: pointer;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background: #33353a;
+    color: #e6e6e6;
+    font-size: 13px;
+    padding: 6px 12px;
+}
+
+.blockly-panel-file-toggle:hover {
+    background: #3d4046;
+}
+
+.blockly-panel-title {
+    flex: 1;
+    color: #e6e6e6;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.blockly-panel-insert,
+.blockly-panel-close {
+    cursor: pointer;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background: #33353a;
+    color: #e6e6e6;
+    font-size: 13px;
+    padding: 6px 12px;
+}
+
+.blockly-panel-insert:hover,
+.blockly-panel-close:hover {
+    background: #3d4046;
+}
+
+.blockly-panel-insert {
+    border-color: #4caf50;
+    color: #8fdf93;
+}
+
+.blockly-panel-insert:hover {
+    background: #2c3d2d;
+}
+
+.blockly-panel-close {
+    padding: 6px 10px;
+}
+
+.blockly-panel-workspace {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+}
+
+/* El toolbox de Blockly (árbol de categorías, fondo claro por
+   default de la librería) no define su propio color de texto --
+   sin esto hereda el "color:white" global de <body> (ver
+   css/simulator.css) y queda invisible sobre el fondo claro. Mismo
+   motivo para las etiquetas de texto dentro de los flyouts (los
+   paneles que se despliegan al abrir una categoría, ej. "elige un
+   valor" en algunos bloques). */
+.blockly-panel-overlay .blocklyTreeLabel,
+.blockly-panel-overlay .blocklyTreeRoot,
+.blockly-panel-overlay .blocklyFlyoutLabelText {
+    color: #1a1a1a;
+}

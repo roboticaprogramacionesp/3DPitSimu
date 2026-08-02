@@ -73,12 +73,21 @@
     //    replPanel (código del editor), por eso se crea después de ambos.
     const reportGenerator = new ReportGenerator(sim, replPanel, toolbar);
 
-    // 9. Exponer globalmente para debug en consola del navegador
+    // 9. Editor de bloques (botón 🧩 junto al nombre del proyecto) --
+    //    overlay a pantalla completa, portado de AppBlock3 (ver plan
+    //    de este cambio). Necesita replPanel para meter el Python
+    //    generado en el editor que ya existe (codeMirror.setValue +
+    //    switchTab("editor")), por eso se crea después de él.
+    const blocklyPanel = new BlocklyPanel(sim, replPanel);
+
+    // 10. Exponer globalmente para debug en consola del navegador
     window.sim             = sim;
     window.replPanel       = replPanel;
     window.tutorialManager = tutorialManager;
     window.toolbar         = toolbar;
     window.reportGenerator = reportGenerator;
+    window.blocklyPanel    = blocklyPanel;
+    window.propertyPanel   = propertyPanel;
 
     console.log("✅ 3DPitSimu listo. REPL panel activo.");
     console.log("   Atajo: Ctrl+` para abrir/cerrar el REPL");

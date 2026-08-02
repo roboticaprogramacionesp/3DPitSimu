@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="css/tutorial.css">
     <link rel="stylesheet" href="css/report-generator.css">
     <link rel="stylesheet" href="css/annotations.css">
+    <link rel="stylesheet" href="css/blockly-panel.css">
 
     <link rel="stylesheet" href="lib/xterm/xterm.css">
     <link rel="stylesheet" href="lib/codemirror/codemirror.css">
@@ -47,6 +48,7 @@
             <span>v0.1</span>
             <input id="currentFileLabel" class="current-file-label" type="text" title="Nombre del proyecto -- se usa al Guardar/Guardar como" value="Sin guardar" spellcheck="false">
             <span id="currentFileLabelDirty" class="current-file-label-dirty" title="Cambios sin guardar">•</span>
+            <button id="btnBlockly" class="btn-project-toggle" title="Editor de bloques (armar el código arrastrando bloques)">🧩</button>
             <button id="btnGenerateReport" class="btn-project-toggle" title="Generar reporte de la práctica (SVG)">📄</button>
 
             <div id="projectDrawer" class="project-drawer hidden">
@@ -68,16 +70,6 @@
         </div>
 
         <div class="toolbar-buttons">
-            <label class="grid-select-label" title="Tamaño de la cuadrícula (afecta componentes y cables)">
-                <span class="grid-select-icon">▦</span>
-                <select id="gridSelect" class="btn-toolbar grid-select">
-                    <option value="0" selected>Hoja en blanco</option>
-                    <option value="5">5 px</option>
-                    <option value="10">10 px</option>
-                    <option value="20">20 px</option>
-                    <option value="40">40 px</option>
-                </select>
-            </label>
             <button id="btnCanvasTheme" class="btn-canvas-theme" title="Cambiar a fondo oscuro (noche)">🌙</button>
             <!-- Botón 🌐 (modo navegador/WASM) oculto a propósito -- no se
                  va a usar por ahora (se prioriza el puente local para
@@ -207,6 +199,7 @@
     <script src="js/simulator/DragManager.js"></script>
     <script src="js/simulator/WireManager.js"></script>
     <script src="js/simulator/SignalEngine.js"></script>
+    <script src="js/simulator/FrozenHalTypes.js"></script>
     <script src="js/simulator/QemuBridge.js"></script>
     <script src="js/simulator/WasmBridge.js"></script>
     <script src="js/simulator/Renderer.js"></script>
@@ -228,6 +221,20 @@
     <script src="lib/codemirror/lang-python.js"></script>
     <script src="lib/jspdf/jspdf.umd.min.js"></script>
 
+    <!-- Blockly (editor de bloques) -- v6.20210701.0, portado de
+         AppBlock3 tal cual (generadores en el namespace global
+         Blockly.Python[tipo], no la API de clases de v9+). Orden
+         importa: core -> idioma -> contenido de bloques/generadores. -->
+    <script src="lib/blockly/blockly_compressed.js"></script>
+    <script src="lib/blockly/blocks_compressed.js"></script>
+    <script src="lib/blockly/python_compressed.js"></script>
+    <script src="lib/blockly/msg/es.js"></script>
+    <script src="js/blockly/field_slider.js"></script>
+    <script src="js/blockly/blocks.js"></script>
+    <script src="js/blockly/generators.js"></script>
+    <script src="js/blockly/toolbox.js"></script>
+    <script src="js/blockly/canvasButtons.js"></script>
+
 
     <!-- ====================================================== -->
     <!-- INTERFAZ                                               -->
@@ -240,6 +247,7 @@
     <script src="js/ui/ContextMenu.js"></script>
     <script src="js/ui/TutorialManager.js"></script>
     <script src="js/ui/ReportGenerator.js"></script>
+    <script src="js/ui/BlocklyPanel.js"></script>
 
 
     <!-- ====================================================== -->

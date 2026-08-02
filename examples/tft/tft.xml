@@ -1,0 +1,72 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="tft_init" id="sYnxVZYjty_Q(dak|{a@" x="10" y="10">
+    <field name="NAME">tft</field>
+    <field name="MOSI">23</field>
+    <field name="SCK">18</field>
+    <field name="DC">21</field>
+    <field name="RST">22</field>
+    <field name="ROT">0</field>
+    <next>
+      <block type="tft_text" id="elf]m19!I6MFV90}xR5y">
+        <field name="NAME">tft</field>
+        <field name="FONT">vga_8x8</field>
+        <value name="TEXT">
+          <shadow type="text" id="lHOt:]+rgbx3GG9}z^6n">
+            <field name="TEXT">Hola TFT</field>
+          </shadow>
+        </value>
+        <value name="X">
+          <shadow type="math_number" id="Dk3!lvD*Z7Cpk3I{CC)g">
+            <field name="NUM">10</field>
+          </shadow>
+        </value>
+        <value name="Y">
+          <shadow type="math_number" id="+;.XY|A0.pz;6qJNlZqo">
+            <field name="NUM">20</field>
+          </shadow>
+        </value>
+        <value name="COLOR">
+          <shadow type="colour_picker" id="e@ZLAxG(8X6+)IuUY=z6">
+            <field name="COLOUR">#ff0000</field>
+          </shadow>
+        </value>
+        <value name="COLOR_BG">
+          <shadow type="colour_picker" id="(=icT5XT9vH3V,A]ImAf">
+            <field name="COLOUR">#000000</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="tft_icon" id="TH$FV}c[vbR-gW}`$X$.">
+            <field name="NAME">tft</field>
+            <field name="SCALE">1</field>
+            <value name="ICON">
+              <block type="oled_icon_value" id=")yu:x_PY!m$7p8o6SyxW">
+                <field name="ICON">0</field>
+              </block>
+            </value>
+            <value name="X">
+              <shadow type="math_number" id="tT-OdI1xP^9aj{Kfz^Gk">
+                <field name="NUM">50</field>
+              </shadow>
+            </value>
+            <value name="Y">
+              <shadow type="math_number" id="6=2~/1*_cxO1(I|;TMPg">
+                <field name="NUM">50</field>
+              </shadow>
+            </value>
+            <value name="COLOR">
+              <shadow type="colour_picker" id="MNlQk/?(Rx_/k7/=!,}`">
+                <field name="COLOUR">#ff0000</field>
+              </shadow>
+            </value>
+            <value name="COLOR_BG">
+              <shadow type="colour_picker" id="{c+M,MI{1@~MzDz)Na_S">
+                <field name="COLOUR">#000000</field>
+              </shadow>
+            </value>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>

@@ -1,0 +1,184 @@
+{
+  "version": "1.0",
+  "timestamp": 1785713234516,
+  "components": [
+    {
+      "id": "esp32_wroom_gkhv4ki",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 260,
+      "y": 120,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "tft_st7789_wyfbvmg",
+      "type": "tft_st7789",
+      "name": "TFT 1.54\" 240x240 (ST7789)",
+      "x": 566.3169865461476,
+      "y": 211.88272650803088,
+      "width": 90,
+      "height": 100,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "ST7789 IPS 1.54\" 240x240 SPI",
+        "screenWidth": 240,
+        "screenHeight": 240
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_2wf8i5a",
+      "from": {
+        "componentId": "tft_st7789_wyfbvmg",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_gkhv4ki",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 584.2169865461476,
+          "y": 202.8787140251865
+        },
+        {
+          "x": 406.28,
+          "y": 202.8787140251865
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-macho"
+    },
+    {
+      "id": "wire_vqt6n3d",
+      "from": {
+        "componentId": "tft_st7789_wyfbvmg",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_gkhv4ki",
+        "pinId": "gnd_1"
+      },
+      "points": [
+        {
+          "x": 573.3169865461476,
+          "y": 208.93910127492813
+        },
+        {
+          "x": 426.28,
+          "y": 208.93910127492813
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-macho"
+    },
+    {
+      "id": "wire_e2pswdr",
+      "from": {
+        "componentId": "tft_st7789_wyfbvmg",
+        "pinId": "scl"
+      },
+      "to": {
+        "componentId": "esp32_wroom_gkhv4ki",
+        "pinId": "io18"
+      },
+      "points": [
+        {
+          "x": 595.0169865461477,
+          "y": 196.21279665338474
+        },
+        {
+          "x": 380.28,
+          "y": 196.21279665338474
+        }
+      ],
+      "color": "#2ecc71",
+      "connectorType": "hembra-macho"
+    },
+    {
+      "id": "wire_kjhj5us",
+      "from": {
+        "componentId": "tft_st7789_wyfbvmg",
+        "pinId": "sda"
+      },
+      "to": {
+        "componentId": "esp32_wroom_gkhv4ki",
+        "pinId": "io23"
+      },
+      "points": [
+        {
+          "x": 605.9169865461477,
+          "y": 187.48910872095126
+        },
+        {
+          "x": 400.28,
+          "y": 187.48910872095126
+        }
+      ],
+      "color": "#2ecc71",
+      "connectorType": "hembra-macho"
+    },
+    {
+      "id": "wire_pc5jhx0",
+      "from": {
+        "componentId": "tft_st7789_wyfbvmg",
+        "pinId": "res"
+      },
+      "to": {
+        "componentId": "esp32_wroom_gkhv4ki",
+        "pinId": "io22"
+      },
+      "points": [
+        {
+          "x": 616.7169865461476,
+          "y": 177.73910456117272
+        },
+        {
+          "x": 340.28,
+          "y": 177.73910456117272
+        }
+      ],
+      "color": "#f2994a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_wrkse0a",
+      "from": {
+        "componentId": "tft_st7789_wyfbvmg",
+        "pinId": "dc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_gkhv4ki",
+        "pinId": "io21"
+      },
+      "points": [
+        {
+          "x": 627.6169865461476,
+          "y": 169.76530867653068
+        },
+        {
+          "x": 350.28,
+          "y": 169.76530867653068
+        }
+      ],
+      "color": "#f2994a",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}
