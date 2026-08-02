@@ -19,26 +19,30 @@ entre corridas). Con el puente local no hay esa limitación — es
 MicroPython real corriendo en QEMU real, igual que en la app de
 escritorio.
 
-## Uso (versión empaquetada) -- sin abrir ninguna consola
+## Uso (versión empaquetada) -- un solo archivo, sin instalar nada
 
-1. Descargá y descomprimí `PitSimulator-Puente` (te lo pasa quien te
-   compartió el simulador).
-2. Doble click en `PitSimulator-Puente.exe`. Ya viene con
-   `allowed_origins.txt` cargado con el dominio de GitHub Pages
-   correcto -- no hace falta tocar nada más (si en algún momento se
-   muda a otro dominio, se edita ese `.txt` con el Bloc de notas, un
-   host por línea, sin recompilar nada).
+1. Descargá `PitSimulator-Puente.exe` (te lo pasa quien te compartió
+   el simulador) -- un solo archivo, se puede dejar en cualquier
+   carpeta (Escritorio, Descargas, un USB), no depende de ninguna otra
+   carpeta al lado.
+2. Doble click. Ya viene con el dominio real de GitHub Pages permitido
+   por default -- no hace falta tocar nada más.
 3. Se va a abrir una ventana de consola con el log del puente -- dejala
    abierta (minimizada está bien) mientras usás el simulador. Para
    cerrarlo: cerrar esa ventana, o Ctrl+C adentro.
 4. Abrí la página del simulador en el navegador y usala normalmente —
    "▶ Simular" va a conectar solo.
 
-(Para uso avanzado -- sumar otro host sin editar el `.txt`, o probar
-contra otro dominio puntual una sola vez -- también se puede setear la
-variable de entorno `ALLOWED_ORIGINS` antes de arrancar el `.exe`
-desde PowerShell; se combina con lo que ya tenga el `.txt`, no lo
-reemplaza.)
+Como todo (server/QEMU/GDB/Node) viaja comprimido adentro de ese único
+`.exe`, cada apertura tarda un poco más que si fuera una carpeta
+(autoextrae a una carpeta temporal) -- normal, no es que se colgó.
+
+Para sumar OTRO host sin recompilar nada (ej. probar contra un fork/otro
+usuario de GitHub Pages), se puede crear un archivo `allowed_origins.txt`
+(un host por línea) en la MISMA carpeta donde pusiste el `.exe` -- si
+existe ahí, se usa ese en vez del que trae embebido por default. También
+sirve setear `ALLOWED_ORIGINS` por PowerShell antes de abrir el `.exe`;
+las tres fuentes se combinan, ninguna reemplaza a las otras.
 
 ## ⚠️ Chrome puede pedir un permiso extra ("Red local")
 
@@ -98,19 +102,20 @@ solo tu dominio real, no algo más amplio.
 
 ## Empaquetado (para quien arma la distribución)
 
-Mismo criterio que la app de escritorio completa (ver comentario al
-inicio de `desktop/build/prepare_dist.py`), apuntando a
-`bridge_only.py` en vez de `main.py`, y sin `--windowed` (es una
-consola, no una ventana):
-
 ```powershell
-pyinstaller --onedir --console --icon=desktop/build/icon.ico `
-    --name PitSimulator-Puente --distpath dist desktop/bridge_only.py
+python desktop/build/build_bridge_onefile.py
 ```
 
-Después copiar `server/`, `desktop/vendor/` Y `desktop/allowed_origins.txt`
-al lado del `.exe` resultante (mismo paso que `prepare_dist.py` hace
-para la app completa — no hace falta copiar el frontend, ese vive en
-GitHub Pages). Sin ese `.txt` al lado, el `.exe` sigue funcionando
-pero solo acepta conexiones desde localhost -- quien lo reciba
-tendría que setear `ALLOWED_ORIGINS` a mano por PowerShell.
+Arma `dist/PitSimulator-Puente.exe` -- un solo archivo, con `server/`,
+`desktop/vendor/` y `desktop/allowed_origins.txt` embebidos adentro
+(ver ese script para el detalle: arma una copia limpia de `server/`
+sin los binarios `_old`/`_prev` de sesiones viejas antes de
+compilar). Reemplaza a la versión anterior en carpeta (`--onedir`) --
+esa seguía dependiendo de que alguien copiara TODAS las carpetas al
+lado del `.exe`, y era fácil copiar solo el `.exe` suelto por error
+(pasó en la práctica). Si por algún motivo se prefiere la versión en
+carpeta (arranca mas rápido, no autoextrae nada): `pyinstaller
+--onedir --console --icon=desktop/build/icon.ico --name
+PitSimulator-Puente --distpath dist desktop/bridge_only.py`, y
+después copiar `server/`, `desktop/vendor/` y
+`desktop/allowed_origins.txt` a mano al lado del `.exe` resultante.

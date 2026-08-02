@@ -61,7 +61,6 @@ else:
 
 BASE_DIR = RESOURCE_DIR
 SERVER_DIR = RESOURCE_DIR / "server"
-ALLOWED_ORIGINS_FILE = CONFIG_DIR / "allowed_origins.txt"
 
 VENDOR_QEMU_BIN = VENDOR_DIR / "qemu-xtensa" / "bin" / "qemu-system-xtensa.exe"
 VENDOR_GDB_BIN = VENDOR_DIR / "xtensa-esp-elf-gdb" / "bin" / "xtensa-esp32-elf-gdb.exe"
@@ -82,21 +81,39 @@ except ImportError:
 # Bridge QEMU (server/server.js)
 # ----------------------------------------------------------
 
+def _allowed_origins_candidates():
+    # APP_DIR primero: al lado del .exe REAL (Desktop, USB, donde sea)
+    # -- funciona en onedir Y en onefile, y es editable sin recompilar
+    # nada (a diferencia de la carpeta temporal autoextraida de
+    # onefile, que se borra al cerrar). CONFIG_DIR cubre dev (desktop/
+    # allowed_origins.txt). RESOURCE_DIR es el que trae EMBEBIDO un
+    # build onefile (ver desktop/build/build_bridge_onefile.py) -- el
+    # default con el que arranca sin que nadie toque nada, si no hay
+    # ninguno de los otros dos.
+    seen = []
+    for d in (APP_DIR, CONFIG_DIR, RESOURCE_DIR):
+        p = d / "allowed_origins.txt"
+        if p not in seen:
+            seen.append(p)
+    return seen
+
+
 def read_allowed_origins_file():
     """Hosts extra listados en allowed_origins.txt (uno por linea,
     '#' para comentarios) -- para que quien reciba el puente empaquetado
     NO tenga que abrir una consola/PowerShell a setear ALLOWED_ORIGINS:
     alcanza con doble click al .exe. Se puede editar ese .txt a mano
     (ej. para apuntar a otro usuario/repo de GitHub Pages) sin tener
-    que recompilar nada."""
-    if not ALLOWED_ORIGINS_FILE.exists():
-        return []
-    hosts = []
-    for line in ALLOWED_ORIGINS_FILE.read_text(encoding="utf-8").splitlines():
-        line = line.split("#", 1)[0].strip()
-        if line:
-            hosts.append(line)
-    return hosts
+    que recompilar nada -- ver _allowed_origins_candidates()."""
+    for path in _allowed_origins_candidates():
+        if path.exists():
+            hosts = []
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.split("#", 1)[0].strip()
+                if line:
+                    hosts.append(line)
+            return hosts
+    return []
 
 
 def get_allowed_origins():
