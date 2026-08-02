@@ -18,6 +18,15 @@ function _pirApplyLed(component) {
 
 ComponentBehaviorRegistry.register("pir", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- mismo
+        // motivo que fc-51.behavior.js/tcrt5000.behavior.js.
+        resync(component, engine) {
+            const detectado = !!component.properties?.detectado;
+            engine._notifyDigitalToFirmware(component, "out", detectado ? 1 : 0);
+        },
+    },
+
     render: {
         initialState(component, renderer) {
             _pirApplyLed(component);

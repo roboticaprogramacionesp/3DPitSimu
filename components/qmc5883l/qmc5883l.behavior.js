@@ -19,6 +19,14 @@ function _qmc5883ApplyNeedle(component) {
 
 ComponentBehaviorRegistry.register("qmc5883l", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- mismo
+        // motivo que mpu6050.behavior.js.
+        resync(component, engine) {
+            engine._notifyQmc5883ToFirmware(component);
+        },
+    },
+
     render: {
         initialState(component, renderer) {
             _qmc5883ApplyNeedle(component);

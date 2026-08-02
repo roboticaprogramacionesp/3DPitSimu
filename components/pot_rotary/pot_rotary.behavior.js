@@ -81,6 +81,22 @@ const POT_MAX_ANGLE = 150;
 
 ComponentBehaviorRegistry.register("pot_rotary", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js --
+        // setPotRotaryValue() solo se llama desde el arrastre de la
+        // perilla, nunca automáticamente. Sin arrastrar todavía en esta
+        // sesión no hay nada que resincronizar (component.potRotaryState
+        // recién existe después del primer arrastre -- no vive en
+        // component.properties, así que tampoco sobrevive a un proyecto
+        // recién cargado, a propósito: no es un dato que tenga sentido
+        // guardar en el archivo).
+        resync(component, engine) {
+            if (component.potRotaryState) {
+                engine.setPotRotaryValue(component, component.potRotaryState.n01);
+            }
+        },
+    },
+
     render: {
 
         tag(component, graphic, renderer) {

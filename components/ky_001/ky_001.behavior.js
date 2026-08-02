@@ -23,6 +23,18 @@
 
 const tempSensorBehavior = {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- setTemperature()/
+        // setHumidity() solo se llaman desde los sliders del panel, nunca
+        // automáticamente. setTemperature() ya reenvía la humedad actual
+        // junto con la temperatura (ver el comentario en
+        // SignalEngine._notifyTempToFirmware), así que alcanza con un
+        // solo llamado acá.
+        resync(component, engine) {
+            engine.setTemperature(component.id, engine.getTemperature(component.id));
+        },
+    },
+
     propertyPanel: {
 
         render(component, panel) {

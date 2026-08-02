@@ -22,6 +22,14 @@ function _tcs34725ApplySwatch(component) {
 
 ComponentBehaviorRegistry.register("tcs34725", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- mismo
+        // motivo que mpu6050.behavior.js.
+        resync(component, engine) {
+            engine._notifyTcs34725ToFirmware(component);
+        },
+    },
+
     render: {
         initialState(component, renderer) {
             _tcs34725ApplySwatch(component);

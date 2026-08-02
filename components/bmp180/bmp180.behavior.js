@@ -43,6 +43,14 @@ function _bmp180Slider(component, panel, key, label, unit, min, max, step, decim
 
 ComponentBehaviorRegistry.register("bmp180", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- mismo
+        // motivo que mpu6050.behavior.js.
+        resync(component, engine) {
+            engine._notifyBmp180ToFirmware(component);
+        },
+    },
+
     propertyPanel: {
 
         render(component, panel) {

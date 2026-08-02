@@ -11,6 +11,16 @@
 
 ComponentBehaviorRegistry.register("fc-51", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- mismo
+        // motivo que mpu6050.behavior.js: el checkbox "Objeto detectado"
+        // solo manda el pin cuando cambia, nunca solo.
+        resync(component, engine) {
+            const detectado = !!component.properties?.detectado;
+            engine._notifyDigitalToFirmware(component, "out", detectado ? 0 : 1);
+        },
+    },
+
     propertyPanel: {
 
         render(component, panel) {

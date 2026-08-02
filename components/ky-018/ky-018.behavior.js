@@ -10,6 +10,18 @@
 
 ComponentBehaviorRegistry.register("ky-018", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- mismo
+        // motivo que mpu6050.behavior.js. A diferencia de pot_rotary/
+        // pot_slider (arrastre en el canvas, sin properties), acá el
+        // nivel de luz SÍ vive en component.properties.luz (slider del
+        // panel), así que también sobrevive a un proyecto recién cargado.
+        resync(component, engine) {
+            const luz = component.properties?.luz ?? 50;
+            engine.setKy018LightLevel(component, luz / 100);
+        },
+    },
+
     propertyPanel: {
 
         render(component, panel) {

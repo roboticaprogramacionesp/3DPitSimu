@@ -68,6 +68,19 @@ function _makeMpuSlider(component, panel, key, label, unit, min, max, step, deci
 
 ComponentBehaviorRegistry.register("mpu6050", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- setMpuAxis()
+        // solo se llama desde los sliders del panel, nunca automáticamente,
+        // así que un ajuste hecho antes de una reconexión de QEMU (o
+        // restaurado desde un proyecto guardado) nunca le llegaba al
+        // firmware hasta el próximo arrastre. _notifyMpuToFirmware() ya lee
+        // todo de component.properties con sus propios defaults, así que
+        // alcanza con volver a llamarlo tal cual.
+        resync(component, engine) {
+            engine._notifyMpuToFirmware(component);
+        },
+    },
+
     propertyPanel: {
 
         render(component, panel) {

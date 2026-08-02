@@ -10,6 +10,15 @@
 
 ComponentBehaviorRegistry.register("tcrt5000", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- mismo
+        // motivo que fc-51.behavior.js.
+        resync(component, engine) {
+            const detectado = !!component.properties?.detectado;
+            engine._notifyDigitalToFirmware(component, "do", detectado ? 0 : 1);
+        },
+    },
+
     propertyPanel: {
 
         render(component, panel) {

@@ -15,6 +15,15 @@
 
 ComponentBehaviorRegistry.register("hcsr04", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- mismo
+        // motivo que mpu6050.behavior.js: setDistance() solo se llama
+        // desde el slider del panel, nunca automáticamente.
+        resync(component, engine) {
+            engine.setDistance(component.id, engine.getDistance(component.id));
+        },
+    },
+
     propertyPanel: {
 
         render(component, panel) {

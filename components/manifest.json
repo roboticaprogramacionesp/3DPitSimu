@@ -193,7 +193,8 @@
         {
             "type": "pot_slider",
             "name": "Potenciómetro Deslizante 10K",
-            "category": "Sensores"
+            "category": "Sensores",
+            "hasBehavior": true
         },
         {
             "type": "mpu6050",

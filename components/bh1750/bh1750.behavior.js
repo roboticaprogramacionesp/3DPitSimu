@@ -11,6 +11,14 @@
 
 ComponentBehaviorRegistry.register("bh1750", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- mismo
+        // motivo que mpu6050.behavior.js.
+        resync(component, engine) {
+            engine._notifyBh1750ToFirmware(component);
+        },
+    },
+
     propertyPanel: {
 
         render(component, panel) {

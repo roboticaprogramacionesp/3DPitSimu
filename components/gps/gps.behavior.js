@@ -27,6 +27,18 @@ function _gpsApplyFixLed(component) {
 
 ComponentBehaviorRegistry.register("gps", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js. El tick de
+        // GPS_TICK_MS de más abajo ya se auto-cura solo (1s como mucho de
+        // espera, a diferencia del tick de 60s de ds3231), pero igual se
+        // agrega el mismo gancho por consistencia -- que el firmware nunca
+        // llegue a arrancar sin ninguna oración NMEA todavía, ni un
+        // segundo.
+        resync(component, engine) {
+            engine._notifyGpsToFirmware(component);
+        },
+    },
+
     render: {
         initialState(component, renderer) {
             _gpsApplyFixLed(component);

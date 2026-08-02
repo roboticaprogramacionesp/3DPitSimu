@@ -43,6 +43,14 @@ function _bmp280Slider(component, panel, key, label, unit, min, max, step, decim
 
 ComponentBehaviorRegistry.register("bmp280", {
 
+    signal: {
+        // Ver nota "resync" en ComponentBehaviorRegistry.js -- mismo
+        // motivo que mpu6050.behavior.js.
+        resync(component, engine) {
+            engine._notifyBmp280ToFirmware(component);
+        },
+    },
+
     propertyPanel: {
 
         render(component, panel) {
