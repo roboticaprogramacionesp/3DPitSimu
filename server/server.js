@@ -558,7 +558,24 @@ function writeToQemuThrottled(data) {
 // 127.0.0.1 (bloquea el ataque de "pestaña maliciosa" de arriba).
 // ============================================
 
+// ALLOWED_ORIGINS (env var, opcional, coma-separado, ej.
+// "usuario.github.io,otro-usuario.github.io") -- para el caso de
+// "puente local" (ver desktop/bridge_only.py): la página REAL vive
+// en GitHub Pages (origen https://usuario.github.io), no en
+// localhost, así que el Origin que llega acá ya no es localhost/
+// 127.0.0.1 aunque la conexión WS en sí siga siendo local (confirmado
+// que el navegador lo permite -- las direcciones loopback están
+// exceptuadas del bloqueo de mixed-content HTTPS→ws:// sin cifrar).
+// SUMA hosts al set de siempre, nunca lo reemplaza -- sin esta
+// variable seteada, comportamiento 100% idéntico a antes (la app de
+// escritorio, que nunca la setea, no cambia en nada).
 const ALLOWED_ORIGIN_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+
+(process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map(h => h.trim())
+    .filter(Boolean)
+    .forEach(h => ALLOWED_ORIGIN_HOSTNAMES.add(h));
 
 function isAllowedOrigin(origin) {
 
