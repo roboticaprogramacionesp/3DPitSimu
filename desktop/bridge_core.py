@@ -29,21 +29,29 @@ _NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 # ----------------------------------------------------------
 # Rutas: dev (python desktop/main.py o desktop/bridge_only.py) vs.
-# empaquetado (PyInstaller --onedir) -- en ambos casos terminamos con
-# una carpeta real en disco que tiene server/ al lado, solo cambia
-# DONDE esta esa carpeta. sys.executable en tiempo de ejecucion
-# siempre apunta al .exe que esta corriendo de verdad (el de main.py
-# o el de bridge_only.py, cada uno con su propio dist/), asi que esta
-# resolucion sirve igual para los dos sin importar desde cual de los
-# dos se importe este modulo.
+# empaquetado -- y dentro de empaquetado, --onedir (una carpeta con el
+# .exe y server/vendor/etc AL LADO) vs. --onefile (un solo .exe que
+# AUTOEXTRAE esos recursos a una carpeta temporal en cada apertura,
+# ver sys._MEIPASS -- PyInstaller la crea solo cuando el build es
+# onefile, por eso alcanza con mirar si existe para distinguir los dos
+# modos empaquetados sin necesitar un flag propio).
+#
+# APP_DIR es SIEMPRE donde vive el .exe real (Desktop, dist/, donde
+# sea) -- ahi es donde tiene sentido buscar/crear archivos que el
+# usuario deba poder editar a mano (allowed_origins.txt). RESOURCE_DIR
+# es de donde salen los recursos empaquetados (server/, vendor/, y en
+# main.py el frontend) -- coincide con APP_DIR salvo en onefile, donde
+# apunta a la carpeta temporal autoextraida.
 # ----------------------------------------------------------
 
 if getattr(sys, "frozen", False):
     APP_DIR = Path(sys.executable).resolve().parent
-    VENDOR_DIR = APP_DIR / "vendor"
+    RESOURCE_DIR = Path(sys._MEIPASS) if hasattr(sys, "_MEIPASS") else APP_DIR
+    VENDOR_DIR = RESOURCE_DIR / "vendor"
     CONFIG_DIR = APP_DIR
 else:
     APP_DIR = Path(__file__).resolve().parent.parent
+    RESOURCE_DIR = APP_DIR
     VENDOR_DIR = Path(__file__).resolve().parent / "vendor"
     # A diferencia de APP_DIR (raiz del repo, para servir el frontend
     # desde main.py), la config del bridge vive junto a ESTE archivo
@@ -51,8 +59,8 @@ else:
     # .exe), en dev no.
     CONFIG_DIR = Path(__file__).resolve().parent
 
-BASE_DIR = APP_DIR
-SERVER_DIR = APP_DIR / "server"
+BASE_DIR = RESOURCE_DIR
+SERVER_DIR = RESOURCE_DIR / "server"
 ALLOWED_ORIGINS_FILE = CONFIG_DIR / "allowed_origins.txt"
 
 VENDOR_QEMU_BIN = VENDOR_DIR / "qemu-xtensa" / "bin" / "qemu-system-xtensa.exe"

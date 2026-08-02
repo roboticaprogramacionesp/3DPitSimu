@@ -20,11 +20,15 @@ server/node_modules/
 
 # desktop/: app de escritorio (Python + pywebview) -- rutas reales de
 # QEMU/GDB de esta máquina, no se commitean (ver bridge_config.example.py);
-# dist/ es la salida final de PyInstaller, build/ y el .spec son
-# artefactos intermedios que se regeneran solos con el mismo comando.
+# dist/ es la salida final de PyInstaller, /build/ (SOLO la de la raíz
+# del repo -- BUG REAL encontrado: "build/" sin la barra inicial
+# también tapaba desktop/build/, que tiene código fuente de verdad
+# -- prepare_dist.py, build_onefile.py, icon.ico -- nunca se habían
+# commiteado) y el .spec son artefactos intermedios que se regeneran
+# solos con el mismo comando.
 desktop/bridge_config.py
 dist/
-build/
+/build/
 *.spec
 
 # desktop/vendor/: copia portable de QEMU+GDB (~234MB) para que la
