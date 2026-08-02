@@ -139,6 +139,15 @@ class Toolbox {
                     el.classList.remove("dragging");
                 });
 
+                // Touch (tablet/celular): el Drag&Drop nativo de HTML5 de
+                // arriba (dragstart/dragend) NUNCA dispara con touch --
+                // ningún navegador lo soporta, en ningún celular/tablet
+                // (confirmado en la práctica, no es un detalle de este
+                // proyecto). Mouse/lápiz siguen usando el D&D nativo de
+                // arriba sin tocar nada; esto es un camino aparte, que
+                // solo se activa para e.pointerType === "touch".
+                this._bindTouchDragToAdd(el, item.type);
+
                 this.listEl.appendChild(el);
 
             }
@@ -148,13 +157,19 @@ class Toolbox {
     }
 
     //------------------------------------------------------
-    // Construir una <img> a partir del SVG cacheado del componente,
-    // para usar como imagen de arrastre (dataTransfer.setDragImage).
-    // Se agrega momentáneamente al DOM (fuera de la vista) porque
-    // algunos navegadores lo requieren para poder capturarla.
+    // Construir una <img> a partir del SVG cacheado del componente --
+    // la usan dos casos distintos:
+    //  - dragstart (D&D nativo, mouse/lápiz): dataTransfer.setDragImage()
+    //    necesita el <img> momentáneamente en el DOM para poder
+    //    capturarla; attachAndAutoRemove=true (default) la agrega fuera
+    //    de la vista y la saca sola apenas el navegador la captura.
+    //  - _bindTouchDragToAdd (touch): el "fantasma" que sigue al dedo
+    //    tiene que persistir y moverse durante todo el arrastre --
+    //    attachAndAutoRemove=false devuelve el <img> SIN agregarlo ni
+    //    programar su borrado, el llamador controla su ciclo de vida.
     //------------------------------------------------------
 
-    _buildDragImage(type) {
+    _buildDragImage(type, attachAndAutoRemove = true) {
 
         const svgData = this.svgCache[type];
         if (!svgData) return null;
@@ -171,6 +186,9 @@ class Toolbox {
 
         const img = new Image(size, size);
         img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgMarkup)));
+
+        if (!attachAndAutoRemove) return img;
+
         img.style.position = "fixed";
         img.style.top  = "-9999px";
         img.style.left = "-9999px";
@@ -237,33 +255,190 @@ class Toolbox {
 
             const type = e.dataTransfer.getData("text/plain");
 
-            const validTypes = this.entries.map(entry => entry.type);
+            await this._addComponentAt(type, e.clientX, e.clientY);
 
-            if (!type || !validTypes.includes(type)) return;
+        });
 
-            const point = Utils.getCanvasPoint(
-                this.simulator.componentLayer,
-                e.clientX,
-                e.clientY
-            );
+    }
 
-            const definition = this.definitions[type];
-            const width  = definition?.width  || 50;
-            const height = definition?.height || 50;
+    //------------------------------------------------------
+    // Agregar un componente en las coordenadas de pantalla dadas
+    // (centrado ahí) -- comun al drop de mouse/D&D nativo de arriba y
+    // al touch-drag de abajo, para no duplicar esta lógica en los dos.
+    //------------------------------------------------------
 
-            const x = Utils.snapToGrid(point.x - width  / 2);
-            const y = Utils.snapToGrid(point.y - height / 2);
+    async _addComponentAt(type, clientX, clientY) {
 
-            const component = await this.simulator.addComponentByType(type, { x, y });
+        const validTypes = this.entries.map(entry => entry.type);
 
-            if (component) {
-                this.simulator.history.push({
-                    undo: () => this.simulator.removeComponent(component.id),
-                    redo: () => this.simulator.addComponent(component)
-                });
+        if (!type || !validTypes.includes(type)) return null;
+
+        const point = Utils.getCanvasPoint(
+            this.simulator.componentLayer,
+            clientX,
+            clientY
+        );
+
+        const definition = this.definitions[type];
+        const width  = definition?.width  || 50;
+        const height = definition?.height || 50;
+
+        const x = Utils.snapToGrid(point.x - width  / 2);
+        const y = Utils.snapToGrid(point.y - height / 2);
+
+        const component = await this.simulator.addComponentByType(type, { x, y });
+
+        if (component) {
+            this.simulator.history.push({
+                undo: () => this.simulator.removeComponent(component.id),
+                redo: () => this.simulator.addComponent(component)
+            });
+        }
+
+        return component;
+
+    }
+
+    //------------------------------------------------------
+    // Touch: arrastrar un item de la lista al canvas para agregarlo
+    // (equivalente al Drag&Drop nativo de arriba, que no dispara con
+    // touch en NINGÚN navegador). Toque largo para "levantar" el item,
+    // a propósito: #toolbox tiene overflow:auto (la lista scrollea en
+    // pantallas chicas) -- mismo patrón que reordenar íconos en un
+    // celular.
+    //
+    // BUG REAL encontrado probando esto en la práctica: .toolbox-item
+    // necesita touch-action:none (ver simulator.css) para que el toque
+    // largo funcione en absoluto -- con touch-action:auto (el default),
+    // el navegador decide en el PRIMER movimiento real si el gesto es
+    // scroll nativo y cancela el puntero (pointercancel) sin importar
+    // que el timer de JS ya hubiera "ganado" el gesto; esa decisión se
+    // toma en base al CSS vigente al EMPEZAR el toque, no se puede
+    // revertir a mitad de camino. Pero eso significa que el scroll
+    // nativo de la lista queda inutilizado -- por eso, mientras el
+    // toque largo todavía no se cumplió, cualquier movimiento se
+    // interpreta como intento de scrollear y se hace a mano (mover
+    // #toolbox.scrollTop/scrollLeft el mismo delta que el dedo).
+    //------------------------------------------------------
+
+    _bindTouchDragToAdd(el, type) {
+
+        const LONG_PRESS_MS = 350;
+        const MOVE_CANCEL_PX = 10;
+
+        const toolboxEl = document.getElementById("toolbox");
+
+        let pressTimer = null;
+        let startX = 0, startY = 0;
+        let lastX = 0, lastY = 0;
+        let ghost = null;
+        let dragging = false;
+        let scrolling = false;
+        let pointerId = null;
+
+        const cancelPress = () => {
+            clearTimeout(pressTimer);
+            pressTimer = null;
+        };
+
+        const cleanup = () => {
+            cancelPress();
+            if (ghost) { ghost.remove(); ghost = null; }
+            el.classList.remove("dragging");
+            dragging = false;
+            scrolling = false;
+            if (pointerId !== null) {
+                try { el.releasePointerCapture(pointerId); } catch (err) { }
+            }
+            pointerId = null;
+        };
+
+        const moveGhost = (x, y) => {
+            if (!ghost) return;
+            ghost.style.left = `${x - 32}px`;
+            ghost.style.top  = `${y - 32}px`;
+        };
+
+        el.addEventListener("pointerdown", (e) => {
+
+            if (e.pointerType !== "touch") return;
+
+            startX = lastX = e.clientX;
+            startY = lastY = e.clientY;
+            pointerId = e.pointerId;
+
+            try { el.setPointerCapture(pointerId); } catch (err) { }
+
+            pressTimer = setTimeout(() => {
+
+                dragging = true;
+                pressTimer = null;
+
+                ghost = this._buildDragImage(type, false);
+                if (ghost) {
+                    ghost.style.position = "fixed";
+                    ghost.style.zIndex = "9999";
+                    ghost.style.pointerEvents = "none";
+                    ghost.style.opacity = "0.85";
+                    ghost.style.filter = "drop-shadow(0 2px 6px rgba(0,0,0,0.5))";
+                    document.body.appendChild(ghost);
+                    moveGhost(startX, startY);
+                }
+
+                el.classList.add("dragging");
+
+            }, LONG_PRESS_MS);
+
+        });
+
+        el.addEventListener("pointermove", (e) => {
+
+            if (e.pointerType !== "touch" || pointerId === null) return;
+
+            if (dragging) {
+                moveGhost(e.clientX, e.clientY);
+                return;
+            }
+
+            const dx = e.clientX - lastX, dy = e.clientY - lastY;
+            lastX = e.clientX;
+            lastY = e.clientY;
+
+            if (!scrolling) {
+                const total = Math.hypot(e.clientX - startX, e.clientY - startY);
+                if (total <= MOVE_CANCEL_PX) return; // podría ser el inicio de un toque largo quieto
+                scrolling = true;
+                cancelPress();
+            }
+
+            if (toolboxEl) toolboxEl.scrollTop -= dy;
+
+        });
+
+        el.addEventListener("pointerup", async (e) => {
+
+            if (e.pointerType !== "touch") return;
+
+            const wasDragging = dragging;
+            const dropX = e.clientX, dropY = e.clientY;
+
+            cleanup();
+
+            if (!wasDragging) return;
+
+            const workspace = document.getElementById("workspace");
+            const wsBox = workspace.getBoundingClientRect();
+            const overCanvas =
+                dropX >= wsBox.left && dropX <= wsBox.right &&
+                dropY >= wsBox.top  && dropY <= wsBox.bottom;
+
+            if (overCanvas) {
+                await this._addComponentAt(type, dropX, dropY);
             }
 
         });
+
+        el.addEventListener("pointercancel", cleanup);
 
     }
 

@@ -975,6 +975,29 @@ body{
 
     transition:.15s;
 
+    /* El toque largo para "levantar" el item en touch (ver
+       Toolbox._bindTouchDragToAdd) no debe disparar el menú contextual/
+       selección de texto nativo de iOS/Android durante esa espera. */
+    -webkit-touch-callout:none;
+
+    user-select:none;
+
+    -webkit-user-select:none;
+
+    /* BUG REAL encontrado probando en touch: con touch-action:auto (el
+       default), el navegador decide en touch-START si el gesto es un
+       scroll nativo -- apenas hay el primer movimiento real, cancela
+       el puntero (pointercancel) SIN IMPORTAR que JS ya haya "ganado"
+       el gesto con el timer de toque largo (ese timer corre en JS,
+       pero la decisión de scroll-vs-JS del navegador ya se tomó antes,
+       en base al CSS vigente al arrancar el toque, no se puede
+       revertir a mitad de camino). Por eso acá va touch-action:none
+       -- el scroll de la lista mientras tanto lo hace a mano
+       Toolbox._bindTouchDragToAdd (mueve #toolbox.scrollTop) durante
+       la espera del toque largo, ver el comentario ahí.
+    */
+    touch-action:none;
+
 }
 
 .toolbox-thumb{
