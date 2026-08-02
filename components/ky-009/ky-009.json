@@ -2,22 +2,45 @@
     "type": "ky-009",
     "name": "KY-009 LED RGB (SMD)",
     "category": "LEDs",
-
-    "width": 53.150397,
-    "height": 83.900951,
-
+    "width": 56.694,
+    "height": 89.736,
     "svgPath": "components/ky-009/ky-009.svg",
-
     "pinShape": "square",
     "pinSize": 4,
-
     "pins": [
-        { "id": "b",   "name": "Azul (B)",  "x": 12.96, "y": 83.29, "type": "input",  "signal": "digital" },
-        { "id": "g",   "name": "Verde (G)", "x": 21.89, "y": 83.29, "type": "input",  "signal": "digital" },
-        { "id": "r",   "name": "Rojo (R)",  "x": 30.93, "y": 83.29, "type": "input",  "signal": "digital" },
-        { "id": "com", "name": "Común (-)", "x": 39.93, "y": 83.29, "type": "ground", "signal": "digital" }
+        {
+            "id": "b",
+            "name": "Azul (B)",
+            "x": 13.824,
+            "y": 89.082,
+            "type": "input",
+            "signal": "digital"
+        },
+        {
+            "id": "g",
+            "name": "Verde (G)",
+            "x": 23.35,
+            "y": 89.082,
+            "type": "input",
+            "signal": "digital"
+        },
+        {
+            "id": "r",
+            "name": "Rojo (R)",
+            "x": 32.992,
+            "y": 89.082,
+            "type": "input",
+            "signal": "digital"
+        },
+        {
+            "id": "com",
+            "name": "Común (-)",
+            "x": 42.593,
+            "y": 89.082,
+            "type": "ground",
+            "signal": "digital"
+        }
     ],
-
     "properties": {
         "modelo": "KY-009: LED RGB SMD 5050, cátodo común -- 'com' a GND. Cada canal (R/G/B) acepta digital ON/OFF (Pin) o PWM (machine.PWM/duty) para variar el brillo"
     }

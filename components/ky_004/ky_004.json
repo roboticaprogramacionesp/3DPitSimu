@@ -1,22 +1,40 @@
 {
     "type": "ky_004",
     "name": "KY-004 Botón",
-
-    "width": 53.15,
-    "height": 85.56,
-
+    "width": 56.694,
+    "height": 89.736,
     "svg": "components/ky_004/ky_004.svg",
-
     "pinShape": "square",
     "pinSize": 6,
-
     "pins": [
-        { "id": "senal", "name": "S (Señal)", "x": 17.77, "y": 85.45, "type": "gpio", "signal": "digital" },
-        { "id": "vcc",   "name": "VCC (+)",   "x": 26.77, "y": 85.45, "type": "power", "signal": "power" },
-        { "id": "gnd",   "name": "GND (-)",   "x": 35.78, "y": 85.45, "type": "ground", "signal": "ground" }
+        {
+            "id": "senal",
+            "name": "S (Señal)",
+            "x": 18.955,
+            "y": 89.621,
+            "type": "gpio",
+            "signal": "digital"
+        },
+        {
+            "id": "vcc",
+            "name": "VCC (+)",
+            "x": 28.555,
+            "y": 89.621,
+            "type": "power",
+            "signal": "power"
+        },
+        {
+            "id": "gnd",
+            "name": "GND (-)",
+            "x": 38.166,
+            "y": 89.621,
+            "type": "ground",
+            "signal": "ground"
+        }
     ],
-
-    "pressPins": ["senal", "vcc"],
-
+    "pressPins": [
+        "senal",
+        "vcc"
+    ],
     "properties": {}
 }

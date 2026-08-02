@@ -5,6 +5,8 @@
     "width": 148,
     "height": 81,
 
+    "svgPath": "components/tm1637/tm1637.svg",
+
     "pinShape": "square",
     "pinSize": 6,
 

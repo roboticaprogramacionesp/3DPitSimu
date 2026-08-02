@@ -1,13 +1,13 @@
 {
   "version": "1.0",
-  "timestamp": 1785561689274,
+  "timestamp": 1785711196986,
   "components": [
     {
-      "id": "esp32_wroom_46ipm0z",
+      "id": "esp32_wroom_6xexifh",
       "type": "esp32_wroom",
       "name": "ESP32 WeMos D1 R32",
-      "x": 320,
-      "y": 100,
+      "x": 400,
+      "y": 150,
       "width": 276.28,
       "height": 210,
       "rotation": 0,
@@ -22,11 +22,11 @@
       "locked": false
     },
     {
-      "id": "lcd_16x2_i2c_obxpnio",
+      "id": "lcd_16x2_i2c_y96sczg",
       "type": "lcd_16x2_i2c",
       "name": "LCD 16x2 I2C",
-      "x": 669,
-      "y": 171,
+      "x": 703.2224574309826,
+      "y": 208.1961614462291,
       "width": 234.692,
       "height": 102.047,
       "rotation": 0,
@@ -42,27 +42,41 @@
   ],
   "wires": [
     {
-      "id": "wire_gndbkf8",
+      "id": "wire_38nyruj",
       "from": {
-        "componentId": "lcd_16x2_i2c_obxpnio",
-        "pinId": "gnd"
+        "componentId": "lcd_16x2_i2c_y96sczg",
+        "pinId": "scl"
       },
       "to": {
-        "componentId": "esp32_wroom_46ipm0z",
-        "pinId": "gnd_2"
+        "componentId": "esp32_wroom_6xexifh",
+        "pinId": "io22"
       },
       "points": [],
-      "color": "#1a1a1a",
+      "color": "#2ecc71",
       "connectorType": "hembra-hembra"
     },
     {
-      "id": "wire_i2sh8wo",
+      "id": "wire_dw3hd0l",
       "from": {
-        "componentId": "lcd_16x2_i2c_obxpnio",
+        "componentId": "lcd_16x2_i2c_y96sczg",
+        "pinId": "sda"
+      },
+      "to": {
+        "componentId": "esp32_wroom_6xexifh",
+        "pinId": "io21"
+      },
+      "points": [],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_db4ae4r",
+      "from": {
+        "componentId": "lcd_16x2_i2c_y96sczg",
         "pinId": "vcc"
       },
       "to": {
-        "componentId": "esp32_wroom_46ipm0z",
+        "componentId": "esp32_wroom_6xexifh",
         "pinId": "3v3"
       },
       "points": [],
@@ -70,57 +84,17 @@
       "connectorType": "hembra-hembra"
     },
     {
-      "id": "wire_s51jnud",
+      "id": "wire_rcm07tp",
       "from": {
-        "componentId": "lcd_16x2_i2c_obxpnio",
-        "pinId": "sda"
+        "componentId": "lcd_16x2_i2c_y96sczg",
+        "pinId": "gnd"
       },
       "to": {
-        "componentId": "esp32_wroom_46ipm0z",
-        "pinId": "io21"
+        "componentId": "esp32_wroom_6xexifh",
+        "pinId": "gnd_1"
       },
-      "points": [
-        {
-          "x": 632.1961523270156,
-          "y": 199.8
-        },
-        {
-          "x": 632.1961523270156,
-          "y": 86.81237421897397
-        },
-        {
-          "x": 410.28,
-          "y": 86.81237421897397
-        }
-      ],
-      "color": "#2ecc71",
-      "connectorType": "hembra-hembra"
-    },
-    {
-      "id": "wire_vn1ael2",
-      "from": {
-        "componentId": "lcd_16x2_i2c_obxpnio",
-        "pinId": "scl"
-      },
-      "to": {
-        "componentId": "esp32_wroom_46ipm0z",
-        "pinId": "io22"
-      },
-      "points": [
-        {
-          "x": 616.4868428884099,
-          "y": 207
-        },
-        {
-          "x": 616.4868428884099,
-          "y": 69.05402441881095
-        },
-        {
-          "x": 400.28,
-          "y": 69.05402441881095
-        }
-      ],
-      "color": "#2ecc71",
+      "points": [],
+      "color": "#1a1a1a",
       "connectorType": "hembra-hembra"
     }
   ],

@@ -2,21 +2,37 @@
     "type": "ky-008",
     "name": "KY-008 Módulo Láser",
     "category": "Actuadores",
-
-    "width": 53.150394,
-    "height": 93.662428,
-
+    "width": 56.694,
+    "height": 89.736,
     "svgPath": "components/ky-008/ky-008.svg",
-
     "pinShape": "square",
     "pinSize": 4,
-
     "pins": [
-        { "id": "s",   "name": "S (señal)", "x": 17.79, "y": 95, "type": "input",  "signal": "digital" },
-        { "id": "vcc", "name": "VCC (+)",   "x": 26.83, "y": 95, "type": "power",  "signal": "power" },
-        { "id": "gnd", "name": "GND (-)",   "x": 35.83, "y": 95, "type": "ground", "signal": "ground" }
+        {
+            "id": "s",
+            "name": "S (señal)",
+            "x": 18.976,
+            "y": 91.019,
+            "type": "input",
+            "signal": "digital"
+        },
+        {
+            "id": "vcc",
+            "name": "VCC (+)",
+            "x": 28.619,
+            "y": 91.019,
+            "type": "power",
+            "signal": "power"
+        },
+        {
+            "id": "gnd",
+            "name": "GND (-)",
+            "x": 38.219,
+            "y": 91.019,
+            "type": "ground",
+            "signal": "ground"
+        }
     ],
-
     "properties": {
         "modelo": "KY-008: módulo láser (diodo 650nm), enciende con S en ALTO y GND conectado -- mismo criterio que un LED simple"
     }

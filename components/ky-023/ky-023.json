@@ -2,25 +2,54 @@
     "type": "ky-023",
     "name": "KY-023 Joystick Analógico (X/Y + botón)",
     "category": "Sensores",
-
-    "width": 53.88478,
-    "height": 80.15966,
-
+    "width": 72,
+    "height": 98,
     "svgPath": "components/ky-023/ky-023.svg",
-
     "pinShape": "square",
     "pinSize": 4,
-
     "pins": [
-        { "id": "gnd", "name": "GND",        "x": 15.90, "y": 79.82, "type": "ground", "signal": "ground" },
-        { "id": "vcc", "name": "+5V",        "x": 20.94, "y": 79.82, "type": "power",  "signal": "power"  },
-        { "id": "vrx", "name": "VRx (ADC)",  "x": 25.98, "y": 79.82, "type": "signal" },
-        { "id": "vry", "name": "VRy (ADC)",  "x": 31.02, "y": 79.82, "type": "signal" },
-        { "id": "sw",  "name": "SW (botón)", "x": 36.04, "y": 79.82, "type": "signal" }
+        {
+            "id": "gnd",
+            "name": "GND",
+            "x": 21.246,
+            "y": 97.584,
+            "type": "ground",
+            "signal": "ground"
+        },
+        {
+            "id": "vcc",
+            "name": "+5V",
+            "x": 27.98,
+            "y": 97.584,
+            "type": "power",
+            "signal": "power"
+        },
+        {
+            "id": "vrx",
+            "name": "VRx (ADC)",
+            "x": 34.714,
+            "y": 97.584,
+            "type": "signal"
+        },
+        {
+            "id": "vry",
+            "name": "VRy (ADC)",
+            "x": 41.449,
+            "y": 97.584,
+            "type": "signal"
+        },
+        {
+            "id": "sw",
+            "name": "SW (botón)",
+            "x": 48.156,
+            "y": 97.584,
+            "type": "signal"
+        }
     ],
-
-    "pressPins": ["sw", "gnd"],
-
+    "pressPins": [
+        "sw",
+        "gnd"
+    ],
     "properties": {
         "modelo": "KY-023: joystick analógico de doble eje (X/Y) + botón Z, módulo real (a diferencia del 'Joystick' genérico dibujado a mano)"
     }

@@ -2,22 +2,45 @@
     "type": "ky-016",
     "name": "KY-016 LED RGB (orificio pasante)",
     "category": "LEDs",
-
-    "width": 52.650389,
-    "height": 88.169784,
-
+    "width": 56.694,
+    "height": 89.736,
     "svgPath": "components/ky-016/ky-016.svg",
-
     "pinShape": "square",
     "pinSize": 4,
-
     "pins": [
-        { "id": "b",   "name": "Azul (B)",  "x": 12.11, "y": 87.56, "type": "input",  "signal": "digital" },
-        { "id": "g",   "name": "Verde (G)", "x": 21.05, "y": 87.56, "type": "input",  "signal": "digital" },
-        { "id": "r",   "name": "Rojo (R)",  "x": 30.09, "y": 87.56, "type": "input",  "signal": "digital" },
-        { "id": "com", "name": "Común (-)", "x": 39.08, "y": 87.56, "type": "ground", "signal": "digital" }
+        {
+            "id": "b",
+            "name": "Azul (B)",
+            "x": 13.04,
+            "y": 89.116,
+            "type": "input",
+            "signal": "digital"
+        },
+        {
+            "id": "g",
+            "name": "Verde (G)",
+            "x": 22.667,
+            "y": 89.116,
+            "type": "input",
+            "signal": "digital"
+        },
+        {
+            "id": "r",
+            "name": "Rojo (R)",
+            "x": 32.401,
+            "y": 89.116,
+            "type": "input",
+            "signal": "digital"
+        },
+        {
+            "id": "com",
+            "name": "Común (-)",
+            "x": 42.082,
+            "y": 89.116,
+            "type": "ground",
+            "signal": "digital"
+        }
     ],
-
     "properties": {
         "modelo": "KY-016: LED RGB de orificio pasante (domo 5mm), cátodo común -- 'com' a GND. Cada canal (R/G/B) acepta digital ON/OFF (Pin) o PWM (machine.PWM/duty) para variar el brillo"
     }

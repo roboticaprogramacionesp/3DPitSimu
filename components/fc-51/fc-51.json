@@ -3,8 +3,8 @@
     "name": "FC-51 Sensor Infrarrojo de Obstáculos",
     "category": "Sensores",
 
-    "width": 119.57836,
-    "height": 137.02456,
+    "width": 156.544,
+    "height": 50.549,
 
     "svgPath": "components/fc-51/fc-51.svg",
 
@@ -12,9 +12,9 @@
     "pinSize": 4,
 
     "pins": [
-        { "id": "out", "name": "OUT", "type": "signal", "x": 0.000,  "y": 125.065 },
-        { "id": "gnd", "name": "GND", "type": "ground", "signal": "ground", "x": 7.075,  "y": 130.687 },
-        { "id": "vcc", "name": "VCC", "type": "power",  "signal": "power", "voltage": 3.3, "x": 13.206, "y": 135.558 }
+        { "id": "out", "name": "OUT", "type": "signal", "x": 0.000, "y": 16.204 },
+        { "id": "gnd", "name": "GND", "type": "ground", "signal": "ground", "x": 0.000, "y": 25.241 },
+        { "id": "vcc", "name": "VCC", "type": "power",  "signal": "power", "voltage": 3.3, "x": 0.000, "y": 33.074 }
     ],
 
     "properties": {
