@@ -203,6 +203,30 @@ class ProjectManager {
             return false;
         }
 
+        // BUG REAL encontrado (2026-08-01, "fantasmas" de componentes
+        // reportados por el usuario): deserialize() no tenía ninguna
+        // traba de reentrancia -- si algo llegaba a dispararlo una
+        // segunda vez mientras una primera pasada todavía estaba en
+        // curso (ej. clickear "Abrir proyecto" durante la restauración
+        // automática al arrancar la página, ver loadFromLocalStorage()),
+        // las dos corrían en paralelo y se pisaban entre sí: el
+        // clear()/innerHTML="" de la SEGUNDA llegaba a mitad de la
+        // PRIMERA, que seguía teniendo createFromDefinition()/
+        // renderComponent() en vuelo -- esos terminaban agregando de
+        // todos modos un <g> real al DOM (y hasta un componente real a
+        // componentManager) por encima del estado ya limpiado por la
+        // segunda pasada. Ahora una llamada mientras otra sigue en
+        // curso espera a que esa termine antes de arrancar la suya
+        // (en fila, nunca en paralelo) -- ninguna corre a mitad de la
+        // otra, así que ningún clear()/innerHTML="" puede pisar trabajo
+        // ajeno todavía en vuelo.
+        if (this._deserializing) {
+            await this._deserializing.catch(() => {});
+        }
+
+        let releaseLock;
+        this._deserializing = new Promise((resolve) => { releaseLock = resolve; });
+
         try {
 
             // Limpiar canvas actual
@@ -233,7 +257,12 @@ class ProjectManager {
                     }
                 );
                 if (component) {
-                    this.simulator.renderer.renderComponent(component);
+                    // await -- a diferencia de TODOS los demás call sites
+                    // de renderComponent() (Renderer.renderAll(),
+                    // Simulator.js:625/644), a este le faltaba (ver el
+                    // comentario grande sobre la traba de reentrancia más
+                    // arriba, en deserialize()).
+                    await this.simulator.renderer.renderComponent(component);
                 }
             }
 
@@ -283,6 +312,11 @@ class ProjectManager {
 
             console.error("[ProjectManager] Error restaurando proyecto:", err);
             return false;
+
+        } finally {
+
+            releaseLock();
+            this._deserializing = null;
 
         }
 
