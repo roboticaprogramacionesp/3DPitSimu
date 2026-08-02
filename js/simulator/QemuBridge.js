@@ -29,6 +29,13 @@ class QemuBridge {
         this.connected = false;
         this.buffer    = "";
 
+        // Si nunca conectamos ni una vez en esta pestaña y falla, es
+        // casi seguro el puente local (no instalado/no corriendo, o
+        // Chrome bloqueándolo -- ver onError()) y no un corte de una
+        // sesión que sí venía andando. Solo mostramos el hint grande
+        // esa primera vez, no en cada reintento.
+        this._everConnected = false;
+
         // Traba de paste mode -- ver beginPasteLock()/endPasteLock()
         // más abajo, y ReplPanel._pasteBlock() (quien la usa).
         this._pasteLockActive = false;
@@ -281,6 +288,7 @@ class QemuBridge {
 
         console.log("[QemuBridge] ✅ Conectado a QEMU");
         this.connected = true;
+        this._everConnected = true;
         this.buffer    = "";
         this.updateStatus("connected");
         this.simulator.eventBus.emit("qemu:connected");
@@ -321,6 +329,25 @@ class QemuBridge {
         console.error("[QemuBridge] Error WebSocket:", e);
         this.updateStatus("error");
 
+        // Página servida fuera de localhost (típicamente GitHub Pages)
+        // + primer intento de conexión que falla: casi siempre es el
+        // "puente local" (desktop/bridge_only.py) sin instalar/sin
+        // arrancar, O Chrome bloqueando el acceso a la red local con
+        // su permiso "Local Network Access" (confirmado en la
+        // práctica: ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS -- una
+        // página pública necesita permiso explícito del usuario para
+        // hablarle a 127.0.0.1, Chrome debería mostrar un cartel de
+        // permiso solo, pero si el usuario lo cerró/rechazó sin
+        // querer, falla en silencio en cualquier intento después).
+        if (!this._everConnected && !QemuBridge.isLocalHostname(location.hostname)) {
+            this.simulator.eventBus.emit("qemu:connect-hint");
+        }
+
+    }
+
+    static isLocalHostname(hostname) {
+        return hostname === "localhost" || hostname === "127.0.0.1" ||
+               hostname === "[::1]" || hostname === "::1" || hostname === "";
     }
 
     onMessage(msg) {

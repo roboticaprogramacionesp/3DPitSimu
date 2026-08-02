@@ -41,6 +41,34 @@ escritorio.
 4. Abrí la página del simulador en el navegador y usala normalmente —
    "▶ Simular" va a conectar solo.
 
+## ⚠️ Chrome puede pedir un permiso extra ("Red local")
+
+Confirmado en la práctica: Chrome tiene una función de seguridad
+relativamente nueva ("Local Network Access") que bloquea que una
+página pública (como `*.github.io`) se conecte a `127.0.0.1` **salvo
+que el usuario dé un permiso explícito** — el error en la consola del
+navegador es `ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS`. Esto pasa
+AUNQUE el puente esté corriendo bien y `ALLOWED_ORIGINS` esté seteado
+correctamente — es el navegador bloqueando antes de que el pedido
+llegue siquiera al puente.
+
+Qué hacer si "▶ Simular" no conecta:
+
+1. Fijate si Chrome mostró un cartel/ícono pidiendo permiso para
+   "acceder a la red local" al hacer clic en Simular, y aceptalo.
+2. Si no apareció ningún cartel (o ya lo rechazaste sin querer antes),
+   hacé clic en el candado 🔒 junto a la dirección del sitio →
+   "Configuración de sitios" (o "Permisos del sitio") → buscá "Red
+   local" (Local network access) → ponelo en "Permitir" → recargá la
+   página.
+3. Si tu navegador no tiene esta función todavía (versiones viejas de
+   Chrome) o usás Firefox, probablemente conecta directo sin pedir
+   nada — Firefox todavía no implementa este bloqueo.
+
+El simulador ahora detecta este caso (primera conexión fallida desde
+un origen que no es localhost) y muestra este mismo aviso solo, en la
+terminal del panel REPL.
+
 ## Uso (desde el código fuente, para desarrollo)
 
 ```powershell

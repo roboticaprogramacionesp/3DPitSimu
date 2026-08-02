@@ -25,7 +25,7 @@ server/node_modules/
 desktop/bridge_config.py
 dist/
 build/
-desktop/build/*.spec
+*.spec
 
 # desktop/vendor/: copia portable de QEMU+GDB (~234MB) para que la
 # distribución final ande en cualquier PC sin instalar nada -- ver

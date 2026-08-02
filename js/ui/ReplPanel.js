@@ -2417,6 +2417,29 @@ class ReplPanel {
 
         });
 
+        this.simulator.eventBus.on("qemu:connect-hint", () => {
+            this.appendOutput(
+                "\n⚠️ No se pudo conectar al puente local.\n" +
+                "\n" +
+                "Para usar el simulador con MicroPython real hace falta tener\n" +
+                "el \"puente local\" instalado y corriendo en TU computadora\n" +
+                "(no alcanza con abrir esta página -- ver el enlace de descarga\n" +
+                "que te haya pasado tu profesor/a).\n" +
+                "\n" +
+                "Si ya lo tenés corriendo y aun así falla, es probable que Chrome\n" +
+                "esté bloqueando el acceso a la red local de esta página. Fijate si\n" +
+                "apareció un cartel/permiso para \"acceder a la red local\" y\n" +
+                "aceptalo -- si no aparece, hacé clic en el candado 🔒 junto a la\n" +
+                "dirección del sitio → \"Configuración de sitios\" → buscá \"Red local\"\n" +
+                "y ponelo en \"Permitir\", después recargá la página.\n" +
+                "\n" +
+                "Mientras tanto podés usar el 🌐 modo navegador (sin instalar nada,\n" +
+                "aunque no actualiza los controles del panel en vivo mientras corre\n" +
+                "un bucle).\n",
+                "repl-error"
+            );
+        });
+
         this.simulator.eventBus.on("qemu:connected", async () => {
 
             this._lastGpioLogged = {};
