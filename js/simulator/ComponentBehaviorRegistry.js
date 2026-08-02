@@ -167,27 +167,52 @@ class ComponentBehaviorRegistry {
 
         const type = entry.type;
 
-        return new Promise((resolve) => {
+        // BUG REAL visto en la práctica (GitHub Pages, no localhost):
+        // un 503 transitorio del CDN en UN behavior.js entre varios
+        // que se piden en paralelo (loadAll() los pide todos juntos,
+        // ver más arriba) -- confirmado que la MISMA URL cargaba bien
+        // reintentada un segundo después. Como loadAll() corre una
+        // sola vez al arrancar, sin reintento ese componente se queda
+        // sin behavior el resto de la sesión aunque el archivo ande
+        // perfecto -- mismo espíritu que el reintento automático del
+        // HAL corrupto (ver project_hal_transmission_corruption): no
+        // depender de que alguien note el warning y recargue a mano.
+        const MAX_ATTEMPTS = 3;
+        const RETRY_DELAY_MS = 600;
+
+        const attempt = (n) => new Promise((resolve) => {
 
             const script = document.createElement("script");
-            script.src = `components/${type}/${type}.behavior.js`;
+            // Cache-bust en los reintentos -- si el 503 vino de una
+            // respuesta de error que el navegador cacheó de forma
+            // agresiva (pasa con algunos CDNs), pedir la MISMA url de
+            // siempre podría devolver el mismo error cacheado en vez
+            // de reintentar la red de verdad.
+            script.src = `components/${type}/${type}.behavior.js${n > 1 ? `?retry=${n}` : ""}`;
 
             script.onload = () => resolve();
 
             script.onerror = () => {
-                // Esto significaría que el manifest miente (dice
-                // hasBehavior:true pero el archivo no está) -- avisar
-                // en vez de fallar en silencio, para que se note el
-                // manifest desactualizado en vez de un componente que
-                // "no hace nada" sin ninguna pista de por qué.
-                console.warn(`[ComponentBehaviorRegistry] manifest.json dice hasBehavior:true para "${type}" pero components/${type}/${type}.behavior.js no cargó.`);
                 script.remove();
-                resolve();
+                if (n < MAX_ATTEMPTS) {
+                    console.warn(`[ComponentBehaviorRegistry] "${type}" behavior.js no cargó (intento ${n}/${MAX_ATTEMPTS}) -- reintentando...`);
+                    setTimeout(() => resolve(attempt(n + 1)), RETRY_DELAY_MS);
+                } else {
+                    // Esto significaría que el manifest miente (dice
+                    // hasBehavior:true pero el archivo no está) -- avisar
+                    // en vez de fallar en silencio, para que se note el
+                    // manifest desactualizado en vez de un componente que
+                    // "no hace nada" sin ninguna pista de por qué.
+                    console.warn(`[ComponentBehaviorRegistry] manifest.json dice hasBehavior:true para "${type}" pero components/${type}/${type}.behavior.js no cargó después de ${MAX_ATTEMPTS} intentos.`);
+                    resolve();
+                }
             };
 
             document.head.appendChild(script);
 
         });
+
+        return attempt(1);
 
     }
 
