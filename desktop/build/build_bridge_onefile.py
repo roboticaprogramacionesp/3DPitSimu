@@ -65,7 +65,7 @@ def main():
         sys.executable, "-m", "PyInstaller",
         "--onefile", "--console",
         "--icon", str(REPO_ROOT / "desktop" / "build" / "icon.ico"),
-        "--name", "PitSimulator-Puente",
+        "--name", "3DPitSimu-Puente",
         "--distpath", str(REPO_ROOT / "dist"),
         "--add-data", f"{staged_server};server",
         "--add-data", f"{vendor_dir};vendor",
@@ -79,7 +79,7 @@ def main():
 
     shutil.rmtree(STAGING_DIR, ignore_errors=True)
 
-    exe = REPO_ROOT / "dist" / "PitSimulator-Puente.exe"
+    exe = REPO_ROOT / "dist" / "3DPitSimu-Puente.exe"
     if exe.exists():
         print(f"Listo: {exe} ({exe.stat().st_size / 1_000_000:.0f} MB)")
     else:

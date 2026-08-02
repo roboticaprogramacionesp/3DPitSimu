@@ -80,7 +80,7 @@
     window.toolbar         = toolbar;
     window.reportGenerator = reportGenerator;
 
-    console.log("✅ PitSimulator listo. REPL panel activo.");
+    console.log("✅ 3DPitSimu listo. REPL panel activo.");
     console.log("   Atajo: Ctrl+` para abrir/cerrar el REPL");
 
 })();

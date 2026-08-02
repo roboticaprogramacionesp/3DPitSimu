@@ -46,7 +46,7 @@ def main():
 
     allowed = get_allowed_origins()
 
-    _log("[puente] PitSimulator -- puente local")
+    _log("[puente] 3DPitSimu -- puente local")
     _log("[puente] Este proceso NO abre ninguna ventana -- dejalo corriendo en")
     _log("[puente] segundo plano y abrí la página del simulador en tu navegador.")
     if allowed:

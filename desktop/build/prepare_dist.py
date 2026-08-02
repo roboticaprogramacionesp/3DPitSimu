@@ -4,14 +4,14 @@
 # Copia el frontend estatico, server/ (con sus binarios de datos,
 # excluyendo los *_old.* sobrantes) y desktop/vendor/ (QEMU+GDB
 # portables, si estan presentes -- ver desktop/vendor/README.md) a
-# dist/PitSimulator/, AL LADO del .exe que ya genero PyInstaller. Paso
+# dist/3DPitSimu/, AL LADO del .exe que ya genero PyInstaller. Paso
 # separado del build en si (no via --add-data) para poder re-copiar
 # solo esto sin tener que recompilar el .exe cada vez que cambia nada
 # mas que el frontend/los binarios vendorizados.
 #
 # Orden de uso:
 #   1. pyinstaller --onedir --windowed --icon=desktop/build/icon.ico \
-#        --name PitSimulator --distpath dist desktop/main.py
+#        --name 3DPitSimu --distpath dist desktop/main.py
 #   2. python desktop/build/prepare_dist.py
 #
 # Alternativa -- desktop/build/build_onefile.py: un solo .exe sin
@@ -23,7 +23,7 @@ import shutil
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-DIST_DIR = REPO_ROOT / "dist" / "PitSimulator"
+DIST_DIR = REPO_ROOT / "dist" / "3DPitSimu"
 VENDOR_SRC = REPO_ROOT / "desktop" / "vendor"
 
 FRONTEND_ITEMS = ["index.html", "3DPit.ico", "css", "js", "components", "assets", "lib"]

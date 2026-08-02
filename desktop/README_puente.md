@@ -1,7 +1,7 @@
-# Puente local (para usar PitSimulator publicado en GitHub Pages)
+# Puente local (para usar 3DPitSimu publicado en GitHub Pages)
 
 Cuando el simulador se abre desde una página web normal (GitHub Pages,
-por ejemplo `https://tuusuario.github.io/PitSimulator/`) el navegador
+por ejemplo `https://tuusuario.github.io/3DPitSimu/`) el navegador
 **no puede** correr QEMU ni MicroPython real por su cuenta — solo
 tiene JavaScript. El "puente local" es un programita chico que corrés
 en tu propia PC (una sola vez, se queda corriendo en segundo plano):
@@ -21,7 +21,7 @@ escritorio.
 
 ## Uso (versión empaquetada) -- un solo archivo, sin instalar nada
 
-1. Descargá `PitSimulator-Puente.exe` (te lo pasa quien te compartió
+1. Descargá `3DPitSimu-Puente.exe` (te lo pasa quien te compartió
    el simulador) -- un solo archivo, se puede dejar en cualquier
    carpeta (Escritorio, Descargas, un USB), no depende de ninguna otra
    carpeta al lado.
@@ -106,7 +106,7 @@ solo tu dominio real, no algo más amplio.
 python desktop/build/build_bridge_onefile.py
 ```
 
-Arma `dist/PitSimulator-Puente.exe` -- un solo archivo, con `server/`,
+Arma `dist/3DPitSimu-Puente.exe` -- un solo archivo, con `server/`,
 `desktop/vendor/` y `desktop/allowed_origins.txt` embebidos adentro
 (ver ese script para el detalle: arma una copia limpia de `server/`
 sin los binarios `_old`/`_prev` de sesiones viejas antes de
@@ -116,6 +116,6 @@ lado del `.exe`, y era fácil copiar solo el `.exe` suelto por error
 (pasó en la práctica). Si por algún motivo se prefiere la versión en
 carpeta (arranca mas rápido, no autoextrae nada): `pyinstaller
 --onedir --console --icon=desktop/build/icon.ico --name
-PitSimulator-Puente --distpath dist desktop/bridge_only.py`, y
+3DPitSimu-Puente --distpath dist desktop/bridge_only.py`, y
 después copiar `server/`, `desktop/vendor/` y
 `desktop/allowed_origins.txt` a mano al lado del `.exe` resultante.

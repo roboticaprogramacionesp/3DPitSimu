@@ -162,7 +162,7 @@ def main():
 
     _log("[desktop] Creando ventana...")
     window = webview.create_window(
-        "PitSimulator",
+        "3DPitSimu",
         f"http://127.0.0.1:{port}/index.html",
         # Antes 1400x900 -- tapaba pantallas chicas al abrir. Arranca
         # más chica, el usuario maximiza/agranda si quiere (resizable

@@ -70,7 +70,7 @@ def main():
         sys.executable, "-m", "PyInstaller",
         "--onefile", "--windowed",
         "--icon", str(REPO_ROOT / "desktop" / "build" / "icon.ico"),
-        "--name", "PitSimulator-Escritorio",
+        "--name", "3DPitSimu",
         "--distpath", str(REPO_ROOT / "dist"),
     ]
     for item in FRONTEND_ITEMS:
@@ -85,7 +85,7 @@ def main():
 
     shutil.rmtree(STAGING_DIR, ignore_errors=True)
 
-    exe = REPO_ROOT / "dist" / "PitSimulator-Escritorio.exe"
+    exe = REPO_ROOT / "dist" / "3DPitSimu.exe"
     if exe.exists():
         print(f"Listo: {exe} ({exe.stat().st_size / 1_000_000:.0f} MB)")
     else:
