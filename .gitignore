@@ -1,6 +1,15 @@
-.claude/settings.local.json
+.claude/
 node_modules/
 __pycache__/
+
+# Archivos sueltos de una etapa anterior del proyecto (patch manual de
+# machine.Pin vía REPL, notas de prueba) -- no los usa ningún componente
+# ni pantalla actual (confirmado, sin referencias en el código), no
+# hace falta para que el simulador funcione publicado en GitHub Pages.
+/npm
+/pin.txt
+/micropython_patch.py
+/lcd.png
 
 # server/: binarios grandes (firmware/ELF con símbolos de debug) --
 # no son código fuente, no tiene sentido versionarlos. Se regeneran
