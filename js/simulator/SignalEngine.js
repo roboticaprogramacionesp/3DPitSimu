@@ -733,15 +733,24 @@ class SignalEngine {
     // mismo criterio de arreglo en las 5 pantallas/matrices.
     if (!this.isFullyConnected(tm1637, "tm1637")) {
       tm1637.lastTm1637Frame = [0, 0, 0, 0];
-      this.simulator.renderer.applyTm1637Segments(tm1637, [0, 0, 0, 0]);
+      tm1637.lastTm1637Brightness = 7;
+      this.simulator.renderer.applyTm1637Segments(tm1637, [0, 0, 0, 0], 7);
       return;
     }
 
-    const byteCount = Math.ceil(hexString.length / 2);
+    // Primeros 8 caracteres = 4 bytes de segmentos; los 2 siguientes
+    // (si vinieron -- tm1637.hal.py los manda siempre, pero por las
+    // dudas ante una línea vieja/cortada) = brillo 0-7 (ver el
+    // comentario de protocolo en tm1637.hal.py -- antes brightness()
+    // no reenviaba nada, así que el brillo nunca se veía en pantalla).
+    const segHex = hexString.slice(0, 8);
+    const brightHex = hexString.slice(8, 10);
+
+    const byteCount = Math.ceil(segHex.length / 2);
     const bytes = [];
 
     for (let i = 0; i < byteCount; i++) {
-      bytes.push(parseInt(hexString.substr(i * 2, 2), 16) || 0);
+      bytes.push(parseInt(segHex.substr(i * 2, 2), 16) || 0);
     }
 
     // Siempre 4 dígitos -- si por lo que sea llegara menos (línea
@@ -749,13 +758,18 @@ class SignalEngine {
     // huecos que revienten applyTm1637Segments().
     while (bytes.length < 4) bytes.push(0);
 
+    const brightness = brightHex.length === 2
+      ? Math.max(0, Math.min(7, parseInt(brightHex, 16) || 0))
+      : 7;
+
     // Guardado para poder repintar sin esperar al próximo write()
     // (mismo mecanismo que ya usa max7219/neopixel_matrix si el
     // día de mañana el PropertyPanel necesita repintar a mitad
     // de sesión, ej. al cambiar algo visual).
     tm1637.lastTm1637Frame = bytes;
+    tm1637.lastTm1637Brightness = brightness;
 
-    this.simulator.renderer.applyTm1637Segments(tm1637, bytes);
+    this.simulator.renderer.applyTm1637Segments(tm1637, bytes, brightness);
 
     this.simulator.eventBus.emit("tm1637:updated", { componentId: tm1637.id });
   }
@@ -1088,9 +1102,23 @@ class SignalEngine {
     const b = this.isKeyConnectedToHighDriver(`${component.id}:${inPinB}`);
 
     const jumperInstalled = component.properties?.[jumperProp] !== false;
-    const enabled =
-      jumperInstalled ||
-      this.isKeyConnectedToHighDriver(`${component.id}:${enPin}`);
+    const enKey = `${component.id}:${enPin}`;
+
+    // ENA/ENB puede venir de un pin en PWM real (machine.PWM, ver
+    // _base.hal.py/setPwmState) -- en ese caso el duty cycle ES la
+    // velocidad, no solo habilitado/deshabilitado
+    // (isKeyConnectedToHighDriver nunca lo ve: PWM no pasa por
+    // driverStates, mismo criterio que ya usa led.behavior.js).
+    // Con el jumper puesto, el pin ENA/ENB queda atado directo a
+    // 5V (máxima velocidad fija), así que ni corresponde mirar PWM.
+    const pwm = jumperInstalled ? null : this.getPwmDutyForKey(enKey);
+    const enabledDigital = jumperInstalled || this.isKeyConnectedToHighDriver(enKey);
+    const enabled = enabledDigital || !!pwm;
+    const speed = jumperInstalled
+      ? 1
+      : pwm
+        ? Math.max(0, Math.min(1, pwm.duty / 1023))
+        : (enabledDigital ? 1 : 0);
 
     let state = "detenido";
 
@@ -1103,7 +1131,7 @@ class SignalEngine {
       state = "deshabilitado";
     }
 
-    return { state, enabled, in_a: a, in_b: b };
+    return { state, enabled, in_a: a, in_b: b, speed };
   }
 
   // ====================================================

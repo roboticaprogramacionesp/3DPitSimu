@@ -38,6 +38,7 @@ const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const COMPONENTS_DIR = path.join(REPO_ROOT, "components");
 const OUT_DIR = path.join(__dirname, "components");
 const MANIFEST_OUT = path.join(__dirname, "_pit_frozen_components.py");
+const JS_MANIFEST_OUT = path.join(REPO_ROOT, "js", "simulator", "FrozenHalTypes.js");
 
 // _base/_i2c_bus/_adc_bus/_uart_bus ya se congelan aparte (a mano,
 // _pit_base.py etc. en esta misma carpeta) -- nunca pasan por acá.
@@ -180,11 +181,17 @@ function main() {
         `# =============================================================\n` +
         `# PitSimulator — lista de tipos de componente con HAL congelado.\n` +
         `#\n` +
-        `# Generado por build_components.js -- NO EDITAR A MANO. ReplPanel.js\n` +
-        `# lo lee vía un probe de una línea al conectar (ver\n` +
-        `# _resyncHalAfterBoot()/FROZEN_PROBE_MARK) para saber, tipo por\n` +
-        `# tipo, si puede mandar "import _pit_hal_<tipo>" (rápido) en vez de\n` +
-        `# pastear el .hal.py completo por paste-mode (lento).\n` +
+        `# Generado por build_components.js -- NO EDITAR A MANO. Este lado\n` +
+        `# Python es solo un frozenset INERTE (ver más abajo) -- la lista\n` +
+        `# que ReplPanel.js usa en el navegador para decidir "import\n` +
+        `# _pit_hal_<tipo>" vs. paste completo vive en js/simulator/\n` +
+        `# FrozenHalTypes.js (generado ACÁ MISMO, ver JS_MANIFEST_OUT), no\n` +
+        `# se sondea el firmware conectado en tiempo real (eso se abandonó:\n` +
+        `# era una sonda con timeout, propensa a carreras -- ver\n` +
+        `# project_frozen_probe_timeout_fix.md). Si el import falla porque\n` +
+        `# el firmware conectado en verdad NO lo tiene (versión vieja),\n` +
+        `# ReplPanel.js cae solo al paste completo para ESE tipo (ver\n` +
+        `# el listener de "qemu:hal-error").\n` +
         `#\n` +
         `# Módulo INERTE a propósito -- solo este frozenset, nada más -- se\n` +
         `# importa incondicionalmente en boot.py (ver boot_snippet.py), sin\n` +
@@ -194,8 +201,7 @@ function main() {
         `# 0x77, ds3231/mpu6050 en 0x68) y solo tiene sentido cargar el HAL\n` +
         `# de lo que el proyecto ACTUAL tiene realmente en el canvas --\n` +
         `# ReplPanel.js sigue decidiendo eso, igual que en el camino\n` +
-        `# pasteado de siempre, con este frozenset solo como "menú" de qué\n` +
-        `# puede pedir por import en vez de por paste.\n` +
+        `# pasteado de siempre.\n` +
         `# =============================================================\n\n` +
         `FROZEN_TYPES = frozenset([\n` +
         frozenTypes.map((t) => `    ${JSON.stringify(t)},`).join("\n") +
@@ -203,7 +209,35 @@ function main() {
 
     fs.writeFileSync(MANIFEST_OUT, manifestText, "utf8");
 
+    const jsManifestText =
+        `// =============================================================\n` +
+        `// PitSimulator — lista de tipos de componente con HAL congelado.\n` +
+        `//\n` +
+        `// Generado por firmware/frozen_hal/build_components.js -- NO\n` +
+        `// EDITAR A MANO. Correr "node firmware/frozen_hal/build_components.js"\n` +
+        `// de nuevo después de cambiar un .hal.py y volver a congelar/\n` +
+        `// recompilar el firmware (ver README.md de esa carpeta).\n` +
+        `//\n` +
+        `// ReplPanel.js usa esto para decidir, ESTÁTICAMENTE (sin sondear\n` +
+        `// el firmware conectado en tiempo real), si intentar\n` +
+        `// "import _pit_hal_<tipo>" (rápido) en vez de pastear el .hal.py\n` +
+        `// completo (lento). Si el firmware conectado resulta ser más\n` +
+        `// viejo y en realidad NO tiene ese tipo congelado, el import\n` +
+        `// falla con un HAL_ERROR normal y ReplPanel.js cae solo al paste\n` +
+        `// completo para ESE tipo -- ver el listener de "qemu:hal-error"\n` +
+        `// en ReplPanel.bindBusEvents(). Reemplaza a la sonda en vivo que\n` +
+        `// había antes (_probeFrozenTypes()/FROZEN_PROBE_MARK, quitada por\n` +
+        `// tener una carrera real con su propio timeout -- ver\n` +
+        `// project_frozen_probe_timeout_fix.md en la memoria del proyecto).\n` +
+        `// =============================================================\n\n` +
+        `const PIT_FROZEN_HAL_TYPES = new Set([\n` +
+        frozenTypes.map((t) => `    ${JSON.stringify(t)},`).join("\n") +
+        `\n]);\n`;
+
+    fs.writeFileSync(JS_MANIFEST_OUT, jsManifestText, "utf8");
+
     console.log(`Generados ${frozenTypes.length} módulos en ${path.relative(REPO_ROOT, OUT_DIR)}`);
+    console.log(`Lista JS estática escrita en ${path.relative(REPO_ROOT, JS_MANIFEST_OUT)}`);
     console.log(frozenTypes.join(", "));
 }
 

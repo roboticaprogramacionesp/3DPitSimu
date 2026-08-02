@@ -139,6 +139,20 @@ class Toolbox {
                     el.classList.remove("dragging");
                 });
 
+                // Clic (sin arrastrar) -- a pedido, ver de qué se
+                // trata un componente antes de arrastrarlo al lienzo.
+                // window.propertyPanel en vez de un campo propio: se
+                // resuelve recién acá, al momento del clic (para
+                // entonces app.js ya terminó de inicializar todo),
+                // así Toolbox.js no necesita que PropertyPanel exista
+                // todavía en el momento en que ESTE método corre (el
+                // orden real de creación en app.js es Toolbox antes
+                // que PropertyPanel).
+                el.addEventListener("click", () => {
+                    this.simulator.selectionManager.clear();
+                    window.propertyPanel?.showPreview(this.definitions[item.type], item.type);
+                });
+
                 // Touch (tablet/celular): el Drag&Drop nativo de HTML5 de
                 // arriba (dragstart/dragend) NUNCA dispara con touch --
                 // ningún navegador lo soporta, en ningún celular/tablet
@@ -268,6 +282,34 @@ class Toolbox {
     //------------------------------------------------------
 
     async _addComponentAt(type, clientX, clientY) {
+
+        // Mismo candado que ya bloquea mover componentes (DragManager)
+        // y editar cables (WireManager.locked) mientras la simulación
+        // está corriendo -- agregar un componente NUEVO al circuito en
+        // pleno "Simular" no tiene sentido (QEMU ya arrancó con el
+        // circuito de ese momento) y antes no estaba bloqueado.
+        if (this.simulator.isRunning) {
+
+            const status = document.getElementById("statusText");
+            if (status) {
+
+                const previousText  = status.textContent;
+                const previousColor = status.style.color;
+
+                status.textContent = "⚠ Detené la simulación para agregar componentes.";
+                status.style.color = "#ff5252";
+
+                clearTimeout(this._simRunningAddTimeout);
+                this._simRunningAddTimeout = setTimeout(() => {
+                    status.textContent = previousText;
+                    status.style.color = previousColor;
+                }, 4000);
+
+            }
+
+            return null;
+
+        }
 
         const validTypes = this.entries.map(entry => entry.type);
 

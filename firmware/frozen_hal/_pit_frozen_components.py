@@ -1,11 +1,17 @@
 # =============================================================
 # PitSimulator — lista de tipos de componente con HAL congelado.
 #
-# Generado por build_components.js -- NO EDITAR A MANO. ReplPanel.js
-# lo lee vía un probe de una línea al conectar (ver
-# _resyncHalAfterBoot()/FROZEN_PROBE_MARK) para saber, tipo por
-# tipo, si puede mandar "import _pit_hal_<tipo>" (rápido) en vez de
-# pastear el .hal.py completo por paste-mode (lento).
+# Generado por build_components.js -- NO EDITAR A MANO. Este lado
+# Python es solo un frozenset INERTE (ver más abajo) -- la lista
+# que ReplPanel.js usa en el navegador para decidir "import
+# _pit_hal_<tipo>" vs. paste completo vive en js/simulator/
+# FrozenHalTypes.js (generado ACÁ MISMO, ver JS_MANIFEST_OUT), no
+# se sondea el firmware conectado en tiempo real (eso se abandonó:
+# era una sonda con timeout, propensa a carreras -- ver
+# project_frozen_probe_timeout_fix.md). Si el import falla porque
+# el firmware conectado en verdad NO lo tiene (versión vieja),
+# ReplPanel.js cae solo al paste completo para ESE tipo (ver
+# el listener de "qemu:hal-error").
 #
 # Módulo INERTE a propósito -- solo este frozenset, nada más -- se
 # importa incondicionalmente en boot.py (ver boot_snippet.py), sin
@@ -15,8 +21,7 @@
 # 0x77, ds3231/mpu6050 en 0x68) y solo tiene sentido cargar el HAL
 # de lo que el proyecto ACTUAL tiene realmente en el canvas --
 # ReplPanel.js sigue decidiendo eso, igual que en el camino
-# pasteado de siempre, con este frozenset solo como "menú" de qué
-# puede pedir por import en vez de por paste.
+# pasteado de siempre.
 # =============================================================
 
 FROZEN_TYPES = frozenset([

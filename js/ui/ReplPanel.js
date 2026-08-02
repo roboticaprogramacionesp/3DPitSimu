@@ -49,14 +49,18 @@ class ReplPanel {
         // recién arrancado, sin nada pegado todavía).
         this._halSentToFirmware = new Set();
 
-        // Tipos cuyo .hal.py está CONGELADO en el firmware conectado
-        // (ver firmware/frozen_hal/README.md) -- se descubre con un
-        // probe de una sola línea al conectar (ver
-        // _probeFrozenTypes()/FROZEN_PROBE_MARK), vacío si el
-        // firmware no tiene nada de esto (compatibilidad total con
-        // firmware viejo, o corriendo sin firmware custom). Mismo
-        // lifecycle que _halSentToFirmware -- se resetea en cada
-        // conexión nueva (_resyncHalAfterBoot).
+        // Tipos que se van a intentar por el camino rápido ("import
+        // _pit_hal_<tipo>") en vez de paste completo -- parte de la
+        // lista ESTÁTICA generada en build (PIT_FROZEN_HAL_TYPES, ver
+        // js/simulator/FrozenHalTypes.js), NO de una sonda en vivo al
+        // firmware (esa se quitó, tenía una carrera real con su
+        // propio timeout -- ver project_frozen_probe_timeout_fix.md
+        // en la memoria del proyecto). Si el firmware conectado
+        // resulta ser más viejo y el import falla de verdad, el
+        // listener de "qemu:hal-error" saca ese tipo puntual de acá
+        // para el resto de la conexión. Mismo lifecycle que
+        // _halSentToFirmware -- se repuebla en cada conexión nueva
+        // (_resyncHalAfterBoot).
         this._frozenHalTypes = new Set();
 
         // Cuántas veces se reintentó automáticamente el HAL de cada
@@ -1311,9 +1315,9 @@ class ReplPanel {
     }
 
     // ====================================================
-    // Camino RÁPIDO: el firmware conectado ya tiene el .hal.py de
+    // Camino RÁPIDO: el firmware conectado PODRÍA tener el .hal.py de
     // este tipo CONGELADO (ver firmware/frozen_hal/README.md y
-    // _probeFrozenTypes() más abajo) -- en vez de pastear ~100-200
+    // PIT_FROZEN_HAL_TYPES en js/simulator/FrozenHalTypes.js) -- en vez de pastear ~100-200
     // líneas de base64 por el pty serial emulado, mandamos un
     // "import _pit_hal_<tipo>" de una sola línea. Mismo aislamiento
     // try/except que _wrapHalForIsolation() (así HAL_ERROR:<tipo> y
@@ -1624,23 +1628,24 @@ class ReplPanel {
     // PROBE_MARK) en el filtro de "qemu:output" de bindBusEvents(),
     // igual que ya se filtran las líneas de protocolo (GPIO:/IN:/etc).
     //
-    // PROBE_TIMEOUT_MS: tope de seguridad. Si no llega nada a
-    // tiempo (REPL trabado, desconexión rara, primera vez que
-    // arranca todo el stack), se resuelve como "no" -- incluso en
-    // el peor caso, esto nunca deja al firmware SIN HAL: como mucho
-    // repasteamos de más, que es exactamente el comportamiento que
-    // había antes de este cambio.
+    // PROBE_TIMEOUT_MS: tope de seguridad para _probeWarmBoot(). Si
+    // no llega nada a tiempo (REPL trabado, desconexión rara, primera
+    // vez que arranca todo el stack), se resuelve como "no" -- ni en
+    // el peor caso esto deja al firmware SIN HAL: como mucho
+    // repasteamos de más.
+    //
+    // Subido de 800ms a 2500ms (2026-08-02): 800ms resultó ser poco
+    // margen para un viaje de ida y vuelta real sobre QEMU+GDB, sobre
+    // todo viniendo justo después del propio Ctrl+C + 150ms de espera
+    // que ya manda este mismo probe. La misma sonda-con-timeout, pero
+    // para tipos con HAL congelado (_probeFrozenTypes()), se
+    // terminó sacando del todo en vez de solo subirle el timeout --
+    // ver el comentario grande cerca de _resyncHalAfterBoot() y
+    // project_frozen_probe_timeout_fix.md en la memoria del proyecto.
     // ====================================================
 
-    static PROBE_TIMEOUT_MS = 800;
+    static PROBE_TIMEOUT_MS = 2500;
     static PROBE_MARK = "_PIT_WARM_";
-
-    // Probe de tipos con HAL congelado (ver _probeFrozenTypes() más
-    // abajo y firmware/frozen_hal/README.md) -- mismo criterio que
-    // PROBE_MARK: un print() de una sola línea, nunca lanza excepción
-    // sea cual sea el firmware conectado (firmware viejo sin nada de
-    // esto → imprime el marcador solo, lista vacía).
-    static FROZEN_PROBE_MARK = "_PIT_FROZEN_";
 
     // BUG REAL encontrado (reportado por el usuario: "el botón de
     // Ejecutar no se activa después de correr el simulador", pero SÍ
@@ -1693,6 +1698,11 @@ class ReplPanel {
                 if (settled) return;
                 settled = true;
                 this._warmProbe = null;
+                // Diagnóstico para la próxima vez que esto se sospeche
+                // de nuevo (ver PROBE_TIMEOUT_MS más arriba, ronda
+                // 2026-08-02) -- si esto se ve seguido en la consola,
+                // confirma que el timeout sigue siendo insuficiente.
+                console.warn(`[ReplPanel] _probeWarmBoot() no respondió en ${ReplPanel.PROBE_TIMEOUT_MS}ms -- asumiendo boot frío.`);
                 resolve(false);
             }, ReplPanel.PROBE_TIMEOUT_MS);
 
@@ -1713,79 +1723,19 @@ class ReplPanel {
     }
 
     // ====================================================
-    // ¿Qué tipos de componente tienen su HAL CONGELADO en el
-    // firmware conectado? (ver firmware/frozen_hal/README.md). Un
-    // solo print() interactivo (no paste), expresión ternaria para
-    // que NUNCA lance una excepción sea cual sea el firmware --
-    // firmware viejo (sin _pit_frozen_components) o corriendo sin
-    // firmware custom en absoluto simplemente no tiene ese nombre en
-    // sys.modules, cae en la rama "else" y contesta el marcador con
-    // la lista vacía. boot_snippet.py importa _pit_frozen_components
-    // incondicionalmente (junto con los otros 4 módulos siempre
-    // presentes) -- si ese import corrió, ya está en sys.modules
-    // para cuando este probe se manda.
-    //
-    // Se llama DESPUÉS de que _resyncHalAfterBoot() resuelve el
-    // warm-boot probe (mismo prompt real ya alcanzado, mismo
-    // criterio de "no mandar nada mientras el intérprete no esté
-    // listo" que ya vale para _probeWarmBoot()).
+    // _probeFrozenTypes() (sonda en vivo "¿qué tipos tenés
+    // congelados?") se QUITÓ (2026-08-02) -- tenía una carrera real
+    // con su propio timeout (ver project_frozen_probe_timeout_fix.md
+    // en la memoria del proyecto: con TM1637 primero y lcd_16x2_i2c
+    // después, la respuesta llegaba bien pero después de que el
+    // timeout ya había resuelto con un Set vacío, degradando TODA la
+    // conexión al paste completo aunque el firmware sí tuviera tipos
+    // congelados). Reemplazada por la lista ESTÁTICA generada en
+    // tiempo de build (PIT_FROZEN_HAL_TYPES, ver
+    // js/simulator/FrozenHalTypes.js y _resyncHalAfterBoot() más
+    // arriba) + fallback automático al paste completo si el import
+    // falla de verdad (ver el listener de "qemu:hal-error").
     // ====================================================
-
-    async _probeFrozenTypes() {
-
-        return new Promise((resolve) => {
-
-            let settled = false;
-            const timer = setTimeout(() => {
-                if (settled) return;
-                settled = true;
-                this._frozenProbe = null;
-                resolve(new Set());
-            }, ReplPanel.PROBE_TIMEOUT_MS);
-
-            this._frozenProbe = (typesCsv) => {
-                if (settled) return;
-                settled = true;
-                clearTimeout(timer);
-                const types = typesCsv ? typesCsv.split(",").filter(Boolean) : [];
-                resolve(new Set(types));
-            };
-
-            // BUG REAL encontrado probando esto con QEMU real: la
-            // terminal ecoa de vuelta el propio comando tal cual se
-            // tipeó (comportamiento normal de cualquier REPL
-            // interactivo) -- ese eco llega ANTES que el resultado
-            // real del print(), y como el código fuente de abajo
-            // contiene el string "_PIT_FROZEN_" literal (entre
-            // comillas, para construir el marcador), el chequeo
-            // "text.includes(FROZEN_PROBE_MARK)" de bindBusEvents()
-            // matcheaba contra ESE eco -- agarrando basura (un
-            // fragmento del código fuente) como si fuera la lista de
-            // tipos, antes de que llegara la línea real.
-            //
-            // _probeWarmBoot() no sufre esto porque valida el
-            // caracter siguiente al marcador (solo acepta "0"/"1") --
-            // en el eco de SU fuente, el caracter siguiente es una
-            // comilla, así que ese chequeo lo descarta solo, por
-            // suerte de cómo está escrito ese comando puntual. Acá,
-            // en vez de depender de una validación así de frágil,
-            // partimos el marcador en dos literales Python
-            // ADYACENTES (concatenación implícita en tiempo de
-            // parseo) -- el substring "_PIT_FROZEN_" completo nunca
-            // aparece tal cual en el CÓDIGO FUENTE que se ecoa, solo
-            // en el RESULTADO real del print().
-            const markMid = Math.ceil(ReplPanel.FROZEN_PROBE_MARK.length / 2);
-            const markA = ReplPanel.FROZEN_PROBE_MARK.slice(0, markMid);
-            const markB = ReplPanel.FROZEN_PROBE_MARK.slice(markMid);
-
-            this.simulator.eventBus.emit(
-                "qemu:send",
-                `print("${markA}" "${markB}" + (",".join(sorted(__import__("sys").modules["_pit_frozen_components"].FROZEN_TYPES)) if "_pit_frozen_components" in __import__("sys").modules else ""))`
-            );
-
-        });
-
-    }
 
     // ====================================================
     // Esperar a que aparezca un ">>>" real en la salida cruda -- ver
@@ -1882,13 +1832,26 @@ class ReplPanel {
             this._halSentToFirmware = new Set(ReplPanel.ALWAYS_HAL_TYPES);
         }
 
-        // Qué tipos de componente tiene congelados ESTE firmware --
-        // se resetea en cada conexión nueva (podría ser un firmware
-        // distinto de la vez anterior). Independiente de warmBoot: un
-        // soft reboot no "descongela" nada (lo congelado sigue
-        // congelado pase lo que pase), pero repreguntamos igual para
-        // no asumir de más -- es un solo print() barato.
-        this._frozenHalTypes = await this._probeFrozenTypes();
+        // Qué tipos de componente PODRÍAN estar congelados en el
+        // firmware conectado -- ya NO se le pregunta al firmware en
+        // vivo (esto sondeaba con un print() + timeout de 800ms,
+        // encontrado con una carrera real: si la respuesta tardaba
+        // más que el timeout -- nada raro sobre QEMU+GDB, sobre todo
+        // justo después de la sonda de warm-boot -- este Set quedaba
+        // vacío para TODA la conexión aunque el firmware sí tuviera
+        // el tipo congelado, ver project_frozen_probe_timeout_fix.md
+        // en la memoria del proyecto). Ahora se parte de la lista
+        // ESTÁTICA generada en tiempo de build (PIT_FROZEN_HAL_TYPES,
+        // ver js/simulator/FrozenHalTypes.js) -- se intenta el import
+        // rápido de una, sin esperar ningún viaje de ida y vuelta. Si
+        // el firmware conectado resulta ser más viejo y en realidad
+        // NO tiene ese tipo congelado, el import falla con un
+        // HAL_ERROR normal y el listener de "qemu:hal-error" (más
+        // abajo) saca ese tipo puntual de este Set, así el reintento
+        // automático cae solo al paste completo -- ver ese listener.
+        this._frozenHalTypes = new Set(
+            typeof PIT_FROZEN_HAL_TYPES !== "undefined" ? PIT_FROZEN_HAL_TYPES : []
+        );
 
         await this.preloadHal();
 
@@ -2198,20 +2161,6 @@ class ReplPanel {
             // print(...) que la generó -- así que se busca en
             // cualquier parte de la línea, no solo al principio.
             if (t.includes(ReplPanel.PROBE_MARK)) return true;
-            if (t.includes(ReplPanel.FROZEN_PROBE_MARK)) return true;
-            // BUG REAL encontrado (el usuario veía el print() del probe
-            // de tipos congelados crudo en el panel): _probeFrozenTypes()
-            // parte FROZEN_PROBE_MARK en dos literales Python adyacentes
-            // ("_PIT_F" "ROZEN_") a propósito, para que el ECO del
-            // comando (lo que la terminal repite mientras se tipea, ANTES
-            // de que llegue el resultado real) no contenga el substring
-            // contiguo "_PIT_FROZEN_" -- eso evitaba un bug de parseo
-            // real (ver el comentario grande en _probeFrozenTypes()), pero
-            // como efecto secundario ese eco dejó de calzar acá, así que
-            // se mostraba crudo. El nombre del módulo SÍ aparece entero
-            // (sin partir) en el código fuente del probe -- filtrarlo por
-            // ahí cubre tanto el eco como el resultado real.
-            if (t.includes("_pit_frozen_components")) return true;
             if (FIRMWARE_BOOT_NOISE.some(p => t.startsWith(p))) return true;
             return PROTOCOL_PREFIXES.some(p => t.startsWith(p));
         };
@@ -2225,11 +2174,6 @@ class ReplPanel {
             const t = fragment.replace(/^\r+/, "");
             if (!t) return false;
             if (ReplPanel.PROBE_MARK.startsWith(t) || t.includes(ReplPanel.PROBE_MARK)) return true;
-            if (ReplPanel.FROZEN_PROBE_MARK.startsWith(t) || t.includes(ReplPanel.FROZEN_PROBE_MARK)) return true;
-            // Mismo motivo que en isProtocolLine() -- cubre el eco del
-            // comando partido.
-            const FROZEN_PROBE_NEEDLE = "_pit_frozen_components";
-            if (FROZEN_PROBE_NEEDLE.startsWith(t) || t.includes(FROZEN_PROBE_NEEDLE)) return true;
             if (FIRMWARE_BOOT_NOISE.some(p => p.startsWith(t) || t.startsWith(p))) return true;
             return PROTOCOL_PREFIXES.some(p => p.startsWith(t) || t.startsWith(p));
         };
@@ -2247,29 +2191,6 @@ class ReplPanel {
                 if (flag === "0" || flag === "1") {
                     this._warmProbe(flag === "1");
                     this._warmProbe = null;
-                }
-            }
-
-            // Marcador de _probeFrozenTypes() -- mismo criterio que
-            // _warmProbe de arriba (chequeado antes del corte de
-            // _suppressEcho). El resto de la línea, hasta el próximo
-            // "\n" o el final de este chunk, es la lista CSV de tipos
-            // (puede venir vacía).
-            if (this._frozenProbe && text.includes(ReplPanel.FROZEN_PROBE_MARK)) {
-                const idx = text.indexOf(ReplPanel.FROZEN_PROBE_MARK) + ReplPanel.FROZEN_PROBE_MARK.length;
-                const rest = text.slice(idx);
-                const nl = rest.indexOf("\n");
-                const csv = (nl === -1 ? rest : rest.slice(0, nl)).replace(/\r/g, "").trim();
-                // Defensa extra (ver el comentario grande en
-                // _probeFrozenTypes() sobre el eco del propio comando):
-                // una lista real de tipos solo tiene letras/dígitos/
-                // "_"/"-"/",". Cualquier otra cosa (comillas,
-                // paréntesis, espacios -- señal de haber matcheado
-                // contra código fuente en vez del resultado real) se
-                // descarta sin resolver, esperando la línea de verdad.
-                if (/^[\w,-]*$/.test(csv)) {
-                    this._frozenProbe(csv);
-                    this._frozenProbe = null;
                 }
             }
 
@@ -2549,6 +2470,21 @@ class ReplPanel {
                 `\n🔄 Se detectó ruido en la transmisión del HAL de "${type}" -- reintentando solo, no hace falta hacer nada.\n`,
                 "repl-info"
             );
+
+            // Si este tipo se había intentado por el camino rápido
+            // ("import _pit_hal_<tipo>", ver _frozenHalTypes más
+            // arriba) y falló, sacarlo del Set ANTES de reintentar --
+            // el error puede ser un firmware más viejo que en
+            // realidad no lo tiene congelado (ModuleNotFoundError) o
+            // un nombre no reexportado en ese namespace propio (ver
+            // el mismo problema ya encontrado con process_line() en
+            // project_resync_idle_repl_fix.md) -- en CUALQUIERA de
+            // los dos casos, el paste completo (que corre en el
+            // namespace global del REPL, con todo ya disponible) es
+            // más probable que funcione. Sin esto, el reintento
+            // automático volvía a probar el mismo import roto hasta
+            // agotar HAL_RETRY_MAX, sin autocorregirse nunca.
+            this._frozenHalTypes.delete(type);
 
             this._halSentToFirmware.delete(type);
             this._retryHalAfterError(type);

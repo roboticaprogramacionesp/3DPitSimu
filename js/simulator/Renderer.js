@@ -1838,15 +1838,18 @@ class Renderer {
 
     if (!spinning || !rotor) return;
 
-    // No tenemos % de PWM real desde el L298N (solo habilitado
-    // sí/no por ahora), así que la velocidad de giro es fija.
-    // Si más adelante ENA/ENB reportan duty real, este es el
-    // lugar para escalar la duración según la velocidad.
+    // speed viene de SignalEngine._computeL298nMotorState(): 1 con
+    // el jumper puesto o ENA/ENB en digital HIGH, o el duty real
+    // (0-1) si ENA/ENB está en PWM -- a menor duty, más lento el
+    // giro. Rango acotado (mín. 0.08) para que la animación siga
+    // siendo perceptible incluso a duty muy bajo, en vez de
+    // "congelarse" en cámara lenta imperceptible.
+    const speed = Math.max(0.08, Math.min(1, motorState?.speed ?? 1));
     const direction = state === "adelante" ? "normal" : "reverse";
 
     component._motorAnim = rotor.animate(
       [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
-      { duration: 700, iterations: Infinity, direction },
+      { duration: 700 / speed, iterations: Infinity, direction },
     );
   }
 
@@ -2684,10 +2687,19 @@ class Renderer {
   // bytes: array de 4 enteros (uno por dígito), tal cual los manda
   // tm1637_hal.py -- ya codificados bit a bit (a=bit0 ... g=bit6),
   // con el bit7 del byte de índice 1 controlando el colón ":".
-  applyTm1637Segments(component, bytes) {
+  // brightness: 0-7 (real del chip, ver tm1637.hal.py) -- 0 NO es
+  // "apagado" (eso lo decide isOn arriba, segmento por segmento),
+  // es la intensidad mínima visible del chip real. Mapeado acá a
+  // opacidad 0.15-1 (antes 0.35-1: a pedido del usuario, brightness=0
+  // se veía "casi igual que prendido normal" -- se achicó el piso
+  // para que 0 se note bien tenue/casi apagado, sin llegar a
+  // opacity:0 real -- el chip real nunca apaga del todo con esto).
+  applyTm1637Segments(component, bytes, brightness = 7) {
     if (!component.element) return;
 
     const ROLES = ["a", "b", "c", "d", "e", "f", "g"];
+    const clampedBrightness = Math.max(0, Math.min(7, brightness));
+    const opacity = 0.15 + (clampedBrightness / 7) * 0.85;
 
     for (let digitIndex = 0; digitIndex < 4; digitIndex++) {
       const byte = bytes[digitIndex] || 0;
@@ -2704,6 +2716,7 @@ class Renderer {
           ? Renderer.TM1637_ON_COLOR
           : Renderer.TM1637_OFF_COLOR;
         el.style.filter = isOn ? "drop-shadow(0 0 3px #ff0033)" : "none";
+        el.style.opacity = isOn ? String(opacity) : "1";
       });
     }
 
@@ -2716,6 +2729,7 @@ class Renderer {
           ? Renderer.TM1637_ON_COLOR
           : Renderer.TM1637_OFF_COLOR;
         el.style.filter = colonOn ? "drop-shadow(0 0 3px #ff0033)" : "none";
+        el.style.opacity = colonOn ? String(opacity) : "1";
       });
   }
 

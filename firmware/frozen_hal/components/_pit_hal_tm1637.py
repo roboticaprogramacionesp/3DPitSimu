@@ -35,11 +35,14 @@ from _pit_i2c_bus import I2C
 # Por eso clk/dio se reciben y se guardan (para que la firma del
 # constructor sea compatible con código real) pero nunca se tocan.
 #
-# Protocolo de salida: TM1637:<8 hex = 4 bytes, uno por dígito>
+# Protocolo de salida: TM1637:<8 hex = 4 bytes, uno por dígito><2 hex = brillo 0-7>
 #   cada byte: bit0=a bit1=b bit2=c bit3=d bit4=e bit5=f bit6=g
 #   (igual convención que el chip real / la librería real)
 #   bit7 del byte de ÍNDICE 1 (el 2do dígito) = los dos puntos ":"
 #   -- también igual que la librería real, que guarda el colón ahí.
+#   El byte de brillo se manda siempre (en cada _send(), no solo al
+#   llamar brightness()) para que el simulador lo tenga sin importar
+#   qué método haya disparado el frame.
 #
 # Uso en código del usuario (idéntico a la librería real):
 #   from machine import Pin
@@ -125,16 +128,28 @@ class TM1637:
             sys.stdout.write("PININFO:tm1637:clk=%d,dio=%d\n" % (clk_num, dio_num))
 
         self._segments = bytearray(4)
-        self._brightness = 7
+
+        # brightness=N por el constructor (firma real de la librería,
+        # ej. TM1637(clk=.., dio=.., brightness=1)) ANTES quedaba
+        # atrapado en **kwargs sin usarse -- self._brightness quedaba
+        # fijo en 7 pase lo que pase hasta el primer .brightness()
+        # explícito. Ahora se lee acá, con el mismo clamp 0-7 que ya
+        # usa brightness().
+        try:
+            initial_brightness = int(kwargs.get("brightness", 7))
+        except Exception:
+            initial_brightness = 7
+        self._brightness = max(0, min(initial_brightness, 7))
 
         self._send()
 
-    # ── Brillo (no afecta la forma, no hace falta reenviar) ──────
+    # ── Brillo ─────────────────────────────────────────────────
 
     def brightness(self, val=None):
         if val is None:
             return self._brightness
         self._brightness = max(0, min(val, 7))
+        self._send()
 
     # ── Escritura cruda ───────────────────────────────────────────
 
@@ -204,7 +219,10 @@ class TM1637:
     # ── Envío al simulador ────────────────────────────────────────
 
     def _send(self):
-        sys.stdout.write("TM1637:%02x%02x%02x%02x\n" % tuple(self._segments))
+        sys.stdout.write(
+            "TM1637:%02x%02x%02x%02x%02x\n"
+            % (self._segments[0], self._segments[1], self._segments[2], self._segments[3], self._brightness)
+        )
 
 
 class _Tm1637Module:

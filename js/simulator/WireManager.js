@@ -1219,6 +1219,16 @@ class WireManager {
             // ahí el cable se veía como un cuadrilátero negro enorme
             // en vez de una línea fina de su color real.
             path.style.fill = "none";
+            // Mismo motivo que fill:none arriba: stroke-width/linejoin/
+            // linecap viven en .wire-visual (simulator.css, hoja
+            // externa) y tampoco viajan al clonar/serializar este layer
+            // para exportar (captura de circuito, reporte) -- el cable
+            // caía al default de SVG (stroke-width:1) y se veía como una
+            // línea finita, casi invisible, en la imagen exportada aunque
+            // en el lienzo en vivo se viera bien grueso.
+            path.style.strokeWidth = "2.3";
+            path.style.strokeLinejoin = "round";
+            path.style.strokeLinecap = "round";
             // El path visual NUNCA debe capturar clicks: es puramente
             // decorativo y va DIBUJADO ENCIMA de las <line class="wire-segment">
             // invisibles (zona de click ancha). Si no le sacamos pointer-events,

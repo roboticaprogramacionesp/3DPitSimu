@@ -36,11 +36,6 @@ class ReportGenerator {
         // no hace falta re-decodificar el .ico cada vez.
         this._logoDataUrl = null;
 
-        // Imagen de código cargada a mano (ej. captura de los bloques
-        // desde Blocks/AppBlock3), ver _bindCodeImageInput(). null =
-        // usar el código en texto plano del editor, como antes.
-        this._codeImage = null;
-
         // Los valores del formulario solo se precargan la PRIMERA vez
         // que se abre el modal en esta sesión -- a pedido explícito:
         // cerrar el modal (click afuera) y volver a abrirlo no debe
@@ -96,18 +91,18 @@ class ReportGenerator {
                 </div>
 
                 <div class="report-modal-field">
-                    <label>Código</label>
-                    <div class="report-modal-code-image-row">
-                        <button type="button" class="report-modal-load-image">📂 Cargar imagen del código (bloques)</button>
-                        <span class="report-modal-code-image-name"></span>
-                        <button type="button" class="report-modal-clear-image hidden" title="Quitar imagen, usar el código en texto">✕</button>
-                    </div>
-                    <input type="file" id="reportCodeImageInput" accept="image/*" class="report-modal-file-hidden">
+                    <label for="reportExtraMaterials">Materiales adicionales (uno por línea)</label>
+                    <textarea id="reportExtraMaterials" maxlength="400" placeholder="Ej.: 1 protoboard&#10;1 batería 9V&#10;Cinta aisladora"></textarea>
                     <p class="report-modal-hint">
-                        Opcional -- si cargás una imagen (ej. una captura de los
-                        bloques desde Blocks) se usa esa en vez del código en
-                        texto plano del editor.
+                        Opcional -- para sumar a la lista automática algo que el
+                        circuito no muestra pero hace falta igual (protoboard,
+                        soportes, cinta, etc.).
                     </p>
+                </div>
+
+                <div class="report-modal-field">
+                    <label for="reportCost">Costo estimado</label>
+                    <input type="text" id="reportCost" maxlength="60" placeholder="Ej.: $850 MXN">
                 </div>
 
                 <div class="report-modal-field">
@@ -124,7 +119,9 @@ class ReportGenerator {
 
                 <p class="report-modal-hint">
                     Se incluyen automáticamente: la lista de componentes y
-                    cables del lienzo, y una captura del circuito.
+                    cables del lienzo, una captura del circuito, y el código
+                    (si armaste bloques en el Editor de bloques 🧩 se usa una
+                    foto de esos bloques, si no, el código en texto del editor).
                 </p>
 
                 <div class="report-modal-actions">
@@ -142,12 +139,10 @@ class ReportGenerator {
             student:        this.overlay.querySelector("#reportStudent"),
             date:           this.overlay.querySelector("#reportDate"),
             school:         this.overlay.querySelector("#reportSchool"),
+            extraMaterials: this.overlay.querySelector("#reportExtraMaterials"),
+            cost:           this.overlay.querySelector("#reportCost"),
             tips:           this.overlay.querySelector("#reportTips"),
             showNames:      this.overlay.querySelector("#reportShowNames"),
-            codeImageInput: this.overlay.querySelector("#reportCodeImageInput"),
-            loadImageBtn:   this.overlay.querySelector(".report-modal-load-image"),
-            clearImageBtn:  this.overlay.querySelector(".report-modal-clear-image"),
-            codeImageName:  this.overlay.querySelector(".report-modal-code-image-name"),
             preview:        this.overlay.querySelector(".report-modal-preview"),
             generate:       this.overlay.querySelector(".report-modal-generate"),
         };
@@ -159,8 +154,6 @@ class ReportGenerator {
         this._els.preview.addEventListener("click", () => this.preview());
         this._els.generate.addEventListener("click", () => this.generate());
 
-        this._bindCodeImageInput();
-
         // Recuerda lo último escrito (alumno/escuela se repiten seguido
         // entre una práctica y la siguiente).
         this._els.student.addEventListener("change", () => {
@@ -168,35 +161,6 @@ class ReportGenerator {
         });
         this._els.school.addEventListener("change", () => {
             localStorage.setItem("pit_report_school", this._els.school.value);
-        });
-
-    }
-
-    _bindCodeImageInput() {
-
-        this._els.loadImageBtn.addEventListener("click", () => this._els.codeImageInput.click());
-
-        this._els.codeImageInput.addEventListener("change", async () => {
-
-            const file = this._els.codeImageInput.files?.[0];
-            if (!file) return;
-
-            try {
-                this._codeImage = await this._loadImageFile(file);
-                this._els.codeImageName.textContent = file.name;
-                this._els.clearImageBtn.classList.remove("hidden");
-            } catch (err) {
-                console.error("[ReportGenerator] No se pudo leer la imagen:", err);
-                alert("❌ No se pudo leer esa imagen.");
-            }
-
-        });
-
-        this._els.clearImageBtn.addEventListener("click", () => {
-            this._codeImage = null;
-            this._els.codeImageInput.value = "";
-            this._els.codeImageName.textContent = "";
-            this._els.clearImageBtn.classList.add("hidden");
         });
 
     }
@@ -293,9 +257,17 @@ class ReportGenerator {
 
         try {
 
-            const [circuitImage, logoDataUrl] = await Promise.all([
+            // codeImage: si hay bloques armados en el Editor de bloques
+            // (BlocklyPanel.js, botón 🧩) se usa una foto de ESOS
+            // bloques -- ya no hace falta que el alumno exporte/cargue
+            // una imagen a mano. Si no hay bloques (o el panel nunca
+            // se abrió), captureWorkspaceImage() devuelve null y
+            // _buildReportSvg() cae al código en texto plano del
+            // editor, mismo criterio de siempre.
+            const [circuitImage, logoDataUrl, codeImage] = await Promise.all([
                 this._captureCircuitImage(),
                 this._loadLogoDataUrl(),
+                window.blocklyPanel?.captureWorkspaceImage() ?? null,
             ]);
 
             return {
@@ -304,9 +276,10 @@ class ReportGenerator {
                 student: this._els.student.value.trim(),
                 school:  this._els.school.value.trim(),
                 date:    this._els.date.value || new Date().toISOString().slice(0, 10),
+                cost:    this._formatCost(this._els.cost.value.trim()),
                 tips:    this._els.tips.value.trim(),
                 code:    this.replPanel?.codeMirror?.getValue()?.trim() || "",
-                codeImage: this._codeImage,
+                codeImage,
                 checklist: this._buildChecklist(components),
                 circuitImage,
                 logoDataUrl,
@@ -331,12 +304,39 @@ class ReportGenerator {
 
     }
 
+    // Completa lo que falte del costo escrito a mano -- a pedido: "$"
+    // adelante y "pesos" al final, cada uno solo si el usuario no lo
+    // puso ya (no se duplica si ya escribió "$850" o "850 pesos").
+    // Vacío se queda vacío (el campo es opcional, ver _buildReportSvg
+    // -- sin esto no se muestra ninguna línea de costo).
+    _formatCost(raw) {
+
+        if (!raw) return "";
+
+        let cost = raw.trim();
+
+        if (!cost.includes("$")) {
+            cost = "$" + cost;
+        }
+
+        if (!/pesos/i.test(cost)) {
+            cost = cost + " pesos";
+        }
+
+        return cost;
+
+    }
+
     // Lista de materiales tipo "* 2 LED, * 1 ESP32 WeMos D1 R32, ..."
     // (mismo espíritu que el listado de adkeypad.svg) -- agrupa por
     // tipo, usa el nombre "lindo" del primer componente de cada grupo
     // (Component.name ya viene resuelto desde <type>.json, no hace
     // falta re-leer manifest.json acá) y agrega el conteo de cables
-    // POR TIPO (ver _classifyWires).
+    // POR TIPO (ver _classifyWires). Termina con lo que el usuario
+    // haya escrito a mano en "Materiales adicionales" (#reportExtraMaterials,
+    // un renglón por ítem) -- cosas que el circuito armado en el
+    // lienzo no puede saber que hacen falta (protoboard, soportes,
+    // cinta, etc.).
     _buildChecklist(components) {
 
         const groups = new Map();
@@ -365,7 +365,12 @@ class ReportGenerator {
 
         });
 
-        return items.concat(this._classifyWires());
+        const extra = (this._els.extraMaterials.value || "")
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean);
+
+        return items.concat(this._classifyWires()).concat(extra);
 
     }
 
@@ -415,24 +420,6 @@ class ReportGenerator {
         });
     }
 
-    // Lee un <input type="file"> de imagen y devuelve {dataUrl, width,
-    // height} -- mismo shape que _captureCircuitImage(), así
-    // _buildReportSvg() puede tratar "código como imagen" y "captura
-    // del circuito" con el mismo bloque de escalado/centrado.
-    _loadImageFile(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-                const img = new Image();
-                img.onload  = () => resolve({ dataUrl: reader.result, width: img.naturalWidth, height: img.naturalHeight });
-                img.onerror = () => reject(new Error("no se pudo decodificar la imagen"));
-                img.src = reader.result;
-            };
-            reader.onerror = () => reject(reader.error);
-            reader.readAsDataURL(file);
-        });
-    }
-
     // El logo del proyecto es un .ico (3DPit.ico, junto a index.html) --
     // se decodifica una vez vía <img>/<canvas> (los navegadores SÍ
     // rasterizan .ico en un <img>, es como cargan el favicon) y se
@@ -478,6 +465,18 @@ class ReportGenerator {
             .replace(/'/g, "&apos;");
     }
 
+    // Recorta a maxChars con "…" -- para renglones de UNA línea que no
+    // pueden wrappear (ej. cada ítem del checklist de Materiales, que
+    // suma una fila de alto fijo por ítem -- wrappear ahí adentro
+    // rompería el cálculo de altura de la caja). Mismo criterio de
+    // ancho aproximado que _wrapText() de abajo (~1.7mm por carácter a
+    // font-size 3, calibrado contra CONTENT_W=186mm/100 caracteres a
+    // font-size 3.3 que ya usaba _wrapText).
+    _truncate(text, maxChars) {
+        if (text.length <= maxChars) return text;
+        return text.slice(0, Math.max(1, maxChars - 1)) + "…";
+    }
+
     // Corte de línea manual -- SVG <text> no hace word-wrap solo.
     // Corta por cantidad de caracteres (aproximado, fuente monoespaciada
     // asumida para el cálculo aunque el texto libre no lo sea -- alcanza
@@ -491,6 +490,47 @@ class ReportGenerator {
         words.forEach((word) => {
             const candidate = current ? `${current} ${word}` : word;
             if (candidate.length > maxChars && current) {
+                lines.push(current);
+                current = word;
+            } else {
+                current = candidate;
+            }
+        });
+        if (current) lines.push(current);
+
+        return lines;
+
+    }
+
+    // Ancho REAL de un texto (en las mismas unidades que el viewBox del
+    // SVG, que son mm -- 1 unidad de font-size = 1mm) vía un <canvas>
+    // 2D fuera de pantalla. Usado en vez de la estimación de _wrapText
+    // (mm/carácter fijo) donde ese estimado quedaba muy conservador y
+    // cortaba la línea mucho antes de llegar al ancho real disponible
+    // -- reportado por el usuario en "¿Qué vamos a aprender?": el texto
+    // wrappeaba dejando un montón de aire libre antes de la caja de
+    // Materiales. measureText() con la MISMA fuente/tamaño que el SVG
+    // (Segoe UI/Arial) da el ancho real, no una aproximación.
+    _measureTextWidth(text, fontSize, bold = false) {
+        if (!this._measureCtx) {
+            this._measureCtx = document.createElement("canvas").getContext("2d");
+        }
+        this._measureCtx.font = `${bold ? "700 " : ""}${fontSize}px "Segoe UI", Arial, sans-serif`;
+        return this._measureCtx.measureText(text).width;
+    }
+
+    // Igual que _wrapText() pero cortando por ANCHO REAL medido
+    // (maxWidth, mismas unidades que el viewBox/font-size del SVG) en
+    // vez de una cantidad fija de caracteres.
+    _wrapTextByWidth(text, maxWidth, fontSize, bold = false) {
+
+        const words = text.split(/\s+/).filter(Boolean);
+        const lines = [];
+        let current = "";
+
+        words.forEach((word) => {
+            const candidate = current ? `${current} ${word}` : word;
+            if (this._measureTextWidth(candidate, fontSize, bold) > maxWidth && current) {
                 lines.push(current);
                 current = word;
             } else {
@@ -539,37 +579,100 @@ class ReportGenerator {
         parts.push(`<text x="${titleX}" y="${headerTop + 11}" font-size="3" fill="#777">Reporte de práctica -- 3DPitSim</text>`);
         parts.push(`<text x="${titleX}" y="${headerTop + 16.5}" font-size="3.2" fill="#333">Alumno: ${esc(data.student || "________________")}    Fecha: ${esc(data.date)}</text>`);
         parts.push(`<text x="${titleX}" y="${headerTop + 21.5}" font-size="3.2" fill="#333">Escuela / CCT: ${esc(data.school || "________________")}</text>`);
-        const leftColBottom = headerTop + 21.5;
 
-        const BOX_X = 130;
-        const BOX_W = PAGE_W - MARGIN - BOX_X;
+        // Caja de Materiales -- calculada ANTES que "¿Qué vamos a
+        // aprender?" (más abajo) porque su ancho (BOX_X, según use 1 o
+        // 2 columnas) determina cuánto lugar horizontal le queda a la
+        // columna izquierda para el texto de la meta -- con muchos
+        // componentes esto crecía indefinidamente hacia abajo (una
+        // fila SVG por ítem) y empujaba todo lo demás cada vez más
+        // crecía indefinidamente hacia abajo (una fila SVG por ítem) y
+        // empujaba todo lo demás ("¿Qué vamos a aprender?", etc.) cada
+        // vez más lejos del encabezado. Ahora tiene una altura tope
+        // (MAX_BOX_H) -- si el checklist en una sola columna la
+        // superaría, se pasa a DOS columnas (la caja se ensancha en
+        // vez de alargarse, ocupando más o menos la mitad del ancho
+        // de la hoja) para que la altura del encabezado quede acotada
+        // sin importar cuántos componentes haya.
         const boxLineH = 4.2;
         const boxTitleH = 6;
-        const boxH = boxTitleH + data.checklist.length * boxLineH + 3;
+        const costLineH = data.cost ? boxLineH + 1.5 : 0;
+        const MAX_BOX_H = 50;
+
+        const singleColH = boxTitleH + data.checklist.length * boxLineH + costLineH + 3;
+        const useTwoCols = singleColH > MAX_BOX_H;
+
+        const BOX_X = useTwoCols ? 90 : 130;
+        const BOX_W = PAGE_W - MARGIN - BOX_X;
+
+        const col1 = useTwoCols ? data.checklist.slice(0, Math.ceil(data.checklist.length / 2)) : data.checklist;
+        const col2 = useTwoCols ? data.checklist.slice(Math.ceil(data.checklist.length / 2)) : [];
+        const rowCount = useTwoCols ? Math.max(col1.length, col2.length) : data.checklist.length;
+        const boxH = boxTitleH + rowCount * boxLineH + costLineH + 3;
+
         parts.push(`<rect x="${BOX_X}" y="${headerTop}" width="${BOX_W}" height="${boxH}" rx="1.5" fill="#f5f7fa" stroke="#ccc" stroke-width="0.3"/>`);
         parts.push(`<text x="${BOX_X + 3}" y="${headerTop + 5}" font-size="3.6" font-weight="700" fill="#1a1a1a">Materiales</text>`);
-        let matY = headerTop + boxTitleH + 3;
-        data.checklist.forEach((item) => {
-            parts.push(`<text x="${BOX_X + 3}" y="${matY}" font-size="3" fill="#333"><tspan font-size="4.5" fill="#2a7fff">&#9633;</tspan> ${esc(item)}</text>`);
-            matY += boxLineH;
-        });
+
+        const colGap = 4;
+        const colW = useTwoCols ? (BOX_W - 6 - colGap) / 2 : BOX_W;
+        const col1X = BOX_X + 3;
+        const col2X = BOX_X + 3 + colW + colGap;
+
+        // Ancho disponible para el TEXTO de cada ítem (colW menos el
+        // espacio del ícono de checkbox) -- ~1.7mm por carácter a
+        // font-size 3, ver _truncate(). Sin esto, un nombre largo (ej.
+        // "1 BH1750 Sensor de Luz Ambiental (I2C)") se salía de su
+        // columna y quedaba superpuesto con la columna vecina.
+        const maxCharsPerItem = Math.max(10, Math.floor((colW - 5) / 1.7));
+
+        const renderCol = (items, colX) => {
+            let itemY = headerTop + boxTitleH + 3;
+            items.forEach((item) => {
+                const label = this._truncate(item, maxCharsPerItem);
+                parts.push(`<text x="${colX}" y="${itemY}" font-size="3" fill="#333"><tspan font-size="4.5" fill="#2a7fff">&#9633;</tspan> ${esc(label)}</text>`);
+                itemY += boxLineH;
+            });
+        };
+        renderCol(col1, col1X);
+        if (useTwoCols) renderCol(col2, col2X);
+
+        let matY = headerTop + boxTitleH + 3 + rowCount * boxLineH;
+        if (data.cost) {
+            matY += 1.5;
+            parts.push(`<line x1="${BOX_X + 3}" y1="${matY - boxLineH + 1}" x2="${BOX_X + BOX_W - 3}" y2="${matY - boxLineH + 1}" stroke="#ccc" stroke-width="0.25"/>`);
+            parts.push(`<text x="${BOX_X + 3}" y="${matY}" font-size="3.2" font-weight="700" fill="#1a7a3a">Costo estimado: ${esc(data.cost)}</text>`);
+        }
         const rightColBottom = headerTop + boxH;
 
-        let y = Math.max(leftColBottom, rightColBottom) + 8;
-        parts.push(`<line x1="${MARGIN}" y1="${y}" x2="${PAGE_W - MARGIN}" y2="${y}" stroke="#ccc" stroke-width="0.3"/>`);
-        y += 7;
+        // ---- ¿Qué vamos a aprender? -- 5ta vuelta: Alumno/Fecha y
+        // Escuela/CCT VUELVEN arriba (debajo de "Reporte de
+        // práctica", ver más arriba) -- eso nunca debió moverse. Lo
+        // único que ocupa todo el ancho hasta Materiales es esta
+        // sección, que ahora arranca DEBAJO de Escuela/CCT (no antes).
+        const goalColX = MARGIN;
+        const goalColW = BOX_X - MARGIN - 6;
 
-        // ---- ¿Qué vamos a aprender? ----
-        parts.push(`<text x="${MARGIN}" y="${y}" font-size="4.5" font-weight="700" fill="#1a1a1a">¿Qué vamos a aprender?</text>`);
-        y += 5;
-        const goalLines = data.goal
-            ? this._wrapText(data.goal, 100)
-            : ["________________________________________________________"];
-        goalLines.forEach((line) => {
-            parts.push(`<text x="${MARGIN}" y="${y}" font-size="3.3" fill="#333">${esc(line)}</text>`);
-            y += 4.2;
+        let goalY = headerTop + 21.5 + 5;
+        this._wrapTextByWidth("¿Qué vamos a aprender?", goalColW, 3.6, true).forEach((line) => {
+            parts.push(`<text x="${goalColX}" y="${goalY}" font-size="3.6" font-weight="700" fill="#1a1a1a">${esc(line)}</text>`);
+            goalY += 4.3;
         });
-        y += 3;
+        const goalLines = data.goal
+            ? this._wrapTextByWidth(data.goal, goalColW, 3.1)
+            : ["____________________________"];
+        goalLines.forEach((line) => {
+            parts.push(`<text x="${goalColX}" y="${goalY}" font-size="3.1" fill="#333">${esc(line)}</text>`);
+            goalY += 4;
+        });
+
+        const leftColBottom = goalY;
+
+        // A pedido: menos aire entre el encabezado y "Conexiones"
+        // (antes +8/+7 = 15mm de puro margen, se sentía como un
+        // salto en blanco muy grande) -- se achica a +4/+5 = 9mm.
+        let y = Math.max(leftColBottom, rightColBottom) + 4;
+        parts.push(`<line x1="${MARGIN}" y1="${y}" x2="${PAGE_W - MARGIN}" y2="${y}" stroke="#ccc" stroke-width="0.3"/>`);
+        y += 5;
 
         // ---- Conexiones (captura del circuito) ----
         parts.push(`<text x="${MARGIN}" y="${y}" font-size="4.5" font-weight="700" fill="#1a1a1a">Conexiones</text>`);
@@ -583,10 +686,15 @@ class ReportGenerator {
             const imgX = MARGIN + (CONTENT_W - imgW) / 2;
             parts.push(`<rect x="${MARGIN}" y="${y}" width="${CONTENT_W}" height="${imgH + 4}" fill="#f5f7fa" stroke="#ddd" stroke-width="0.3"/>`);
             parts.push(`<image href="${data.circuitImage.dataUrl}" x="${imgX}" y="${y + 2}" width="${imgW}" height="${imgH}"/>`);
-            y += imgH + 8;
+            // A pedido: separar "Código" de la imagen de Conexiones --
+            // antes el hueco real (descontando los 4mm de padding ya
+            // incluidos en el recuadro de la imagen) era de solo 4mm,
+            // se veía "pegado". Ahora son ~10mm, más parecido al resto
+            // de los espacios entre secciones del reporte.
+            y += imgH + 14;
         } else {
             parts.push(`<text x="${MARGIN}" y="${y}" font-size="3.3" fill="#999">(no se pudo capturar el circuito)</text>`);
-            y += 6;
+            y += 10;
         }
 
         // ---- Código -- imagen cargada a mano (ej. bloques) si hay
