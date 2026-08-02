@@ -72,6 +72,111 @@ class ContextMenu {
         window.addEventListener("blur", () => this.close());
         window.addEventListener("scroll", () => this.close(), true);
 
+        this._bindTouchLongPress();
+
+    }
+
+    //------------------------------------------------------
+    // Touch (tablet/celular): no hay clic derecho. Un toque largo
+    // (quieto, sin arrastrar) abre el mismo menú que el clic derecho
+    // abriría -- mismo patrón que Toolbox._bindTouchDragToAdd() (toque
+    // largo para "levantar" un item de la lista).
+    //
+    // BUG REAL a evitar (visto en la práctica con el mismo patrón en
+    // Toolbox.js): DragManager/WireManager/Simulator.bindPanEvents()
+    // ya arrancan SU PROPIO arrastre/paneo/dibujo-de-cable en el mismo
+    // pointerdown, sin esperar ningún toque largo -- si se deja que
+    // sigan "activos" cuando el menú abre, queda un arrastre fantasma
+    // a medio hacer (cursor grabbing pegado, pointer capture sin
+    // soltar, etc.). Como los tres escuchan "pointerup" en window sin
+    // filtrar por pointerId (confirmado leyendo los tres archivos), un
+    // solo pointerup sintético alcanza para que los tres limpien su
+    // estado ANTES de abrir el menú -- no hace falta tocarlos ni
+    // exponer su estado interno (que hoy es privado a cada closure).
+    //------------------------------------------------------
+
+    _bindTouchLongPress() {
+
+        const LONG_PRESS_MS = 500;
+        const MOVE_CANCEL_PX = 10;
+
+        let timer = null;
+        let startX = 0, startY = 0, startPointerId = null;
+
+        const cancelTimer = () => {
+            clearTimeout(timer);
+            timer = null;
+        };
+
+        this.simulator.canvas.addEventListener("pointerdown", (e) => {
+
+            if (e.pointerType !== "touch") return;
+
+            // Sobre un pin el toque es para dibujar un cable nuevo
+            // (WireManager) -- no interceptar ese gesto con un menú.
+            if (e.target.closest(".pin")) return;
+
+            startX = e.clientX;
+            startY = e.clientY;
+            startPointerId = e.pointerId;
+
+            timer = setTimeout(() => {
+
+                timer = null;
+
+                window.dispatchEvent(new PointerEvent("pointerup", {
+                    clientX: startX, clientY: startY,
+                    pointerId: startPointerId, bubbles: true,
+                }));
+
+                const target = document.elementFromPoint(startX, startY);
+                const componentEl = target?.closest(".component");
+                // Incluye los tiradores de codo/tramo (.wire-node-hit,
+                // .wire-seg-handle-hit) -- si el toque cae justo sobre
+                // uno (lo más probable si el usuario está apuntando a
+                // ese codo puntual), no solo sobre la línea del cable.
+                const wireEl = target?.closest(".wire-segment, .wire-visual, .wire-node-hit, .wire-seg-handle-hit");
+
+                if (componentEl) {
+
+                    const id = componentEl.getAttribute("data-id");
+                    const component = this.simulator.componentManager.get(id);
+
+                    if (component) {
+                        if (!this.simulator.selectionManager.selected.includes(id)) {
+                            this.simulator.selectionManager.select(id, false);
+                        }
+                        this.showComponentMenu(component, startX, startY);
+                        return;
+                    }
+
+                }
+
+                if (wireEl) {
+                    const wireId = wireEl.getAttribute("data-wire-id");
+                    this.showWireMenu(wireId, startX, startY);
+                    return;
+                }
+
+                this.showCanvasMenu(startX, startY);
+
+            }, LONG_PRESS_MS);
+
+        });
+
+        this.simulator.canvas.addEventListener("pointermove", (e) => {
+
+            if (e.pointerType !== "touch" || !timer) return;
+
+            if (Math.hypot(e.clientX - startX, e.clientY - startY) > MOVE_CANCEL_PX) {
+                cancelTimer();
+            }
+
+        });
+
+        this.simulator.canvas.addEventListener("pointerup", cancelTimer);
+        this.simulator.canvas.addEventListener("pointercancel", cancelTimer);
+
     }
 
     close() {
@@ -123,6 +228,11 @@ class ContextMenu {
                 row.appendChild(arrow);
 
                 row.addEventListener("mouseenter", () => this.openSubmenu(item.submenu, row));
+
+                // Touch (tablet/celular): no hay "hover" -- sin esto, un
+                // submenú (ej. "Girar") nunca se abre, solo con mouse. Un
+                // tap hace lo mismo que el mouseenter de arriba.
+                row.addEventListener("click", () => this.openSubmenu(item.submenu, row));
 
             } else if (!item.disabled) {
 
@@ -264,6 +374,77 @@ class ContextMenu {
                 action: () => this.pasteAt(x, y)
             },
         ];
+
+        this.buildMenu(items, x, y);
+
+    }
+
+    //------------------------------------------------------
+    // Menú sobre un cable -- equivalente táctil de "doble click sobre
+    // el codo para borrarlo" (WireManager.onWireLayerDblClick) y de
+    // "Del/Backspace con el cable seleccionado" (Simulator's
+    // deleteSelection), ninguno de los dos alcanzable en touch. Mismo
+    // criterio de undo/redo que esos dos usan.
+    //------------------------------------------------------
+
+    showWireMenu(wireId, x, y) {
+
+        const wireManager = this.simulator.wireManager;
+        const wire = wireManager.wires.find(w => w.id === wireId);
+
+        if (!wire) return;
+
+        wireManager.setSelectedWire(wireId);
+        wireManager.setSelectedPoint(null);
+
+        // ¿El toque cayó cerca de un codo puntual? Mismo radio de
+        // "zona de click" que ya usan los tiradores de codo
+        // (.wire-node-hit/.wire-seg-handle-hit, ver WireManager.renderAll).
+        const canvasPt = Utils.getCanvasPoint(this.simulator.componentLayer, x, y);
+        const HIT_RADIUS = 16;
+        let elbowIndex = -1;
+        let elbowDist = HIT_RADIUS;
+
+        wire.points.forEach((p, i) => {
+            const d = Math.hypot(p.x - canvasPt.x, p.y - canvasPt.y);
+            if (d < elbowDist) { elbowDist = d; elbowIndex = i; }
+        });
+
+        const items = [];
+
+        if (elbowIndex >= 0) {
+            items.push({
+                label: "Borrar este codo",
+                action: () => {
+                    const removedPoint = wire.points[elbowIndex];
+                    wire.points.splice(elbowIndex, 1);
+                    wireManager.renderAll();
+                    this.simulator.history.push({
+                        undo: () => { wire.points.splice(elbowIndex, 0, removedPoint); wireManager.renderAll(); },
+                        redo: () => { wire.points.splice(elbowIndex, 1); wireManager.renderAll(); }
+                    });
+                }
+            });
+            items.push("separator");
+        }
+
+        items.push({
+            label: "Eliminar cable",
+            shortcut: "Del",
+            action: () => {
+                wireManager.removeWire(wireId);
+                wireManager.selectedWire = null;
+                this.simulator.eventBus.emit("wire:selected", null);
+                this.simulator.history.push({
+                    undo: () => {
+                        wireManager.wires.push(wire);
+                        wireManager.renderAll();
+                        this.simulator.eventBus.emit("wire:added", wire);
+                    },
+                    redo: () => { wireManager.removeWire(wire.id); }
+                });
+            }
+        });
 
         this.buildMenu(items, x, y);
 
