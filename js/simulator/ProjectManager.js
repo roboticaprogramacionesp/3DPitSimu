@@ -474,16 +474,6 @@ class ProjectManager {
 
     async openProject() {
 
-        if (this.dirty) {
-
-            const ok = confirm(
-                "Hay cambios sin guardar.\n\n¿Abrir otro proyecto de todas formas? Se perderán los cambios que todavía no guardaste."
-            );
-
-            if (!ok) return false;
-
-        }
-
         try {
 
             let selectedFile = null;
@@ -517,6 +507,23 @@ class ProjectManager {
             }
 
             if (!selectedFile) return false;
+
+            // El chequeo de "cambios sin guardar" va ACÁ (después de
+            // elegir el archivo, no antes) -- un confirm() disparado
+            // ANTES de showOpenFilePicker() le come el "user gesture"
+            // del click al navegador (falla con "Must be handling a
+            // user gesture to show a file picker"), reportado por el
+            // usuario. Bonus: tampoco tiene sentido preguntar esto si
+            // el usuario termina cancelando el picker.
+            if (this.dirty) {
+
+                const ok = confirm(
+                    "Hay cambios sin guardar.\n\n¿Abrir este proyecto de todas formas? Se perderán los cambios que todavía no guardaste."
+                );
+
+                if (!ok) return false;
+
+            }
 
             const text = await selectedFile.text();
             const data = JSON.parse(text);

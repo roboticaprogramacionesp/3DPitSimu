@@ -232,6 +232,74 @@ class PropertyPanel {
 
     }
 
+    // ====================================================
+    // Vista previa de un tipo de componente TODAVÍA NO colocado en el
+    // lienzo (clic en el Toolbox, ver Toolbox.js) -- a pedido, para
+    // poder ver de qué se trata un componente antes de arrastrarlo.
+    //
+    // A propósito NO reusa show()/_renderCommonProperties(): esos
+    // métodos asumen un componente REAL ya en el canvas en todo
+    // momento (component.x/setPosition/setRotation/toggleFlip,
+    // component.element del SVG vivo, etc.) -- pasarles la definición
+    // cruda de un .json rompería o, peor, ejecutaría acciones sobre
+    // un componente que no existe. Esto es deliberadamente de SOLO
+    // LECTURA: nombre, descripción (properties.modelo si la tiene) y
+    // la lista de pines, nada interactivo ni editable.
+    //
+    // No toca this.current a propósito -- si había un componente real
+    // seleccionado, sigue siéndolo internamente (SelectionManager es
+    // quien decide eso, no PropertyPanel); el llamador (Toolbox.js) es
+    // quien limpia la selección real ANTES de llamar acá, para que no
+    // quede una mezcla rara de "seleccionado en el lienzo" + "vista
+    // previa" al mismo tiempo.
+    // ====================================================
+
+    showPreview(definition, type) {
+
+        this.layout?.classList.remove("props-collapsed");
+
+        this.content.innerHTML = "";
+
+        const banner = document.createElement("div");
+        banner.className = "property-preview-banner";
+        banner.textContent = "👁 Vista previa -- arrastralo al lienzo para usarlo";
+        this.content.appendChild(banner);
+
+        const title = document.createElement("h4");
+        title.className = "property-preview-title";
+        title.textContent = definition?.name || type;
+        this.content.appendChild(title);
+
+        const modelo = definition?.properties?.modelo;
+        if (modelo) {
+            const desc = document.createElement("p");
+            desc.className = "property-preview-desc";
+            desc.textContent = modelo;
+            this.content.appendChild(desc);
+        }
+
+        const pins = definition?.pins;
+        if (Array.isArray(pins) && pins.length > 0) {
+
+            const pinsTitle = document.createElement("div");
+            pinsTitle.className = "property-preview-subtitle";
+            pinsTitle.textContent = `Pines (${pins.length})`;
+            this.content.appendChild(pinsTitle);
+
+            const list = document.createElement("ul");
+            list.className = "property-preview-pin-list";
+            pins.forEach((pin) => {
+                const li = document.createElement("li");
+                const kind = pin.signal || pin.type || "";
+                li.textContent = kind ? `${pin.name || pin.id} — ${kind}` : (pin.name || pin.id);
+                list.appendChild(li);
+            });
+            this.content.appendChild(list);
+
+        }
+
+    }
+
 
     // ====================================================
 

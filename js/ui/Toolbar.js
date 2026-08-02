@@ -701,27 +701,17 @@ class Toolbar {
 
         this.bindProjectDrawer();
 
-        const gridSelect = document.getElementById("gridSelect");
-
-        if (gridSelect) {
-            // Inicializar con el valor actual del simulador
-            gridSelect.value = String(this.simulator.gridSize || 0);
-            // Sincronizar el snap de cables con el estado REAL inicial del
-            // grid -- antes esto solo pasaba en el evento "change" de más
-            // abajo, así que al cargar la página con "Hoja en blanco"
-            // (gridSize=0) el WireManager.snapEnabled se quedaba en su
-            // default (true) sin que nada lo corrigiera, produciendo
-            // division por cero (NaN) en Utils.snapToGrid.
-            this.simulator.wireManager.snapEnabled = !!this.simulator.gridSize;
-            gridSelect.addEventListener("change", (e) => {
-                const val = parseInt(e.target.value, 10);
-                this.simulator.gridSize = isNaN(val) ? 0 : val;
-                // Si se elige '0' deshabilitamos el snap globalmente para cables
-                this.simulator.wireManager.snapEnabled = !!this.simulator.gridSize;
-                this.simulator.applyViewportTransform();
-                this.simulator.eventBus.emit("grid:changed", this.simulator.gridSize);
-            });
-        }
+        // El selector de cuadrícula se movió al menú de clic derecho
+        // del canvas (ContextMenu.showCanvasMenu(), submenú "▦
+        // Cuadrícula") -- a pedido, para liberar espacio en la barra
+        // superior. Sincronizar el snap de cables con el estado REAL
+        // inicial del grid sigue haciendo falta acá igual (antes
+        // dependía del listener "change" del <select> que ya no
+        // existe): sin esto, al cargar la página con "Hoja en blanco"
+        // (gridSize=0) el WireManager.snapEnabled se quedaba en su
+        // default (true) sin que nada lo corrigiera, produciendo
+        // división por cero (NaN) en Utils.snapToGrid.
+        this.simulator.wireManager.snapEnabled = !!this.simulator.gridSize;
 
     }
 

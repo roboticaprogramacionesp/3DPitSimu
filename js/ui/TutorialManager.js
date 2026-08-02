@@ -64,7 +64,7 @@ class TutorialManager {
             steps: [
                 {
                     title: "Paso 1 — Panel de componentes",
-                    text: "Aquí están todos los componentes disponibles, agrupados por categoría. Arrastra cualquiera hasta el lienzo para empezar a armar tu circuito.",
+                    text: "Aquí están todos los componentes disponibles, agrupados por categoría. Haz clic en cualquiera para ver sus propiedades y pines antes de usarlo, o arrástralo directo hasta el lienzo para empezar a armar tu circuito.",
                     highlight: (tm) => tm.highlightElements(["#toolbox"]),
                     isDone: () => true,
                 },
@@ -93,25 +93,31 @@ class TutorialManager {
                     isDone: () => true,
                 },
                 {
-                    title: "Paso 5 — Reporte de la práctica",
-                    text: "Genera un reporte imprimible de la práctica: título, qué van a aprender, lista de componentes, captura del circuito y el código.",
+                    title: "Paso 5 — Editor de bloques",
+                    text: "Arma tu programa arrastrando bloques en vez de escribir Python a mano -- útil si recién estás empezando. Cuando termines, un botón manda el código generado directo a la pestaña Editor de abajo.",
+                    highlight: (tm) => tm.highlightElements(["#btnBlockly"]),
+                    isDone: () => true,
+                },
+                {
+                    title: "Paso 6 — Reporte de la práctica",
+                    text: "Genera un reporte imprimible de la práctica: título, qué van a aprender, lista de componentes (con materiales adicionales y costo si hace falta), captura del circuito y el código.",
                     highlight: (tm) => tm.highlightElements(["#btnGenerateReport"]),
                     isDone: () => true,
                 },
                 {
-                    title: "Paso 6 — Simular",
+                    title: "Paso 7 — Simular",
                     text: "Inicia la simulación y corre el firmware sobre el circuito que armaste -- necesitas una ESP32 en el lienzo para poder simular.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: () => true,
                 },
                 {
-                    title: "Paso 7 — Captura, deshacer, rehacer y notas",
+                    title: "Paso 8 — Captura, deshacer, rehacer y notas",
                     text: "La cámara guarda una imagen del circuito completo. Las flechas deshacen/rehacen cualquier cambio (también con Ctrl+Z / Ctrl+Y). La etiqueta agrega una nota de color al lienzo -- azul para info, verde para un tip, roja para algo importante que no hay que pasar por alto, y amarilla para una advertencia.",
                     highlight: (tm) => tm.highlightElements(["#btnScreenshot", "#btnUndo", "#btnRedo", "#btnAddAnnotation"]),
                     isDone: () => true,
                 },
                 {
-                    title: "Paso 8 — Panel MicroPython",
+                    title: "Paso 9 — Panel MicroPython",
                     text: "Aquí abajo está la consola REPL (para escribir comandos sueltos y ver la salida en vivo) y la pestaña Editor, donde escribes o cargas el código que se ejecuta en la ESP32.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header"]),
                     onEnter: (tm) => {
@@ -120,7 +126,7 @@ class TutorialManager {
                     isDone: () => true,
                 },
                 {
-                    title: "Paso 9 — Lienzo de trabajo",
+                    title: "Paso 10 — Lienzo de trabajo",
                     text: "Y aquí es donde armas todo: sueltas los componentes, los conectas con cables, y ves el circuito cobrar vida al simular. ¡Ya puedes empezar!",
                     highlight: (tm) => tm.highlightElements(["#workspace"]),
                     onEnter: (tm) => {

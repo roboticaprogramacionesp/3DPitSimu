@@ -363,9 +363,32 @@ class ContextMenu {
 
     showCanvasMenu(x, y) {
 
+        // Tamaño de cuadrícula -- antes era un <select> fijo en la
+        // barra superior (#gridSelect), movido acá a pedido para
+        // liberar espacio ahí arriba. Misma lógica de siempre
+        // (Simulator.setGridSize(), extraída de Toolbar.js para que
+        // ambos caminos la compartan sin duplicar código). Un "✓"
+        // marca la opción activa, mismo criterio visual que usa
+        // Blockly/otros menús nativos para el ítem seleccionado.
+        const currentGrid = this.simulator.gridSize || 0;
+        const gridOption = (label, val) => ({
+            label: (currentGrid === val ? "✓ " : "　 ") + label,
+            action: () => this.simulator.setGridSize(val),
+        });
+
         const items = [
             { label: "Acercar (+)", action: () => this.simulator.zoomIn() },
             { label: "Alejar (−)", action: () => this.simulator.zoomOut() },
+            {
+                label: "▦ Cuadrícula",
+                submenu: [
+                    gridOption("Hoja en blanco", 0),
+                    gridOption("5 px", 5),
+                    gridOption("10 px", 10),
+                    gridOption("20 px", 20),
+                    gridOption("40 px", 40),
+                ],
+            },
             "separator",
             {
                 label: "Pegar",

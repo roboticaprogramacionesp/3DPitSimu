@@ -529,6 +529,28 @@ class Simulator {
 
     /*
     ======================================================
+    Tamaño de cuadrícula -- extraído a método propio (antes vivía
+    inline en el listener "change" de #gridSelect, en Toolbar.js) para
+    que el menú de clic derecho (ContextMenu.showCanvasMenu(), submenú
+    "▦ Cuadrícula") pueda disparar el mismo comportamiento sin
+    duplicar la lógica.
+    ======================================================
+    */
+
+    setGridSize(val) {
+
+        this.gridSize = isNaN(val) ? 0 : val;
+        // Si se elige '0' (Hoja en blanco) deshabilitamos el snap
+        // globalmente para cables -- ver Utils.snapToGrid, dividir
+        // por un gridSize de 0 da NaN.
+        this.wireManager.snapEnabled = !!this.gridSize;
+        this.applyViewportTransform();
+        this.eventBus.emit("grid:changed", this.gridSize);
+
+    }
+
+    /*
+    ======================================================
     Centrar/ajustar la vista sobre los componentes actuales.
 
     Por qué existe: offsetX/offsetY (pan) NO se guarda en el

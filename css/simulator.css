@@ -1046,6 +1046,57 @@ body{
 
 
 /* ==========================================================
+   PropertyPanel: vista previa de un tipo del Toolbox (clic sin
+   arrastrar todavía, ver Toolbox.js/PropertyPanel.showPreview())
+========================================================== */
+
+.property-preview-banner{
+    background:rgba(77,163,255,0.12);
+    border:1px solid rgba(77,163,255,0.35);
+    border-radius:6px;
+    padding:6px 10px;
+    font-size:12px;
+    color:#4da3ff;
+    margin-bottom:12px;
+}
+
+.property-preview-title{
+    color:#fff;
+    font-size:15px;
+    margin-bottom:6px;
+}
+
+.property-preview-desc{
+    color:#bbb;
+    font-size:12.5px;
+    line-height:1.5;
+    margin-bottom:14px;
+}
+
+.property-preview-subtitle{
+    color:#888;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    margin-bottom:6px;
+}
+
+.property-preview-pin-list{
+    list-style:none;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.property-preview-pin-list li{
+    background:#2b2d31;
+    border-radius:4px;
+    padding:5px 9px;
+    font-size:12.5px;
+    color:#ddd;
+}
+
+/* ==========================================================
    PropertyPanel: campos de propiedades del componente
 ========================================================== */
 
