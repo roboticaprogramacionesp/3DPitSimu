@@ -277,7 +277,88 @@ class QemuBridge {
     // sendData() para IN:/TEMP:/DIST:, pero ahora va derecho a stdin,
     // exactamente como send()).
     sendData(text) {
+
+        // Ver resyncAndFlush() más abajo -- mientras está "recolectando"
+        // (SignalEngine.resyncAllComponents() en curso), ninguna línea
+        // sale de una: se junta acá para mandarlas todas juntas como
+        // "process_line(...)" al final, no como stdin crudo.
+        if (this._resyncCollecting) {
+            this._resyncCollecting.push(text);
+            return;
+        }
+
         this.send(text);
+    }
+
+    // ====================================================
+    // Resync (ver ComponentBehaviorRegistry.js, nota "resync") --
+    // SignalEngine.resyncAllComponents() llama esto pasándole una
+    // función que, al ejecutarla, dispara los resync() de todos los
+    // componentes (esos, adentro, llaman a setTemperature()/etc. como
+    // siempre, que terminan en sendData() de arriba).
+    //
+    // BUG REAL encontrado probando esto con QEMU real (no solo
+    // revisión de código): resyncAllComponents() dispara siempre
+    // justo después de un boot/reconexión, con el REPL en un prompt
+    // ">>>" IDLE de verdad (nada corriendo todavía que llame a
+    // poll_input()). Mandar una línea cruda como "IN:4:1" ahí se
+    // pierde -- el REPL nativo la lee él mismo como si el usuario la
+    // hubiera tipeado y tira SyntaxError; process_line() (ver
+    // _base.hal.py) nunca llega a verla. Confirmado que esto YA
+    // afectaba a ds3231/rc522 antes de este fix, no es nuevo.
+    //
+    // Fix: en vez de mandar la línea cruda, se manda
+    // 'process_line("IN:4:1")' -- una llamada Python VÁLIDA, que el
+    // REPL idle sabe parsear y ejecutar normal en su propio prompt,
+    // sin necesitar ningún poll_input() de por medio. process_line()
+    // ya existe en _base.hal.py/firmware/frozen_hal/_pit_base.py --
+    // extraído del propio bucle de poll_input(), mismo comportamiento,
+    // ahora invocable aparte.
+    async resyncAndFlush(runResyncFns) {
+
+        this._resyncCollecting = [];
+
+        try {
+            runResyncFns();
+        } finally {
+
+            const lines = this._resyncCollecting;
+            this._resyncCollecting = null;
+
+            if (lines.length > 0) {
+                await this._sendResyncLines(lines);
+            }
+
+        }
+
+    }
+
+    static RESYNC_LINE_DELAY_MS = 60;
+
+    async _sendResyncLines(lines) {
+
+        // Mismo criterio que ReplPanel._pasteBlock() -- bloquear
+        // cualquier otro emisor mientras dura este lote, para que
+        // nada se cuele entre líneas.
+        this.beginPasteLock();
+
+        try {
+
+            for (const line of lines) {
+                // JSON.stringify de un string da comillas dobles válidas
+                // en Python también -- alcanza para escapar cualquier
+                // ":" adentro (nunca hay comillas ni backslashes en
+                // estas líneas, son todas protocolo interno).
+                this._sendImmediate(`process_line(${JSON.stringify(line)})\n`);
+                await new Promise((resolve) => setTimeout(resolve, QemuBridge.RESYNC_LINE_DELAY_MS));
+            }
+
+        } finally {
+
+            this.endPasteLock();
+
+        }
+
     }
 
     // ====================================================

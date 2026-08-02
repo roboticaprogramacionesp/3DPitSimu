@@ -16,7 +16,7 @@
 #
 # Mismo contenido/lógica que boot_snippet.py -- ver ese archivo para
 # la explicación completa de por qué se importan estos 5 módulos y se
-# reexportan esos 5 nombres como globals. Si el filesystem de flash
+# reexportan esos 6 nombres como globals. Si el filesystem de flash
 # ALGUNA VEZ tiene su propio boot.py real, ese gana (el fallback
 # frozen solo aplica cuando no hay ninguno en el filesystem) -- no
 # hace falta ninguna lógica especial acá para ese caso.
@@ -30,6 +30,7 @@ import _pit_frozen_components
 
 register_line_handler = _pit_base.register_line_handler
 poll_input            = _pit_base.poll_input
+process_line           = _pit_base.process_line
 _settle                = _pit_base._settle
 register_i2c_device    = _pit_i2c_bus.register_i2c_device
 register_adc_default   = _pit_adc_bus.register_adc_default

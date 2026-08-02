@@ -39,14 +39,23 @@ import _pit_frozen_components
 # de siempre (_buildPendingHal() en ReplPanel.js).
 
 # El HAL por componente (pegado por paste-mode, sin cambios) asume
-# estos 5 nombres como GLOBALS del REPL -- exactamente igual que
+# estos 6 nombres como GLOBALS del REPL -- exactamente igual que
 # cuando _base/_i2c_bus/_adc_bus se pegaban por exec() antes. boot.py
 # corre en el mismo namespace que después usa la REPL interactiva
 # (mp_globals_get() de MicroPython), así que estas asignaciones acá
 # quedan disponibles como globals para cualquier código pegado
 # después, sin necesitar ningún truco extra.
+#
+# process_line -- a diferencia de los otros 5 (llamados desde código
+# de componente ya pegado), a este lo llama DIRECTO el simulador
+# (QemuBridge._sendResyncLines()) escribiéndolo como texto crudo en
+# el prompt del REPL idle (ej. "process_line('IN:4:1')\n") -- por eso
+# tiene que existir como global del REPL, idéntico motivo que los
+# otros 5. Ver el comentario grande junto a process_line() en
+# _pit_base.py.
 register_line_handler = _pit_base.register_line_handler
 poll_input            = _pit_base.poll_input
+process_line          = _pit_base.process_line
 _settle               = _pit_base._settle
 register_i2c_device   = _pit_i2c_bus.register_i2c_device
 register_adc_default  = _pit_adc_bus.register_adc_default

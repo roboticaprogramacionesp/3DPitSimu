@@ -273,59 +273,7 @@ def poll_input():
             _stdin_buf = lines[-1]
 
             for line in lines[:-1]:
-                line = line.strip()
-                if not line:
-                    continue
-
-                if line == "SYNC:":
-                    # Confirmación del simulador: ya terminó de
-                    # recalcular todo lo que dependía de la última
-                    # escritura de pin (y ya mandó los IN:/etc que
-                    # correspondan). Ver _settle() más abajo.
-                    _sync_pending += 1
-                    continue
-
-                if line.startswith("IN:"):
-                    parts = line.split(":")
-                    if len(parts) >= 3:
-                        try:
-                            gpio = int(parts[1])
-                            value = int(parts[2])
-                        except ValueError:
-                            continue
-                        # OJO: actualizar _pin_input_states ANTES de
-                        # disparar el IRQ (no después) -- igual que en
-                        # hardware real, para cuando el handler llegue
-                        # a correr la transición eléctrica YA pasó, así
-                        # que si el handler lee pin.value() (propio o
-                        # de otro pin, patrón típico de un decoder de
-                        # cuadratura que lee CLK+DT juntos al firmarse
-                        # cualquiera de los dos) tiene que ver el valor
-                        # NUEVO, no el viejo que motivó el flanco.
-                        # Hacerlo ACÁ ADENTRO del for de líneas (no una
-                        # sola vez al final de poll_input()) importa
-                        # igual: si llegaron varias líneas "IN:" juntas
-                        # para el mismo gpio (ej. los 3 pasos de
-                        # cuadratura de un encoder mandados casi
-                        # seguidos), cada transición individual dispara
-                        # su propio IRQ, no solo la última.
-                        old_value = _pin_input_states.get(gpio)
-                        _pin_input_states[gpio] = value
-                        _maybe_fire_irq(gpio, old_value, value)
-                    continue
-
-                for prefix, callbacks in _line_handlers.items():
-                    if line.startswith(prefix):
-                        for callback in callbacks:
-                            try:
-                                callback(line.split(":"))
-                            except Exception:
-                                pass
-                        # OJO: sin "break" -- si dos prefijos
-                        # distintos matchearan la misma línea (no
-                        # debería pasar con los prefijos actuales,
-                        # pero por las dudas) también se despachan
-                        # todos, no solo el primero.
+                process_line(line)
 
     except Exception:
         pass
@@ -334,6 +282,74 @@ def poll_input():
 
     if _pending_interrupt is not None:
         raise _pending_interrupt
+
+
+# Extraído del bucle de poll_input() de arriba (antes vivía inline
+# ahí, nunca invocable por separado) -- BUG REAL encontrado probando
+# resyncAllComponents() con QEMU real (no solo revisión de código):
+# SignalEngine.resyncAllComponents() dispara justo después de un
+# boot/reconexión, ANTES de que el usuario corra nada -- en ese
+# momento el REPL está en un prompt ">>>" idle DE VERDAD (nada llama a
+# poll_input() todavía). Mandar una línea cruda tipo "IN:4:1" en ese
+# momento (lo que hacía QemuBridge.sendData() antes) se pierde: el
+# REPL nativo la lee él mismo como si el usuario la hubiera tipeado,
+# falla con SyntaxError, y process_line() nunca llega a verla -- ya
+# está consumida y descartada para cuando cualquier código de usuario
+# arranque después. Confirmado que esto YA afectaba a ds3231/rc522
+# (los primeros dos componentes con resync), no es nuevo de este
+# cambio.
+#
+# Fix: en vez de mandar la línea cruda por stdin, el simulador manda
+# "process_line('IN:4:1')" -- una llamada Python VÁLIDA, que el REPL
+# idle sí sabe parsear y ejecutar normalmente en su prompt de
+# siempre, sin necesitar ningún poll_input() de por medio. Ver
+# QemuBridge.sendResyncBatch()/SignalEngine.resyncAllComponents().
+def process_line(line):
+    global _sync_pending
+
+    line = line.strip()
+    if not line:
+        return
+
+    if line == "SYNC:":
+        # Confirmación del simulador: ya terminó de recalcular todo lo
+        # que dependía de la última escritura de pin (y ya mandó los
+        # IN:/etc que correspondan). Ver _settle() más abajo.
+        _sync_pending += 1
+        return
+
+    if line.startswith("IN:"):
+        parts = line.split(":")
+        if len(parts) >= 3:
+            try:
+                gpio = int(parts[1])
+                value = int(parts[2])
+            except ValueError:
+                return
+            # OJO: actualizar _pin_input_states ANTES de disparar el
+            # IRQ (no después) -- igual que en hardware real, para
+            # cuando el handler llegue a correr la transición eléctrica
+            # YA pasó, así que si el handler lee pin.value() (propio o
+            # de otro pin, patrón típico de un decoder de cuadratura
+            # que lee CLK+DT juntos al dispararse cualquiera de los
+            # dos) tiene que ver el valor NUEVO, no el viejo que
+            # motivó el flanco.
+            old_value = _pin_input_states.get(gpio)
+            _pin_input_states[gpio] = value
+            _maybe_fire_irq(gpio, old_value, value)
+        return
+
+    for prefix, callbacks in _line_handlers.items():
+        if line.startswith(prefix):
+            for callback in callbacks:
+                try:
+                    callback(line.split(":"))
+                except Exception:
+                    pass
+            # OJO: sin "break" -- si dos prefijos distintos matchearan
+            # la misma línea (no debería pasar con los prefijos
+            # actuales, pero por las dudas) también se despachan
+            # todos, no solo el primero.
 
 
 # ── Soporte de Pin.irq() (interrupciones "emuladas") ────────────

@@ -332,12 +332,28 @@ class SignalEngine {
   // un restart de QEMU) queda con la tarjeta "puesta" en la UI pero
   // el firmware nunca se entera.
   resyncAllComponents() {
-    this.simulator.componentManager.getAll().forEach((component) => {
-      const behavior = ComponentBehaviorRegistry.get(component.type);
-      if (behavior?.signal?.resync) {
-        behavior.signal.resync(component, this);
-      }
-    });
+
+    const run = () => {
+      this.simulator.componentManager.getAll().forEach((component) => {
+        const behavior = ComponentBehaviorRegistry.get(component.type);
+        if (behavior?.signal?.resync) {
+          behavior.signal.resync(component, this);
+        }
+      });
+    };
+
+    // WasmBridge: sin ambigüedad "REPL idle" que evitar (processLine()
+    // corre síncrono en el Worker, no hay pty/REPL nativo compitiendo
+    // por stdin) -- se manda directo, más simple y más rápido. Ver el
+    // comentario grande en QemuBridge.resyncAndFlush() para el motivo
+    // real por el que QEMU sí necesita el camino especial.
+    const bridge = this.simulator.qemuBridge;
+    if (bridge && !bridge.isWasmBridge && typeof bridge.resyncAndFlush === "function") {
+      bridge.resyncAndFlush(run);
+    } else {
+      run();
+    }
+
   }
 
   _notifyAdcToFirmware(component, pinId, value) {
