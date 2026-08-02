@@ -79,7 +79,16 @@
                 </select>
             </label>
             <button id="btnCanvasTheme" class="btn-canvas-theme" title="Cambiar a fondo oscuro (noche)">🌙</button>
+            <!-- Botón 🌐 (modo navegador/WASM) oculto a propósito -- no se
+                 va a usar por ahora (se prioriza el puente local para
+                 GitHub Pages, ver desktop/README_puente.md). El modo en sí
+                 sigue andando, solo no hay botón visible: se puede seguir
+                 entrando a mano con el hash #modo=wasm, y Toolbar.
+                 bindWasmModeToggle() ya tiene un guard (if (!btn) return;)
+                 así que no hace falta tocar nada más para restaurarlo --
+                 alcanza con volver a poner esta línea:
             <button id="btnWasmModeToggle" class="btn-canvas-theme" title="Cambiar entre modo escritorio y modo navegador (experimental)">🌐</button>
+            -->
             <button id="btnSimToggle" class="btn-sim-toggle">▶ Simular</button>
         </div>
 
