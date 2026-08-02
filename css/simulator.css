@@ -331,6 +331,14 @@ body{
 
     -webkit-user-select:none;
 
+    /* Sin esto, en touch (tablet/celular) el navegador interpreta
+       cualquier arrastre como scroll/paneo NATIVO de la página y se
+       come los pointermove antes de que DragManager/WireManager/
+       Simulator (paneo)/SelectionManager los vean -- todos ya estan
+       armados sobre Pointer Events (funcionan con touch), lo que
+       faltaba era decirle al navegador que no interfiera. */
+    touch-action:none;
+
 }
 
 
