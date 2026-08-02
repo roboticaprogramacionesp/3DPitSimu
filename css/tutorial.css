@@ -152,6 +152,16 @@
     margin: -14px -16px 6px -16px;
     padding: 10px 16px;
     border-bottom: 1px solid #333;
+
+    /* Mismo bug/fix que #simulatorCanvas (ver simulator.css) --
+       TutorialManager._bindDrag() ya está armado sobre Pointer Events
+       (soporta touch), pero sin esto el navegador se queda con el
+       gesto para su propio scroll apenas hay el primer movimiento
+       real, y el modal nunca llega a moverse en tablet/celular. */
+    touch-action: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .tutorial-modal.dragging .tutorial-modal-header {

@@ -196,7 +196,90 @@ class Simulator {
 
         let panStart = null;
 
+        // ====================================================
+        // Pinch-zoom (touch, tablet/celular) -- antes el único zoom
+        // era la rueda del mouse (bindZoomEvents) o "Acercar"/"Alejar"
+        // del menú contextual (que en touch requiere mantener
+        // presionado, nada intuitivo). Pellizcar con dos dedos es el
+        // gesto esperado en cualquier app móvil, así que se agrega acá
+        // -- comparte los mismos listeners de pointerdown/move/up que
+        // el paneo de un dedo (mismo elemento, this.canvas) para poder
+        // cancelar el paneo apenas aparece un segundo dedo, sin que
+        // los dos gestos se peleen por el mismo pointermove.
+        // ====================================================
+
+        const activeTouches = new Map(); // pointerId -> {x, y}
+        let pinchDistance = null;
+
+        const touchDistance = () => {
+            const pts = Array.from(activeTouches.values());
+            if (pts.length < 2) return null;
+            return Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        };
+
+        const touchMidpoint = () => {
+            const pts = Array.from(activeTouches.values());
+            return { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+        };
+
         this.canvas.addEventListener("pointerdown", (e) => {
+
+            if (e.pointerType !== "touch") return;
+
+            activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (activeTouches.size === 2) {
+                // Arranca el pellizco -- cortar cualquier paneo de un
+                // solo dedo que ya estuviera en curso, para que no siga
+                // moviendo la vista con el delta del PRIMER dedo mientras
+                // el pellizco también la mueve/escala.
+                panStart = null;
+                this.canvas.style.cursor = "default";
+                pinchDistance = touchDistance();
+            }
+
+        });
+
+        this.canvas.addEventListener("pointermove", (e) => {
+
+            if (e.pointerType !== "touch" || !activeTouches.has(e.pointerId)) return;
+
+            activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (activeTouches.size === 2 && pinchDistance) {
+
+                const newDistance = touchDistance();
+                const mid = touchMidpoint();
+
+                // zoomAt() ya sabe re-centrar en el punto de pantalla
+                // dado -- pasándole el punto medio ACTUAL en cada
+                // pointermove, "sigue" a los dedos si además de pellizcar
+                // los movés juntos (pellizcar-y-panear en el mismo gesto,
+                // como en cualquier mapa).
+                this.zoomAt(mid.x, mid.y, newDistance / pinchDistance);
+                pinchDistance = newDistance;
+
+            }
+
+        });
+
+        const endTouch = (e) => {
+            if (e.pointerType !== "touch") return;
+            activeTouches.delete(e.pointerId);
+            if (activeTouches.size < 2) pinchDistance = null;
+        };
+
+        this.canvas.addEventListener("pointerup", endTouch);
+        this.canvas.addEventListener("pointercancel", endTouch);
+
+        this.canvas.addEventListener("pointerdown", (e) => {
+
+            // Mientras haya un pellizco de 2 dedos en curso, ningún
+            // dedo nuevo debe arrancar un paneo de "un solo dedo" --
+            // ver el bloque de pinch-zoom más arriba (mismo pointerdown
+            // del canvas, este es un segundo listener aparte para no
+            // mezclar la lógica de paneo con la de pellizco).
+            if (activeTouches.size >= 2) return;
 
             // NOTA: ".wire-handle-hit" / ".wire-seg-handle-hit" son los
             // círculos de "zona de click" que agrega WireManager (antes se
