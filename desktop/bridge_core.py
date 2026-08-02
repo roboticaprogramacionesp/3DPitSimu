@@ -41,12 +41,19 @@ _NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 if getattr(sys, "frozen", False):
     APP_DIR = Path(sys.executable).resolve().parent
     VENDOR_DIR = APP_DIR / "vendor"
+    CONFIG_DIR = APP_DIR
 else:
     APP_DIR = Path(__file__).resolve().parent.parent
     VENDOR_DIR = Path(__file__).resolve().parent / "vendor"
+    # A diferencia de APP_DIR (raiz del repo, para servir el frontend
+    # desde main.py), la config del bridge vive junto a ESTE archivo
+    # (desktop/) -- en frozen ambos coinciden (todo vive al lado del
+    # .exe), en dev no.
+    CONFIG_DIR = Path(__file__).resolve().parent
 
 BASE_DIR = APP_DIR
 SERVER_DIR = APP_DIR / "server"
+ALLOWED_ORIGINS_FILE = CONFIG_DIR / "allowed_origins.txt"
 
 VENDOR_QEMU_BIN = VENDOR_DIR / "qemu-xtensa" / "bin" / "qemu-system-xtensa.exe"
 VENDOR_GDB_BIN = VENDOR_DIR / "xtensa-esp-elf-gdb" / "bin" / "xtensa-esp32-elf-gdb.exe"
@@ -66,6 +73,33 @@ except ImportError:
 # ----------------------------------------------------------
 # Bridge QEMU (server/server.js)
 # ----------------------------------------------------------
+
+def read_allowed_origins_file():
+    """Hosts extra listados en allowed_origins.txt (uno por linea,
+    '#' para comentarios) -- para que quien reciba el puente empaquetado
+    NO tenga que abrir una consola/PowerShell a setear ALLOWED_ORIGINS:
+    alcanza con doble click al .exe. Se puede editar ese .txt a mano
+    (ej. para apuntar a otro usuario/repo de GitHub Pages) sin tener
+    que recompilar nada."""
+    if not ALLOWED_ORIGINS_FILE.exists():
+        return []
+    hosts = []
+    for line in ALLOWED_ORIGINS_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line:
+            hosts.append(line)
+    return hosts
+
+
+def get_allowed_origins():
+    """Union de la env var ALLOWED_ORIGINS (coma-separada) y el archivo
+    allowed_origins.txt -- ver start_bridge()/read_allowed_origins_file()."""
+    from_env = [h.strip() for h in os.environ.get("ALLOWED_ORIGINS", "").split(",") if h.strip()]
+    from_file = read_allowed_origins_file()
+    # dict.fromkeys en vez de set() para no perder el orden (mas facil
+    # de leer en los logs) y no repetir si el mismo host esta en los dos.
+    return list(dict.fromkeys(from_env + from_file))
+
 
 def start_bridge(extra_env=None):
 
@@ -89,11 +123,14 @@ def start_bridge(extra_env=None):
         else DEFAULT_GDB_BIN or os.environ.get("GDB_BIN", "")
     )
 
+    allowed_origins = get_allowed_origins()
+
     env = {
         **os.environ,
         "QEMU_BIN": qemu_bin,
         "GDB_BIN": gdb_bin,
         "MP_ELF": str(SERVER_DIR / "micropython.elf"),
+        **({"ALLOWED_ORIGINS": ",".join(allowed_origins)} if allowed_origins else {}),
         **(extra_env or {}),
     }
 

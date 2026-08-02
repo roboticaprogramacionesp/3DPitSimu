@@ -19,38 +19,44 @@
 #   (o el .exe empaquetado -- ver desktop/README_puente.md)
 #
 # Para permitir que una página de GitHub Pages (origen distinto de
-# localhost/127.0.0.1) se conecte, seteá ALLOWED_ORIGINS ANTES de
-# arrancar (coma-separado si hay más de un host), ej. en PowerShell:
-#   $env:ALLOWED_ORIGINS = "tuusuario.github.io"
-#   python desktop/bridge_only.py
-# Sin esa variable seteada, sigue aceptando solo localhost/127.0.0.1
-# (mismo comportamiento que la app de escritorio).
+# localhost/127.0.0.1) se conecte, hay DOS formas de sumar ese host
+# (ver bridge_core.get_allowed_origins(), se combinan las dos):
+#   1. Editar allowed_origins.txt (al lado de este archivo, o al lado
+#      del .exe si es la version empaquetada) -- un host por linea.
+#      Es la forma pensada para que alguien sin conocimientos de
+#      consola pueda simplemente doble-clickear el .exe sin tocar nada
+#      mas (ya viene con un default cargado, ver ese archivo).
+#   2. La variable de entorno ALLOWED_ORIGINS (coma-separada si hay mas
+#      de un host), para uso avanzado/scripts, ej. en PowerShell:
+#        $env:ALLOWED_ORIGINS = "tuusuario.github.io"
+#        python desktop/bridge_only.py
+# Si ninguna de las dos tiene nada, solo se aceptan conexiones desde
+# localhost/127.0.0.1 (mismo comportamiento que la app de escritorio).
 # ==========================================================
 
-import os
 import signal
 import sys
 import threading
 import time
 
-from bridge_core import _log, start_bridge, stop_bridge, watch_bridge
+from bridge_core import _log, get_allowed_origins, start_bridge, stop_bridge, watch_bridge
 
 
 def main():
 
-    allowed = os.environ.get("ALLOWED_ORIGINS", "").strip()
+    allowed = get_allowed_origins()
 
     _log("[puente] PitSimulator -- puente local")
     _log("[puente] Este proceso NO abre ninguna ventana -- dejalo corriendo en")
     _log("[puente] segundo plano y abrí la página del simulador en tu navegador.")
     if allowed:
-        _log(f"[puente] Orígenes extra permitidos (ALLOWED_ORIGINS): {allowed}")
+        _log(f"[puente] Orígenes extra permitidos: {', '.join(allowed)}")
     else:
-        _log("[puente] ALLOWED_ORIGINS no está seteada -- solo se van a aceptar")
+        _log("[puente] No hay orígenes extra configurados -- solo se van a aceptar")
         _log("[puente] conexiones desde páginas en localhost/127.0.0.1. Si vas a")
-        _log("[puente] usar la versión de GitHub Pages, cerrá esto (Ctrl+C),")
-        _log("[puente] seteá ALLOWED_ORIGINS a tu dominio de GitHub Pages y volvé")
-        _log("[puente] a arrancar (ver desktop/README_puente.md).")
+        _log("[puente] usar la versión de GitHub Pages, cerrá esto (Ctrl+C), agregá")
+        _log("[puente] tu dominio a allowed_origins.txt y volvé a arrancar (ver")
+        _log("[puente] desktop/README_puente.md).")
     _log("[puente] Para cerrar el puente: Ctrl+C.")
 
     bridge = {"proc": start_bridge(), "shutting_down": False}

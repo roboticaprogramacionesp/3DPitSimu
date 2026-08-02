@@ -1,0 +1,11 @@
+# PitSimulator - allowed_origins.txt
+#
+# Un host por linea (sin "https://", sin la barra final) -- paginas
+# servidas desde estos dominios van a poder conectarse a este puente
+# local. Ver desktop/README_puente.md. Las lineas que empiezan con "#"
+# son comentarios, se ignoran.
+#
+# Editar este archivo NO requiere recompilar nada: se lee cada vez que
+# arranca el puente (bridge_only.py o el .exe empaquetado).
+
+roboticaprogramacionesp.github.io

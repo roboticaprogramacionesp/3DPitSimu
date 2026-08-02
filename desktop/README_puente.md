@@ -19,27 +19,26 @@ entre corridas). Con el puente local no hay esa limitación — es
 MicroPython real corriendo en QEMU real, igual que en la app de
 escritorio.
 
-## Uso (versión empaquetada)
+## Uso (versión empaquetada) -- sin abrir ninguna consola
 
 1. Descargá y descomprimí `PitSimulator-Puente` (te lo pasa quien te
    compartió el simulador).
-2. Antes de abrirlo por primera vez, si vas a usar la versión de
-   GitHub Pages (no `localhost`), abrí una consola en esa carpeta y
-   seteá `ALLOWED_ORIGINS` a tu propia URL, por ejemplo:
-
-   ```powershell
-   $env:ALLOWED_ORIGINS = "tuusuario.github.io"
-   .\PitSimulator-Puente.exe
-   ```
-
-   (coma-separado si necesitás más de un host: `"host1,host2"`). Sin
-   esto, el puente por default solo acepta conexiones desde páginas en
-   `localhost`/`127.0.0.1` — lo rechaza todo lo demás por seguridad.
-3. Dejá esa ventana de consola abierta (minimizada está bien) mientras
-   uses el simulador. Para cerrar el puente: Ctrl+C en esa consola, o
-   cerrar la ventana.
+2. Doble click en `PitSimulator-Puente.exe`. Ya viene con
+   `allowed_origins.txt` cargado con el dominio de GitHub Pages
+   correcto -- no hace falta tocar nada más (si en algún momento se
+   muda a otro dominio, se edita ese `.txt` con el Bloc de notas, un
+   host por línea, sin recompilar nada).
+3. Se va a abrir una ventana de consola con el log del puente -- dejala
+   abierta (minimizada está bien) mientras usás el simulador. Para
+   cerrarlo: cerrar esa ventana, o Ctrl+C adentro.
 4. Abrí la página del simulador en el navegador y usala normalmente —
    "▶ Simular" va a conectar solo.
+
+(Para uso avanzado -- sumar otro host sin editar el `.txt`, o probar
+contra otro dominio puntual una sola vez -- también se puede setear la
+variable de entorno `ALLOWED_ORIGINS` antes de arrancar el `.exe`
+desde PowerShell; se combina con lo que ya tenga el `.txt`, no lo
+reemplaza.)
 
 ## ⚠️ Chrome puede pedir un permiso extra ("Red local")
 
@@ -73,9 +72,12 @@ terminal del panel REPL.
 
 ```powershell
 cd desktop
-$env:ALLOWED_ORIGINS = "tuusuario.github.io"
 python bridge_only.py
 ```
+
+Ya lee `desktop/allowed_origins.txt` (mismo archivo que en la versión
+empaquetada). Para un host distinto sin editar el archivo:
+`$env:ALLOWED_ORIGINS = "tuusuario.github.io"` antes de arrancar.
 
 Requiere lo mismo que la app de escritorio para el bridge en sí
 (QEMU/GDB — vendorizados en `desktop/vendor/`, o `bridge_config.py`, o
@@ -87,12 +89,12 @@ ninguna ventana).
 
 El puente sigue escuchando SOLO en `127.0.0.1` (nunca expuesto a la
 red) y sigue validando el header `Origin` de cada conexión contra una
-lista blanca — por default `localhost`/`127.0.0.1`, y con
-`ALLOWED_ORIGINS` se **suma** tu propio host a esa lista, nunca la
-reemplaza ni la abre a cualquiera. Una pestaña maliciosa en otro sitio
-no puede conectarse al puente aunque sepa que existe, porque su Origin
-no va a estar en la lista. Por eso importa setear `ALLOWED_ORIGINS` a
-tu dominio real y no a algo más amplio.
+lista blanca — por default `localhost`/`127.0.0.1`, y `allowed_origins.txt`/
+`ALLOWED_ORIGINS` **suman** hosts a esa lista, nunca la reemplazan ni
+la abren a cualquiera. Una pestaña maliciosa en otro sitio no puede
+conectarse al puente aunque sepa que existe, porque su Origin no va a
+estar en la lista. Por eso importa que `allowed_origins.txt` tenga
+solo tu dominio real, no algo más amplio.
 
 ## Empaquetado (para quien arma la distribución)
 
@@ -106,7 +108,9 @@ pyinstaller --onedir --console --icon=desktop/build/icon.ico `
     --name PitSimulator-Puente --distpath dist desktop/bridge_only.py
 ```
 
-Después copiar `server/` y `desktop/vendor/` al lado del `.exe`
-resultante (mismo paso que `prepare_dist.py` hace para la app
-completa — no hace falta copiar el frontend, ese vive en GitHub
-Pages).
+Después copiar `server/`, `desktop/vendor/` Y `desktop/allowed_origins.txt`
+al lado del `.exe` resultante (mismo paso que `prepare_dist.py` hace
+para la app completa — no hace falta copiar el frontend, ese vive en
+GitHub Pages). Sin ese `.txt` al lado, el `.exe` sigue funcionando
+pero solo acepta conexiones desde localhost -- quien lo reciba
+tendría que setear `ALLOWED_ORIGINS` a mano por PowerShell.
