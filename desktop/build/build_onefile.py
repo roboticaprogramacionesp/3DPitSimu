@@ -27,6 +27,7 @@
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -46,9 +47,28 @@ def _ignore_extras(dirpath, names):
     ]
 
 
+def _rmtree_retry(path, attempts=10, delay=0.5):
+    # BUG REAL (repo vive adentro de OneDrive): justo despues de que un
+    # build anterior copio miles de archivos chicos a node_modules/ ahi
+    # adentro, OneDrive los toma un instante para sincronizarlos/
+    # indexarlos y los deja bloqueados -- un shutil.rmtree() inmediato
+    # de ESTE staging (por ejemplo, al arrancar OTRO build enseguida)
+    # puede pisar justo ese bloqueo transitorio (PermissionError,
+    # confirmado en la practica). Reintentar con una pausa corta
+    # alcanza porque el lock se libera solo en segundos.
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(delay)
+
+
 def stage_clean_server():
     if STAGING_DIR.exists():
-        shutil.rmtree(STAGING_DIR)
+        _rmtree_retry(STAGING_DIR)
     shutil.copytree(REPO_ROOT / "server", STAGING_DIR, ignore=_ignore_extras)
     shutil.copytree(REPO_ROOT / "server" / "node_modules", STAGING_DIR / "node_modules")
     return STAGING_DIR

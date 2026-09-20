@@ -27,11 +27,18 @@ escritorio.
    carpeta al lado.
 2. Doble click. Ya viene con el dominio real de GitHub Pages permitido
    por default -- no hace falta tocar nada más.
-3. Se va a abrir una ventana de consola con el log del puente -- dejala
-   abierta (minimizada está bien) mientras usás el simulador. Para
-   cerrarlo: cerrar esa ventana, o Ctrl+C adentro.
+3. No se abre ninguna ventana (ni consola negra) -- aparece un ícono
+   redondo (azul/índigo) en la bandeja del sistema, junto al reloj
+   (puede quedar oculto bajo la flechita "▲" de íconos ocultos la
+   primera vez). Dejalo ahí mientras usás el simulador. Para cerrar el
+   puente: clic derecho sobre el ícono → "Salir".
 4. Abrí la página del simulador en el navegador y usala normalmente —
    "▶ Simular" va a conectar solo.
+
+Si algo no conecta y querés ver el log del puente (arrancó bien,
+detectó QEMU/Node vendorizados, etc.), se escribe en
+`3DPitSimu-Puente.log`, al lado del `.exe` -- ya no hay consola donde
+leerlo en vivo, pero queda ahí para revisar después.
 
 Como todo (server/QEMU/GDB/Node) viaja comprimido adentro de ese único
 `.exe`, cada apertura tarda un poco más que si fuera una carpeta
@@ -115,7 +122,7 @@ esa seguía dependiendo de que alguien copiara TODAS las carpetas al
 lado del `.exe`, y era fácil copiar solo el `.exe` suelto por error
 (pasó en la práctica). Si por algún motivo se prefiere la versión en
 carpeta (arranca mas rápido, no autoextrae nada): `pyinstaller
---onedir --console --icon=desktop/build/icon.ico --name
+--onedir --windowed --icon=desktop/build/icon.ico --name
 3DPitSimu-Puente --distpath dist desktop/bridge_only.py`, y
 después copiar `server/`, `desktop/vendor/` y
 `desktop/allowed_origins.txt` a mano al lado del `.exe` resultante.

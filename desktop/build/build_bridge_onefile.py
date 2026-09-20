@@ -7,8 +7,9 @@
 # adentro, se autoextraen a una carpeta temporal en cada apertura.
 # Mismo criterio que desktop/build/build_onefile.py (la version de la
 # app de escritorio completa), pero apuntando a bridge_only.py, con
-# --console (es una consola, no una ventana) y sin el frontend (ese
-# vive en GitHub Pages, el puente no lo sirve).
+# --windowed (sin ventana de consola -- corre como icono de bandeja,
+# ver bridge_only.py) y sin el frontend (ese vive en GitHub Pages, el
+# puente no lo sirve).
 #
 # Uso:
 #   python desktop/build/build_bridge_onefile.py
@@ -23,6 +24,7 @@
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -36,9 +38,28 @@ def _ignore_extras(dirpath, names):
     ]
 
 
+def _rmtree_retry(path, attempts=10, delay=0.5):
+    # BUG REAL (repo vive adentro de OneDrive): justo despues de que un
+    # build anterior copio miles de archivos chicos a node_modules/ ahi
+    # adentro, OneDrive los toma un instante para sincronizarlos/
+    # indexarlos y los deja bloqueados -- un shutil.rmtree() inmediato
+    # de ESTE staging (por ejemplo, al arrancar OTRO build enseguida)
+    # puede pisar justo ese bloqueo transitorio (PermissionError,
+    # confirmado en la practica). Reintentar con una pausa corta
+    # alcanza porque el lock se libera solo en segundos.
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(delay)
+
+
 def stage_clean_server():
     if STAGING_DIR.exists():
-        shutil.rmtree(STAGING_DIR)
+        _rmtree_retry(STAGING_DIR)
     shutil.copytree(REPO_ROOT / "server", STAGING_DIR, ignore=_ignore_extras)
     shutil.copytree(REPO_ROOT / "server" / "node_modules", STAGING_DIR / "node_modules")
     return STAGING_DIR
@@ -63,12 +84,20 @@ def main():
 
     args = [
         sys.executable, "-m", "PyInstaller",
-        "--onefile", "--console",
+        "--onefile", "--windowed",
         "--icon", str(REPO_ROOT / "desktop" / "build" / "icon.ico"),
         "--name", "3DPitSimu-Puente",
         "--distpath", str(REPO_ROOT / "dist"),
         "--add-data", f"{staged_server};server",
         "--add-data", f"{vendor_dir};vendor",
+        # Mismo icon.ico de arriba (--icon), pero embebido tambien como
+        # DATO -- --icon solo lo usa para el icono de archivo del .exe,
+        # no lo deja accesible en runtime. bridge_only.py lo carga desde
+        # aca para el icono de la bandeja del sistema (ver
+        # bridge_only._tray_icon_image()). "desktop/build" como destino
+        # para que la ruta relativa coincida con la del repo (ver
+        # bridge_core.RESOURCE_DIR).
+        "--add-data", f"{REPO_ROOT / 'desktop' / 'build' / 'icon.ico'};desktop/build",
     ]
     if allowed_origins_file.exists():
         args += ["--add-data", f"{allowed_origins_file};."]

@@ -173,7 +173,18 @@ function startQemu(wss) {
         "-nographic",
         "-machine", "esp32",
         "-drive", `file=${CONFIG.flashImage},if=mtd,format=raw`,
-        "-s" // habilita el servidor GDB en tcp:1234, sin pausar el CPU (sin -S)
+        // Antes "-s" (atajo de QEMU para "-gdb tcp::1234", sin pausar
+        // el CPU -- eso es lo que hace la falta de "-S"): ese atajo
+        // escucha en TODAS las interfaces (0.0.0.0), no solo
+        // localhost, y por eso Windows Firewall pedía permiso de red
+        // pública/privada la primera vez que corría QEMU -- mismo tipo
+        // de problema que el comentario de seguridad de más arriba
+        // sobre el WebSocket (host:"127.0.0.1" ahí). Con la forma larga
+        // y CONFIG.gdbHost/gdbPort (ya son "127.0.0.1"/1234, los mismos
+        // que usa GdbMiClient para conectarse) el socket queda atado a
+        // loopback nomás -- inalcanzable desde la red, así que Windows
+        // no debería pedir nada.
+        "-gdb", `tcp:${CONFIG.gdbHost}:${CONFIG.gdbPort}`
     ];
 
     console.log("[QEMU] Lanzando:", CONFIG.qemuBinary, args.join(" "));

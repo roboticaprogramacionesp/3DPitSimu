@@ -40,3 +40,11 @@ desktop/vendor/
 # termina creando un archivo literal llamado "nul" en la raiz -- no
 # es contenido real, se regenera solo si vuelve a pasar.
 nul
+
+# Artefactos sueltos de compilacion/pruebas locales -- no son codigo
+# fuente, se regeneran o son de uso personal (no del proyecto).
+/3DPitSimu-dev.log
+/3DPitSimu.exe
+/_backup_v128_server/
+*.docx
+*.pdf

@@ -110,6 +110,11 @@ class ReportGenerator {
                     <textarea id="reportTips" maxlength="600" placeholder="Ej.: Revisar que el GND esté compartido entre todos los módulos."></textarea>
                 </div>
 
+                <div class="report-modal-field">
+                    <label for="reportConclusions">Conclusiones</label>
+                    <textarea id="reportConclusions" maxlength="600" placeholder="Ej.: Logramos que el sensor encienda el LED cuando detecta movimiento."></textarea>
+                </div>
+
                 <div class="report-modal-field report-modal-checkbox-field">
                     <label>
                         <input type="checkbox" id="reportShowNames" checked>
@@ -142,6 +147,7 @@ class ReportGenerator {
             extraMaterials: this.overlay.querySelector("#reportExtraMaterials"),
             cost:           this.overlay.querySelector("#reportCost"),
             tips:           this.overlay.querySelector("#reportTips"),
+            conclusions:    this.overlay.querySelector("#reportConclusions"),
             showNames:      this.overlay.querySelector("#reportShowNames"),
             preview:        this.overlay.querySelector(".report-modal-preview"),
             generate:       this.overlay.querySelector(".report-modal-generate"),
@@ -278,6 +284,7 @@ class ReportGenerator {
                 date:    this._els.date.value || new Date().toISOString().slice(0, 10),
                 cost:    this._formatCost(this._els.cost.value.trim()),
                 tips:    this._els.tips.value.trim(),
+                conclusions: this._els.conclusions.value.trim(),
                 code:    this.replPanel?.codeMirror?.getValue()?.trim() || "",
                 codeImage,
                 checklist: this._buildChecklist(components),
@@ -481,22 +488,41 @@ class ReportGenerator {
     // Corta por cantidad de caracteres (aproximado, fuente monoespaciada
     // asumida para el cálculo aunque el texto libre no lo sea -- alcanza
     // para que no se salga de la página).
+    //
+    // BUG REAL reportado: un salto de línea (Enter, en un <textarea>
+    // del modal) quedaba "pegado" al renglón anterior en el reporte.
+    // Causa: el \s+ de abajo trataba "\n" igual que un espacio común,
+    // así que todo el texto se re-flowaba como un solo párrafo continuo
+    // sin importar dónde el alumno haya puesto Enter. Fix: partir
+    // PRIMERO por "\n" (cada uno es un corte de línea explícito que el
+    // alumno pidió a propósito) y wrappear cada pedazo por separado --
+    // una línea vacía entre dos Enter seguidos se respeta como renglón
+    // en blanco (deja el espacio visual esperado).
     _wrapText(text, maxChars) {
 
-        const words = text.split(/\s+/).filter(Boolean);
         const lines = [];
-        let current = "";
 
-        words.forEach((word) => {
-            const candidate = current ? `${current} ${word}` : word;
-            if (candidate.length > maxChars && current) {
-                lines.push(current);
-                current = word;
-            } else {
-                current = candidate;
+        text.split("\n").forEach((paragraph) => {
+
+            const words = paragraph.split(/\s+/).filter(Boolean);
+            if (words.length === 0) {
+                lines.push("");
+                return;
             }
+
+            let current = "";
+            words.forEach((word) => {
+                const candidate = current ? `${current} ${word}` : word;
+                if (candidate.length > maxChars && current) {
+                    lines.push(current);
+                    current = word;
+                } else {
+                    current = candidate;
+                }
+            });
+            if (current) lines.push(current);
+
         });
-        if (current) lines.push(current);
 
         return lines;
 
@@ -521,23 +547,34 @@ class ReportGenerator {
 
     // Igual que _wrapText() pero cortando por ANCHO REAL medido
     // (maxWidth, mismas unidades que el viewBox/font-size del SVG) en
-    // vez de una cantidad fija de caracteres.
+    // vez de una cantidad fija de caracteres. Mismo fix de _wrapText()
+    // de arriba: respeta "\n" como corte de línea explícito en vez de
+    // tratarlo como un espacio más.
     _wrapTextByWidth(text, maxWidth, fontSize, bold = false) {
 
-        const words = text.split(/\s+/).filter(Boolean);
         const lines = [];
-        let current = "";
 
-        words.forEach((word) => {
-            const candidate = current ? `${current} ${word}` : word;
-            if (this._measureTextWidth(candidate, fontSize, bold) > maxWidth && current) {
-                lines.push(current);
-                current = word;
-            } else {
-                current = candidate;
+        text.split("\n").forEach((paragraph) => {
+
+            const words = paragraph.split(/\s+/).filter(Boolean);
+            if (words.length === 0) {
+                lines.push("");
+                return;
             }
+
+            let current = "";
+            words.forEach((word) => {
+                const candidate = current ? `${current} ${word}` : word;
+                if (this._measureTextWidth(candidate, fontSize, bold) > maxWidth && current) {
+                    lines.push(current);
+                    current = word;
+                } else {
+                    current = candidate;
+                }
+            });
+            if (current) lines.push(current);
+
         });
-        if (current) lines.push(current);
 
         return lines;
 
@@ -746,6 +783,19 @@ class ReportGenerator {
             parts.push(`<text x="${MARGIN}" y="${y}" font-size="4.5" font-weight="700" fill="#1a1a1a">Comentarios / tips a considerar</text>`);
             y += 5;
             this._wrapText(data.tips, 100).forEach((line) => {
+                parts.push(`<text x="${MARGIN}" y="${y}" font-size="3.3" fill="#333">${esc(line)}</text>`);
+                y += 4.2;
+            });
+        }
+
+        // ---- Conclusiones -- a pedido, sección final del reporte
+        // (después de tips, antes del pie de página). Mismo criterio
+        // de wrap/tamaño que Comentarios/tips, arriba.
+        if (data.conclusions) {
+            y += 3;
+            parts.push(`<text x="${MARGIN}" y="${y}" font-size="4.5" font-weight="700" fill="#1a1a1a">Conclusiones</text>`);
+            y += 5;
+            this._wrapText(data.conclusions, 100).forEach((line) => {
                 parts.push(`<text x="${MARGIN}" y="${y}" font-size="3.3" fill="#333">${esc(line)}</text>`);
                 y += 4.2;
             });
