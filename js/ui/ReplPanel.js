@@ -1989,7 +1989,29 @@ class ReplPanel {
     // prompt limpio y concluyendo (mal) "undió bien". Ahora se escucha
     // DURANTE todo el envío (desde antes del Ctrl+E hasta un margen
     // corto después del Ctrl+D final), sin importar cuánto tarde.
-    static USER_CODE_PASTE_SETTLE_MS = 1500;
+    //
+    // BUG REAL (reportado con dos corridas reales, ya SIN el falso
+    // positivo del propio eco -- ver el comentario grande de
+    // USER_CODE_CORRUPT_MARKER): el checksum SÍ detectaba la
+    // corrupción de verdad (quedaba impreso "USER_CODE_CORRUPT:...",
+    // visible en el panel), pero el reintento automático NUNCA se
+    // disparaba -- ningún "reintentando (2/6)". Causa: este margen era
+    // un _sleep() FIJO de 1.5s -- en una máquina real, bajo carga,
+    // confirmado en otras partes de esta misma sesión que una sola
+    // línea puede tardar varios segundos (hasta 60s en un pico) en
+    // ecoar/ejecutarse -- el checksum real corre DESPUÉS del Ctrl+D,
+    // así que si tarda más de 1.5s en imprimirse, el listener de
+    // onOutput/onHistory ya se había desarmado (ver el "finally" más
+    // abajo) antes de que el marcador llegara, y _pasteUserCodeWithRetry
+    // concluía (mal) "no hubo corrupción" -- el usuario SÍ veía el
+    // aviso en el panel (ese listener permanente no tiene timeout),
+    // solo que ya era tarde para que ESTE reintento se enterara.
+    // Ahora se espera (con tope, no a ciegas) un ">>>" real -- más
+    // margen en reintentos sucesivos, igual que el pacing de líneas --
+    // en vez de un sleep fijo. Para un "while True:" que nunca vuelve
+    // al prompt, esto solo significa esperar el tope completo UNA vez
+    // (el programa ya se ve corriendo mientras tanto, igual que antes).
+    static USER_CODE_PASTE_SETTLE_MS = 4000;
 
     // BUG REAL (reportado: "se demora demasiado" -- confirmado con un
     // log real de varios minutos): este reintento (hasta
@@ -2075,10 +2097,18 @@ class ReplPanel {
             let corruptionSeen = false;
             let pasteModeConfirmed = false;
             let stillSending = true;
+
+            // Ver USER_CODE_PASTE_SETTLE_MS -- apenas se ve el marcador,
+            // resuelve la espera de abajo de una (sin esto, incluso
+            // encontrando el marcador rápido, se esperaría igual el
+            // tope entero antes de poder reintentar).
+            let markerSeenEarly = () => {};
+            const markerSeenPromise = new Promise((resolve) => { markerSeenEarly = resolve; });
+
             const onOutput = (text) => {
-                if (text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) corruptionSeen = true;
+                if (text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) { corruptionSeen = true; markerSeenEarly(); }
                 if (/paste mode|=== ?$/m.test(text)) pasteModeConfirmed = true;
-                if (pasteModeConfirmed && stillSending && />>> /.test(text)) corruptionSeen = true;
+                if (pasteModeConfirmed && stillSending && />>> /.test(text)) { corruptionSeen = true; markerSeenEarly(); }
             };
             this.simulator.eventBus.on("qemu:output", onOutput);
 
@@ -2100,7 +2130,7 @@ class ReplPanel {
             // pasaba completamente desapercibida. Mismo chequeo,
             // mismo flag, la otra fuente posible.
             const onHistory = (text) => {
-                if (text && text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) corruptionSeen = true;
+                if (text && text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) { corruptionSeen = true; markerSeenEarly(); }
             };
             this.simulator.eventBus.on("qemu:history", onHistory);
 
@@ -2116,12 +2146,21 @@ class ReplPanel {
 
                 await this._pasteBlock(fullCode, halLineCount, { silent: false, marginMultiplier });
                 stillSending = false;
-                // Margen corto post Ctrl+D -- el último error de la
-                // tanda puede llegar un instante después de que
-                // _pasteBlock() ya resolvió (mismo motivo que
-                // PASTE_LINE_DELAY_MS en _pasteBlock: el eco/la
-                // ejecución real sobre QEMU+GDB no es instantánea).
-                await this._sleep(ReplPanel.USER_CODE_PASTE_SETTLE_MS);
+                // Margen post Ctrl+D -- el checksum real (o un bug
+                // genuino del usuario) puede tardar en imprimirse más
+                // de lo que tardaría en una máquina sin carga (ver el
+                // comentario grande de USER_CODE_PASTE_SETTLE_MS). Se
+                // resuelve apenas aparece el próximo ">>>" real O el
+                // marcador de corrupción (lo que llegue primero,
+                // vía markerSeenPromise) -- nunca más tarde que el tope
+                // (con el mismo margen creciente que el pacing de
+                // líneas). Un "while True:" que nunca vuelve al prompt
+                // simplemente agota el tope una vez -- el programa ya
+                // se ve corriendo mientras tanto.
+                await Promise.race([
+                    this._waitForNextPrompt(Math.round(ReplPanel.USER_CODE_PASTE_SETTLE_MS * marginMultiplier)),
+                    markerSeenPromise,
+                ]);
 
             } finally {
 

@@ -181,6 +181,46 @@ test('_pasteUserCodeWithRetry reintenta si el marcador llega A MITAD de un enví
 
 });
 
+test('_pasteUserCodeWithRetry no se cuelga esperando el tope completo si el marcador llega rápido (margen variable, no un sleep fijo)', async () => {
+
+    // BUG REAL (reportado con dos corridas reales: el checksum SÍ
+    // detectaba la corrupción -- quedaba impreso en el panel -- pero
+    // el reintento automático NUNCA se disparaba): el margen post
+    // Ctrl+D era un _sleep() FIJO de 1.5s -- en una máquina real bajo
+    // carga, confirmado en esta misma sesión que una sola línea puede
+    // tardar varios segundos en ecoar/ejecutarse, el checksum real
+    // podía imprimirse DESPUÉS de que ese sleep fijo ya había vencido
+    // y el listener ya se había desarmado. Ahora se espera (con tope)
+    // un ">>>" real O el marcador, lo que llegue primero -- sube
+    // USER_CODE_PASTE_TIME_BUDGET_MS/SETTLE_MS bien alto para este
+    // test y confirma que, aun así, no se tarda ni cerca de ese tope
+    // si el marcador aparece rápido (si el código hubiera vuelto a un
+    // _sleep() fijo del tope completo, este test tardaría  >1s de
+    // verdad y fallaría el assert de tiempo).
+    const ReplPanel = loadReplPanel();
+    const originalSettle = ReplPanel.USER_CODE_PASTE_SETTLE_MS;
+    ReplPanel.USER_CODE_PASTE_SETTLE_MS = 2000; // tope alto a propósito
+    let calls = 0;
+    const ctx = makeCtx(ReplPanel, async () => {
+        calls++;
+        if (calls === 1) {
+            setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', fakeCorruptMessage(ReplPanel)), 10);
+        }
+    });
+
+    const startedAt = Date.now();
+    try {
+        await ctx._pasteUserCodeWithRetry('codigo corto', 0);
+    } finally {
+        ReplPanel.USER_CODE_PASTE_SETTLE_MS = originalSettle;
+    }
+    const elapsedMs = Date.now() - startedAt;
+
+    assert.equal(calls, 2, 'debería haber reintentado apenas vio el marcador');
+    assert.ok(elapsedMs < 500, `no debería haber esperado cerca del tope de 2000ms -- tardó ${elapsedMs}ms`);
+
+});
+
 test('_pasteUserCodeWithRetry reintenta si paste mode se corta antes de tiempo (el checksum nunca llega a evaluarse)', async () => {
 
     // BUG REAL encontrado probando el checksum contra el .exe real: el
