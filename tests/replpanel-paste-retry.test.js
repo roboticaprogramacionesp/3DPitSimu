@@ -416,3 +416,66 @@ test('_wrapUserCodeForIntegrity nunca ejecuta el código dentro de un try/except
     assert.ok(!/^\s*(try|except)/.test(execLine), 'la línea de exec() no debería estar envuelta en try/except');
 
 });
+
+test('_wrapUserCodeForIntegrity NUNCA incluye el marcador de corrupción completo, de corrido, en su propio código fuente', () => {
+
+    // BUG REAL, el más grave de todos (encontrado recién al simular
+    // _pasteUserCodeWithRetry de punta a punta con un _pasteBlock que
+    // hace eco de cada línea del wrapper, como hace QEMU de verdad):
+    // paste mode ecoa el CÓDIGO tal cual se pega, ANTES de ejecutar una
+    // sola línea -- y el listener de "qemu:output" de
+    // _pasteUserCodeWithRetry no depende de _suppressEcho, escucha
+    // TODO. Antes de este fix, el wrapper armaba
+    // `print("USER_CODE_CORRUPT:...")` como un ÚNICO string literal de
+    // Python -- ese texto FUENTE, ecoado durante el pegado, YA
+    // contenía el marcador completo, así que el detector se disparaba
+    // SOLO en TODAS las corridas, exitosas o no (confirmado:
+    // una tanda perfecta, sin ninguna corrupción real, agotaba los 6
+    // intentos igual). Ahora el marcador se arma con DOS strings de
+    // Python concatenados en tiempo de ejecución -- el texto PEGADO
+    // (fuente) nunca debe contener el marcador completo de corrido.
+    const ReplPanel = loadReplPanel();
+    const ctx = Object.create(ReplPanel.prototype);
+
+    const wrapped = ctx._wrapUserCodeForIntegrity('print("hola")');
+
+    assert.ok(
+        !wrapped.includes(ReplPanel.USER_CODE_CORRUPT_MARKER),
+        'el código fuente del wrapper (lo que se pega/ecoa) no debería contener el marcador completo -- solo el RESULTADO de ejecutarlo debería armarlo'
+    );
+
+});
+
+test('_pasteUserCodeWithRetry NO reintenta en un pegado perfecto (sin corrupción real) -- el eco de su propio wrapper no debe confundirse con el marcador', async () => {
+
+    // Reproduce el bug de arriba contra _pasteUserCodeWithRetry
+    // completo: un _pasteBlock realista que ecoa cada línea del
+    // fullCode (como paste mode de verdad) y después imprime el
+    // resultado normal de ejecutar -- sin ninguna corrupción -- no
+    // debería disparar NINGÚN reintento.
+    const ReplPanel = loadReplPanel();
+    const ctx = Object.create(ReplPanel.prototype);
+    ReplPanel.USER_CODE_PASTE_SETTLE_MS = 20;
+    const appended = [];
+    ctx.simulator = { eventBus: makeEventBus() };
+    ctx.appendOutput = (t) => appended.push(t);
+    ctx._sleep = (ms) => new Promise((resolve) => setTimeout(resolve, Math.min(ms, 5)));
+
+    const wrapped = ctx._wrapUserCodeForIntegrity('print("hola")');
+    const halLineCount = wrapped.split('\n').length;
+
+    let calls = 0;
+    ctx._pasteBlock = async (code) => {
+        calls++;
+        for (const line of code.split('\n')) {
+            ctx.simulator.eventBus.emit('qemu:output', line + '\n');
+        }
+        ctx.simulator.eventBus.emit('qemu:output', 'hola\n'); // salida real, sin corrupción
+    };
+
+    await ctx._pasteUserCodeWithRetry(wrapped, halLineCount);
+
+    assert.equal(calls, 1, 'un pegado perfecto no debería disparar ningún reintento');
+    assert.equal(appended.length, 0, 'no debería mostrarse ningún mensaje de "reintentando" en un pegado perfecto');
+
+});

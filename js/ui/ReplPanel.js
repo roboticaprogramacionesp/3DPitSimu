@@ -1365,6 +1365,27 @@ class ReplPanel {
     // tal cual, como siempre, no camuflarse como "corrupción".
     static USER_CODE_CORRUPT_MARKER = "USER_CODE_CORRUPT:";
 
+    // BUG REAL (confirmado con un test directo contra el método real:
+    // una tanda PERFECTA, sin ninguna corrupción, agotaba igual los 6
+    // intentos): el wrapper de más abajo imprime USER_CODE_CORRUPT_MARKER
+    // armado como UN SOLO string literal -- pero paste mode ECOA el
+    // código tal cual se pega, ANTES de que se ejecute una sola línea
+    // (ver _pasteUserCodeWithRetry(), el listener de "qemu:output" NO
+    // depende de _suppressEcho, lo escucha TODO). Eso significa que el
+    // propio texto fuente `print("USER_CODE_CORRUPT:...")` -- el
+    // código, no su resultado -- ya contiene el marcador completo, así
+    // que el detector de corrupción se disparaba SOLO, SIEMPRE, con
+    // cada "Ejecutar", exitoso o no (6 intentos de margen creciente en
+    // CADA corrida, sin relación con la UART real -- el contribuyente
+    // más grande, de lejos, a "tarda demasiado"). Partiendo el marcador
+    // en dos strings de Python que se concatenan en tiempo de
+    // ejecución (`%` liga más fuerte que `+`, así que el orden da lo
+    // mismo sin paréntesis extra, aunque igual los sumamos por
+    // claridad), el texto PEGADO nunca contiene el marcador completo
+    // de corrido -- solo el RESULTADO real de imprimir (ejecutado de
+    // verdad, tras el Ctrl+D) lo arma completo. _wrapHalForIsolation()
+    // no sufre esto porque su propio marcador (HAL_ERROR:) viaja
+    // dentro de un try/except que si acaso se arma en runtime distinto.
     _wrapUserCodeForIntegrity(userCode) {
 
         // Misma técnica que _wrapHalForIsolation() -- ver los
@@ -1387,6 +1408,13 @@ class ReplPanel {
         }
         const rawBlock = rawLines.join("\n");
 
+        // Ver el comentario grande de arriba (junto a USER_CODE_CORRUPT_MARKER)
+        // -- partido a la mitad nomás para que ninguna mitad por sí
+        // sola parezca el marcador completo a simple vista en el fuente.
+        const markerSplit = Math.ceil(ReplPanel.USER_CODE_CORRUPT_MARKER.length / 2);
+        const markerPart1 = ReplPanel.USER_CODE_CORRUPT_MARKER.slice(0, markerSplit);
+        const markerPart2 = ReplPanel.USER_CODE_CORRUPT_MARKER.slice(markerSplit);
+
         return (
             `# -- Tu codigo (verificado) --\n` +
             `import ubinascii as _uc_iso\n` +
@@ -1397,7 +1425,7 @@ class ReplPanel {
             `except Exception:\n` +
             `    _uc_bytes = b""\n` +
             `if len(_uc_bytes) != ${expectedLen} or sum(_uc_bytes) % 65536 != ${checksum}:\n` +
-            `    print("${ReplPanel.USER_CODE_CORRUPT_MARKER}len=%d sum=%d esperado_len=${expectedLen} esperado_sum=${checksum}" % (len(_uc_bytes), sum(_uc_bytes) % 65536))\n` +
+            `    print("${markerPart1}" + ("${markerPart2}len=%d sum=%d esperado_len=${expectedLen} esperado_sum=${checksum}" % (len(_uc_bytes), sum(_uc_bytes) % 65536)))\n` +
             `else:\n` +
             `    exec(_uc_bytes.decode(), globals())\n`
         );
