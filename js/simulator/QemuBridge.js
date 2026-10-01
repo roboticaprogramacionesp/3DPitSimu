@@ -29,6 +29,22 @@ class QemuBridge {
         this.connected = false;
         this.buffer    = "";
 
+        // BUG REAL (ver el handler de "\x00STATUS:" en onMessage() y
+        // el comentario grande junto a "let bridgeReady" en
+        // server.js): "connected" solo dice que el WebSocket abrió --
+        // GDB puede tardar varios segundos más en adjuntarse y armar
+        // su breakpoint, y durante todo ese tiempo el target queda
+        // PAUSADO por GDB, sin poder responder nada. ReplPanel espera
+        // este flag (ver _waitForBridgeReady()) antes de mandar su
+        // sondeo de "¿arranque en caliente?" -- sin esto, ese sondeo
+        // llegaba contra un CPU pausado, concluía "arranque frío" por
+        // error, y disparaba un repasteo completo del HAL que con el
+        // firmware congelado de este proyecto nunca debería hacer
+        // falta. Se resetea en cada onClose() -- una reconexión puede
+        // ser a un bridge relanzado de cero (ver watch_bridge() en
+        // bridge_core.py), que vuelve a necesitar su propio aviso.
+        this.bridgeReady = false;
+
         // Si nunca conectamos ni una vez en esta pestaña y falla, es
         // casi seguro el puente local (no instalado/no corriendo, o
         // Chrome bloqueándolo -- ver onError()) y no un corte de una
@@ -387,6 +403,7 @@ class QemuBridge {
 
         console.log("[QemuBridge] ❌ Desconectado");
         this.connected = false;
+        this.bridgeReady = false; // ver el comentario grande en el constructor
         this.updateStatus("disconnected");
         this.simulator.eventBus.emit("qemu:disconnected");
         this.simulator.stopSimulation();
@@ -454,7 +471,22 @@ class QemuBridge {
         if (text.startsWith("\x00STATUS:")) {
             try {
                 const data = JSON.parse(text.slice(8));
-                if (!data.running) {
+
+                // BUG REAL que esto evita: antes de agregar
+                // "bridgeReady" (ver el comentario grande en el
+                // constructor), este era el ÚNICO campo que viajaba
+                // acá, así que "!data.running" alcanzaba. Un mensaje
+                // {bridgeReady:true} SIN la clave "running" hacía que
+                // "!data.running" diera true por "undefined" y
+                // disparara la rama de desconexión -- justo lo
+                // opuesto de lo que ese mensaje anuncia. Ahora cada
+                // campo se chequea por separado, solo si está presente.
+                if (data.bridgeReady) {
+                    this.bridgeReady = true;
+                    this.simulator.eventBus.emit("qemu:bridge-ready");
+                }
+
+                if ("running" in data && !data.running) {
                     this.simulator.stopSimulation();
                     this.updateStatus("disconnected");
                     this.simulator.renderer.stopAllBuzzers?.();

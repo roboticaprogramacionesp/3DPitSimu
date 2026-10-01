@@ -100,6 +100,102 @@ except ImportError:
 # Bridge QEMU (server/server.js)
 # ----------------------------------------------------------
 
+# Debe coincidir SIEMPRE con CONFIG.wsPort/CONFIG.gdbPort en
+# server/server.js -- los dos puertos fijos que usa el bridge: el
+# WebSocket hacia el navegador y el servidor GDB que expone QEMU.
+# Ver _ensure_port_free() mas abajo.
+BRIDGE_WS_PORT = 8787
+
+# BUG REAL encontrado probando el fix de BRIDGE_WS_PORT (2026-10-01):
+# liberar SOLO 8787 no alcanza. Si el usuario (o Windows) mata el
+# "node.exe" padre pero no a sus hijos (ej. desde el Administrador de
+# tareas, "Finalizar tarea" sobre el proceso visible -- no siempre se
+# lleva puestos a los hijos, a diferencia de taskkill /T que SI usa
+# stop_bridge()), un "qemu-system-xtensa.exe" huerfano puede seguir
+# vivo y quedarse con el puerto 1234 aunque 8787 ya este libre (node
+# murio, pero QEMU no). Confirmado en la practica: el GDB del
+# PROXIMO arranque se conectaba a ese QEMU viejo/huerfano en vez del
+# que recien bootea, insertaba su breakpoint contra un layout de
+# memoria que no correspondia, y el firmware terminaba crasheando con
+# "Guru Meditation Error (LoadProhibited)" en bucle -- el sintoma
+# exacto reportado de "el puente no arranca bien". Mismo fix que para
+# 8787, aplicado tambien a este puerto.
+BRIDGE_GDB_PORT = 1234
+
+
+def _port_owner_pid(port):
+    """PID que tiene ese puerto en LISTENING (127.0.0.1 o 0.0.0.0), o
+    None si esta libre. Via "netstat -ano" (siempre disponible, no
+    pide admin) en vez de una libreria de terceros -- no hay ninguna
+    instalada en el entorno empaquetado para esto."""
+    if sys.platform != "win32":
+        return None
+    try:
+        result = subprocess.run(
+            ["netstat", "-ano", "-p", "TCP"],
+            capture_output=True, text=True, creationflags=_NO_WINDOW, timeout=5,
+        )
+    except Exception:
+        return None
+    for line in result.stdout.splitlines():
+        parts = line.split()
+        if len(parts) >= 5 and parts[0].upper() == "TCP" and parts[3].upper() == "LISTENING":
+            local = parts[1]
+            if local.endswith(f":{port}") and (
+                local.startswith("127.0.0.1:") or local.startswith("0.0.0.0:")
+            ):
+                try:
+                    return int(parts[-1])
+                except ValueError:
+                    continue
+    return None
+
+
+# BUG REAL que esto arregla: si un "node server.js" de una sesion
+# anterior queda zombie (el taskkill /T del padre no siempre se lleva
+# puesto a Node -- _WATCHED_IMAGES mas abajo vigila QEMU/GDB pero
+# nunca al propio Node, que es quien realmente tiene el puerto
+# abierto), el proximo arranque choca con EADDRINUSE. Hasta ahora
+# server.js moria ahi con una excepcion sin capturar (WebSocket.Server
+# no tenia manejador de "error", ver server.js) -- proc.poll() lo veia
+# como "goterminado" y watch_bridge() lo volvia a lanzar, chocando
+# otra vez con el mismo puerto ocupado, en bucle infinito, sin que
+# "Ejecutar" se habilitara nunca (el WS jamas llegaba a abrir del lado
+# del navegador). Ahora, antes de lanzar un Node nuevo, nos fijamos si
+# alguien YA esta escuchando BRIDGE_WS_PORT y lo matamos primero --
+# puntual, por PID (nunca un "taskkill /IM node.exe" a ciegas, que se
+# llevaria puesto cualquier OTRO Node del usuario, ej. VS Code).
+def _ensure_port_free(port):
+
+    pid = _port_owner_pid(port)
+    if pid is None:
+        return
+
+    name = ""
+    try:
+        result = subprocess.run(
+            ["tasklist", "/FI", f"PID eq {pid}"],
+            capture_output=True, text=True, creationflags=_NO_WINDOW, timeout=5,
+        )
+        hit = next((l for l in result.stdout.splitlines() if str(pid) in l), None)
+        if hit:
+            name = hit.split()[0]
+    except Exception:
+        pass
+
+    _log(
+        f"AVISO: el puerto {port} ya estaba ocupado "
+        f"(PID {pid}{' / ' + name if name else ''}) -- liberandolo antes de arrancar el bridge."
+    )
+    subprocess.run(
+        ["taskkill", "/PID", str(pid), "/T", "/F"],
+        capture_output=True, creationflags=_NO_WINDOW,
+    )
+
+    deadline = time.time() + 5
+    while time.time() < deadline and _port_owner_pid(port) is not None:
+        time.sleep(0.2)
+
 def _allowed_origins_candidates():
     # APP_DIR primero: al lado del .exe REAL (Desktop, USB, donde sea)
     # -- funciona en onedir Y en onefile, y es editable sin recompilar
@@ -151,6 +247,9 @@ def start_bridge(extra_env=None, on_status=None):
         _log(f"AVISO: no se encontro {SERVER_DIR} -- el bridge no puede arrancar.")
         return None
 
+    _ensure_port_free(BRIDGE_WS_PORT)
+    _ensure_port_free(BRIDGE_GDB_PORT)
+
     # Prioridad: 1) binarios vendorizados (portables, viajan con la
     # distribucion) 2) bridge_config.py (rutas reales de ESTA maquina
     # de desarrollo) 3) variable de entorno del sistema. Vendorizado
@@ -200,8 +299,16 @@ def start_bridge(extra_env=None, on_status=None):
             bufsize=1,
             creationflags=creationflags,
         )
-    except FileNotFoundError:
-        _log(f"AVISO: no se encontro '{node_bin}' -- el bridge no puede arrancar.")
+    except OSError as e:
+        # Antes solo se atajaba FileNotFoundError ('node_bin' no
+        # existe) -- pero Popen tambien puede fallar con otros
+        # OSError reales en el campo (ej. PermissionError si un
+        # antivirus pone en cuarentena/bloquea el .exe vendorizado la
+        # primera vez que corre). Sin este catch mas amplio, esa
+        # excepcion se escapaba de start_bridge() y rompia main() ANTES
+        # de que la ventana llegara a abrirse -- el usuario veia la app
+        # "no abrir" sin ningun mensaje, en vez de un AVISO en el log.
+        _log(f"AVISO: no se pudo arrancar '{node_bin}' ({e}) -- el bridge no puede arrancar.")
         return None
 
     def pump_output():
@@ -321,16 +428,53 @@ def watch_bridge(bridge, extra_env=None, on_status=None):
         if bridge["shutting_down"]:
             return
         proc = bridge["proc"]
-        if proc is None or proc.poll() is None:
-            continue  # sigue vivo (o nunca arranco), nada que hacer
-        _log("El bridge QEMU termino -- relanzando...")
+
+        # BUG REAL (reportado: "el puente no arranca bien a veces y
+        # Ejecutar nunca se habilita"): esta condicion trataba
+        # "proc is None" (start_bridge() fallo de entrada, ej. puerto
+        # ocupado, node bloqueado por un antivirus, etc.) EXACTAMENTE
+        # igual que "sigue vivo" -- el comentario de antes decia "sigue
+        # vivo (o nunca arranco), nada que hacer", pero "nunca arranco"
+        # es el caso que mas necesita un reintento, no uno para
+        # ignorar. Con el bug, un fallo de arranque dejaba la ventana
+        # abierta pero el WS nunca llegaba a existir -- "Ejecutar"
+        # quedaba deshabilitado para siempre en esa sesion, sin ningun
+        # reintento automatico.
+        if proc is not None and proc.poll() is None:
+            continue  # sigue vivo de verdad, nada que hacer
+
+        _log(
+            "El bridge QEMU termino -- relanzando..." if proc is not None
+            else "El bridge QEMU nunca llego a arrancar -- reintentando..."
+        )
         if on_status is not None:
             on_status("down")
-        stop_bridge(proc)  # red de seguridad: limpia restos aunque proc ya haya muerto
+        if proc is not None:
+            stop_bridge(proc)  # red de seguridad: limpia restos aunque proc ya haya muerto
         if bridge["shutting_down"]:
             return
         new_proc = start_bridge(extra_env, on_status)
         bridge["proc"] = new_proc
+
+        # BUG REAL encontrado probando el fix de arriba (2026-10-01):
+        # si el usuario cierra la ventana justo mientras este
+        # relanzamiento estaba en curso, on_closing() (ver main.py) ya
+        # puede haber corrido y terminado su propio stop_bridge() ANTES
+        # de que este proceso nuevo existiera -- "shutting_down" se
+        # puso en True mientras start_bridge() de arriba todavia
+        # estaba en el aire. Sin este chequeo, nadie mas limpia este
+        # proceso nuevo: el loop va a volver a "while True", ver
+        # shutting_down=True en el proximo chequeo, y devolver sin
+        # pasar por stop_bridge() -- confirmado en la practica, dejaba
+        # un QEMU/GDB/Node huerfano corriendo para siempre, ocupando
+        # los puertos 8787/1234 hasta el proximo arranque (que ahora
+        # SI los libera, ver _ensure_port_free(), pero es mejor no
+        # dejar el huerfano desde el vamos).
+        if bridge["shutting_down"]:
+            if new_proc is not None:
+                stop_bridge(new_proc)
+            return
+
         # Vuelve a "idle" (icono/estado normal) apenas el relanzamiento
         # arranca bien -- sin esto, el estado quedaba pegado en "down"
         # para siempre despues de un crash, aunque el bridge ya este

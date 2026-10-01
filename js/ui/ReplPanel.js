@@ -1647,6 +1647,64 @@ class ReplPanel {
     static PROBE_TIMEOUT_MS = 2500;
     static PROBE_MARK = "_PIT_WARM_";
 
+    // Tope de seguridad para _waitForBridgeReady() -- ver ese método.
+    // Un bridge viejo (build anterior a este fix, ej. un .exe que
+    // alguien todavía no actualizó) nunca va a mandar la señal
+    // "bridgeReady" -- sin este tope, esta espera colgaría para
+    // siempre y el síntoma sería peor que el que vinimos a arreglar
+    // (Ejecutar deshabilitado para siempre, en vez de "a veces"). Bien
+    // por encima de lo que tarda GDB en adjuntarse en la práctica (unos
+    // segundos), para no disparar en falso en una máquina lenta.
+    static BRIDGE_READY_TIMEOUT_MS = 15000;
+
+    // ====================================================
+    // Espera a que el bridge avise que GDB ya terminó de adjuntarse y
+    // el target REALMENTE volvió a ejecutar (ver el "\x00STATUS:" con
+    // bridgeReady:true que manda server.js, y el comentario grande en
+    // el constructor de QemuBridge). "conectado" (WebSocket abierto)
+    // y "listo para hablar con MicroPython" NO son lo mismo -- sondear
+    // antes de tiempo contra un CPU todavía pausado por GDB es lo que
+    // causaba el repasteo completo de HAL innecesario reportado (ver
+    // el comentario grande donde se llama a este método).
+    // ====================================================
+
+    _waitForBridgeReady() {
+
+        const bridge = this.simulator.qemuBridge;
+
+        if (!bridge || bridge.isWasmBridge || bridge.bridgeReady) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+
+            let settled = false;
+
+            const onReady = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                this.simulator.eventBus.off("qemu:bridge-ready", onReady);
+                resolve();
+            };
+
+            const timer = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                this.simulator.eventBus.off("qemu:bridge-ready", onReady);
+                console.warn(
+                    `[ReplPanel] No llegó la señal de "bridge listo" en ${ReplPanel.BRIDGE_READY_TIMEOUT_MS}ms -- ` +
+                    "seguimos igual (puente de una build vieja, o GDB tardó más de lo esperado)."
+                );
+                resolve();
+            }, ReplPanel.BRIDGE_READY_TIMEOUT_MS);
+
+            this.simulator.eventBus.on("qemu:bridge-ready", onReady);
+
+        });
+
+    }
+
     // BUG REAL encontrado (reportado por el usuario: "el botón de
     // Ejecutar no se activa después de correr el simulador", pero SÍ
     // se activaba en cuanto pegaba el HAL de algún componente): esta
@@ -2420,6 +2478,23 @@ class ReplPanel {
             this.sendBtn.disabled = true;
             const runBtn = document.getElementById("replBtnRun");
             if (runBtn) runBtn.disabled = true;
+
+            // BUG REAL (reportado: "al ejecutar el código se carga
+            // muy rápido, no se colocan bien las letras", con
+            // repasteos completos de HAL pese a que el firmware ya lo
+            // trae congelado): "conectado" solo dice que el WebSocket
+            // abrió -- GDB puede tardar varios segundos más en
+            // adjuntarse y armar su breakpoint (ver runGpioEventBridge
+            // en server.js), y el target queda PAUSADO por GDB
+            // mientras tanto. El sondeo de _resyncHalAfterBoot() de
+            // más abajo manda un Ctrl+C que, si llega en esa ventana,
+            // no tiene ningún CPU corriendo del otro lado para
+            // responderle -- concluía "arranque frío" por error y
+            // disparaba un repasteo completo e innecesario, en el peor
+            // momento posible (justo cuando el bridge recién está
+            // terminando de asentarse). Esperamos la señal real del
+            // bridge antes de sondear nada -- ver _waitForBridgeReady().
+            await this._waitForBridgeReady();
 
             // Ver _resyncHalAfterBoot() -- sondea primero (¿ya está
             // "_pit_state" en sys.modules, sea por reconexión en

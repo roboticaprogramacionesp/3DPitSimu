@@ -167,6 +167,23 @@ function appendOutputHistory(text) {
     }
 }
 
+// BUG REAL (reportado: "al ejecutar el código se carga muy rápido, no
+// se colocan bien las letras"): el navegador se entera de que "ya se
+// puede hablar con MicroPython" apenas el WebSocket abre -- pero el
+// WebSocket se abre ANTES de que GDB termine de adjuntarse/armar su
+// breakpoint (ver runGpioEventBridge: el target queda PAUSADO por GDB
+// -- gdb.interruptAndWait() -- durante toda esa configuración, que
+// puede tardar varios segundos reales). ReplPanel.js manda su sondeo
+// "¿ya arrancó en caliente?" (Ctrl+C + print()) apenas ve "conectado",
+// sin saber nada de esto -- si llega mientras el target sigue pausado
+// por GDB, el sondeo nunca obtiene una respuesta real, concluye
+// "arranque frío" por error, y disparaba un repasteo COMPLETO del HAL
+// que en este proyecto ya viene congelado en el firmware y nunca
+// debería hacer falta. bridgeReady se pone en true recién en el
+// "await gdb.resume()" final de runGpioEventBridge -- el momento en
+// que el target REALMENTE vuelve a ejecutar y puede responder algo.
+let bridgeReady = false;
+
 function startQemu(wss) {
 
     const args = [
@@ -622,6 +639,32 @@ function startWebSocketServer() {
         },
     });
 
+    // BUG REAL (reportado: "el puente no arranca bien a veces, y
+    // Ejecutar nunca se habilita"): WebSocket.Server sin un handler de
+    // "error" propio hace que Node trate cualquier fallo de bind (ej.
+    // EADDRINUSE -- el puerto ya tiene un "node server.js" zombie de
+    // una sesion anterior escuchando) como una excepcion SIN CAPTURAR,
+    // que tira abajo el proceso entero con un stack trace en vez de un
+    // mensaje claro. Del lado de desktop/main.py eso se veia solo como
+    // "el bridge termino" -- sin saber POR QUE, asi que no habia forma
+    // de diagnosticarlo desde el log. Ahora se loguea la causa real
+    // (puntualmente EADDRINUSE, el caso de lejos mas comun) antes de
+    // salir -- bridge_core._ensure_port_free() ya debería evitar que
+    // esto pase en primer lugar liberando el puerto ANTES de lanzar
+    // este proceso, pero este handler igual hace falta como red de
+    // seguridad (ej. si alguien corre "node server.js" a mano).
+    wss.on("error", (err) => {
+        if (err && err.code === "EADDRINUSE") {
+            console.error(
+                `[WS] El puerto ${CONFIG.wsPort} ya está en uso -- probablemente otra instancia ` +
+                `del puente (3DPitSimu / 3DPitSimu-Puente) sigue corriendo. Cerrala primero.`
+            );
+        } else {
+            console.error(`[WS] No se pudo abrir el servidor WebSocket: ${err && err.message}`);
+        }
+        process.exit(1);
+    });
+
     console.log(`[WS] Escuchando en ws://127.0.0.1:${CONFIG.wsPort} (solo localhost, Origin validado)`);
 
     wss.on("connection", (ws) => {
@@ -636,6 +679,17 @@ function startWebSocketServer() {
         // los que ya estaban conectados.
         if (outputHistory) {
             ws.send("\x00HISTORY:" + JSON.stringify(outputHistory));
+        }
+
+        // Ver el comentario grande junto a "let bridgeReady" -- si
+        // este cliente se conecta DESPUÉS de que el target ya volvió a
+        // correr (lo normal: GDB tarda unos segundos en adjuntarse),
+        // se lo avisamos de una. Si todavía no está listo, ya le va a
+        // llegar el broadcast cuando runGpioEventBridge() termine su
+        // configuración (ver el "await gdb.resume()" final de esa
+        // función) -- no hace falta nada más acá en ese caso.
+        if (bridgeReady) {
+            ws.send("\x00STATUS:" + JSON.stringify({ bridgeReady: true }));
         }
 
         // Se congela con la PRIMERA conexión que exista, sea esta
@@ -1344,6 +1398,13 @@ async function runGpioEventBridge(gdb, wss, elfPath) {
     });
 
     await gdb.resume();
+
+    // Ver el comentario grande junto a "let bridgeReady" -- recién
+    // ACÁ el target realmente volvió a ejecutar. Antes de este punto
+    // cualquier Ctrl+C/sondeo que mandara el navegador caía contra un
+    // CPU pausado por GDB, sin ninguna posibilidad real de responder.
+    bridgeReady = true;
+    broadcastRaw(wss, "\x00STATUS:" + JSON.stringify({ bridgeReady: true }));
 
     return {
         // No hace falta un loop propio -- todo pasa por el
