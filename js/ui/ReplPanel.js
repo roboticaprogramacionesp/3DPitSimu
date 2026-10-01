@@ -1724,7 +1724,56 @@ class ReplPanel {
     // interrumpía el programa viejo. Ahora la sonda hace lo mismo:
     // Ctrl+C primero, para llegar a un prompt de verdad sin importar
     // en qué quedó la sesión anterior.
+    // BUG REAL (reportado: repasteos gigantes de HAL -- cientos de
+    // líneas, con IndentationError/SyntaxError en cadena -- pese a
+    // que el firmware ya tiene el HAL congelado y _PIT_WARM_1 venía
+    // saliendo bien en la mayoría de las reconexiones): confirmado con
+    // un log real que el propio MENSAJE DEL SONDEO llegaba corrompido
+    // de tanto en tanto ('print("_PIT_WARM" if ...' -- perdió
+    // "_" + ("1" if "_pit_state" in __import__("sys").modules else "0"
+    // adentro del envío, sin ningún Ctrl+C superpuesto de por medio).
+    // La UART emulada de QEMU puede perder bytes bajo carga real
+    // (documentado hace rato en server.js/writeToQemuThrottled, nunca
+    // 100% eliminado solo con pacing) -- cuando le toca justo al
+    // sondeo, _resyncHalAfterBoot() concluye "arranque frío" por error
+    // y dispara el repasteo COMPLETO (cientos de líneas, sección 1 de
+    // _buildPendingHal) -- un envío mucho más largo, con mucha más
+    // superficie para que la MISMA corrupción vuelva a pegar, y en
+    // cascada. Ya se probó envolver ese repasteo grande con el mismo
+    // checksum que protege el HAL por componente (ver el comentario
+    // "REVERTIDO" en _buildPendingHal()) y empeoró las cosas (base64
+    // +33% de tamaño, los 4 bloques fallando juntos). La sonda en sí
+    // es MUCHO más barata de reintentar que repastear todo -- si un
+    // intento no responde a tiempo (nunca llegó nada reconocible, lo
+    // más probable con esta corrupción puntual), reintentar un par de
+    // veces ANTES de resignarse a "frío" evita pagar el repasteo caro
+    // por una falla transitoria y chica.
+    static PROBE_ATTEMPTS = 3;
+
     async _probeWarmBoot() {
+
+        for (let attempt = 1; attempt <= ReplPanel.PROBE_ATTEMPTS; attempt++) {
+
+            const result = await this._probeWarmBootOnce();
+
+            if (result !== null) return result; // respuesta real (true/false), no hace falta reintentar
+
+            if (attempt < ReplPanel.PROBE_ATTEMPTS) {
+                console.warn(`[ReplPanel] Intento ${attempt}/${ReplPanel.PROBE_ATTEMPTS} del sondeo de arranque sin respuesta -- reintentando (probable corrupción puntual en la UART emulada).`);
+            }
+
+        }
+
+        console.warn(`[ReplPanel] El sondeo de arranque no respondió en ${ReplPanel.PROBE_ATTEMPTS} intentos -- asumiendo boot frío.`);
+        return false;
+
+    }
+
+    // Un solo intento del sondeo -- devuelve true/false si llegó una
+    // respuesta real, o null si agotó el timeout sin ver nada
+    // reconocible (señal de "reintentá", no "es un boot frío" --
+    // ver _probeWarmBoot() arriba).
+    async _probeWarmBootOnce() {
 
         // BUG REAL encontrado (2026-07-31, reportado como "después de
         // Detener y volver a Simular, el REPL/editor ya no responde"):
@@ -1760,8 +1809,8 @@ class ReplPanel {
                 // de nuevo (ver PROBE_TIMEOUT_MS más arriba, ronda
                 // 2026-08-02) -- si esto se ve seguido en la consola,
                 // confirma que el timeout sigue siendo insuficiente.
-                console.warn(`[ReplPanel] _probeWarmBoot() no respondió en ${ReplPanel.PROBE_TIMEOUT_MS}ms -- asumiendo boot frío.`);
-                resolve(false);
+                console.warn(`[ReplPanel] _probeWarmBootOnce() no respondió en ${ReplPanel.PROBE_TIMEOUT_MS}ms.`);
+                resolve(null);
             }, ReplPanel.PROBE_TIMEOUT_MS);
 
             this._warmProbe = (isWarm) => {
