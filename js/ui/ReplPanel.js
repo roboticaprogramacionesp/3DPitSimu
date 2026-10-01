@@ -1769,6 +1769,114 @@ class ReplPanel {
 
     }
 
+    // ====================================================
+    // BUG REAL (reportado: "a medida que el código crece -- ej. un
+    // NeoMatrix con arrays grandes de píxeles -- Ejecutar falla cada
+    // vez más seguido, con SyntaxError/IndentationError en cascada,
+    // y hay que darle a Ejecutar varias veces a mano hasta que uno
+    // sale bien"): el código del usuario viaja en texto plano (sin el
+    // checksum que protege al HAL -- ver _wrapHalForIsolation) para
+    // que el estudiante pueda VER su código tipeándose en el panel
+    // mientras corre. Envolverlo en base64+checksum como el HAL ya se
+    // probó para el bloque grande "siempre presente" y empeoró las
+    // cosas (ver el comentario "REVERTIDO" en _buildPendingHal) --
+    // más tamaño por el base64 es MÁS superficie para que la UART
+    // pierda bytes, no menos, y acá además se perdería la vista previa
+    // en vivo del código.
+    //
+    // En vez de proteger la TRANSMISIÓN, se detecta la FALLA típica
+    // que deja (un SyntaxError/IndentationError apenas termina el
+    // paste -- la firma exacta de "el texto que llegó no compila",
+    // nunca de un bug real del usuario que recién se manifiesta en
+    // tiempo de ejecución) y se reintenta todo el paste automático,
+    // en vez de obligar al estudiante a notar el error y volver a
+    // clickear "Ejecutar" él mismo cada vez -- mismo patrón que ya usa
+    // _retryHalAfterError()/_probeWarmBoot() en este archivo. Si el
+    // error es un bug REAL del código (no transmisión), reintentar
+    // reproduce el mismo error de forma determinística -- se agota el
+    // cupo de intentos y se muestra tal cual, mismo resultado final
+    // que sin este mecanismo, solo que unos segundos más tarde.
+    // ====================================================
+
+    static USER_CODE_PASTE_ATTEMPTS = 3;
+
+    // BUG REAL encontrado probando el fix de arriba con un script
+    // largo de verdad (un NeoMatrix con arrays de píxeles, ~90
+    // líneas): la primera versión de esto esperaba la señal de
+    // corrupción recién DESPUÉS de que _pasteBlock() ya hubiera
+    // terminado de mandar TODO -- para un pegado corto eso alcanza
+    // (todo pasa en milisegundos), pero un pegado largo puede tardar
+    // varios segundos completos (el pacing de server.js, SEND_CHUNK_SIZE/
+    // SEND_CHUNK_DELAY_MS), y la corrupción -- confirmado con un log
+    // real -- puede pasar A MITAD de ese envío, no al final: si un
+    // byte se pierde y hace que MicroPython salga de paste mode antes
+    // de tiempo, TODO lo que _pasteBlock() siga mandando después (el
+    // resto de fullCode, todavía en su loop de líneas, ajeno a que
+    // paste mode ya terminó) se tipea suelto en el prompt normal,
+    // cascada de SyntaxError tras SyntaxError -- pero para cuando
+    // _pasteBlock() por fin resolvía, un watcher que recién arrancaba
+    // AHÍ se perdía toda esa cascada, viendo como mucho el último
+    // prompt limpio y concluyendo (mal) "undió bien". Ahora se escucha
+    // DURANTE todo el envío (desde antes del Ctrl+E hasta un margen
+    // corto después del Ctrl+D final), sin importar cuánto tarde.
+    static USER_CODE_PASTE_SETTLE_MS = 1500;
+
+    // Pega el código del usuario (+ HAL pendiente) con reintento
+    // automático si la tanda anterior dio señales de corrupción en
+    // tránsito -- ver el comentario grande más arriba.
+    async _pasteUserCodeWithRetry(fullCode, halLineCount) {
+
+        for (let attempt = 1; attempt <= ReplPanel.USER_CODE_PASTE_ATTEMPTS; attempt++) {
+
+            if (attempt > 1) {
+                this.appendOutput(
+                    `\n⚠️ Posible error de transmisión -- reintentando (${attempt}/${ReplPanel.USER_CODE_PASTE_ATTEMPTS})...\n`,
+                    "repl-info"
+                );
+            }
+
+            // SyntaxError/IndentationError son la firma de "el texto
+            // que llegó no compila" -- nunca de un bug real del
+            // usuario, que recién se manifestaría en tiempo de
+            // EJECUCIÓN (después de que esto ya compiló bien). Se
+            // acumula un solo flag en vez de resolver apenas se ve el
+            // primero -- importa HABER VISTO corrupción en algún
+            // momento del envío, no en qué orden llegó respecto a
+            // otra cosa.
+            let corruptionSeen = false;
+            const onOutput = (text) => {
+                if (/SyntaxError|IndentationError/.test(text)) corruptionSeen = true;
+            };
+            this.simulator.eventBus.on("qemu:output", onOutput);
+
+            try {
+
+                await this._pasteBlock(fullCode, halLineCount, { silent: false });
+                // Margen corto post Ctrl+D -- el último error de la
+                // tanda puede llegar un instante después de que
+                // _pasteBlock() ya resolvió (mismo motivo que
+                // PASTE_LINE_DELAY_MS en _pasteBlock: el eco/la
+                // ejecución real sobre QEMU+GDB no es instantánea).
+                await this._sleep(ReplPanel.USER_CODE_PASTE_SETTLE_MS);
+
+            } finally {
+
+                this.simulator.eventBus.off("qemu:output", onOutput);
+
+            }
+
+            if (!corruptionSeen) return;
+
+            if (attempt < ReplPanel.USER_CODE_PASTE_ATTEMPTS) {
+                console.warn(`[ReplPanel] Intento ${attempt}/${ReplPanel.USER_CODE_PASTE_ATTEMPTS} de Ejecutar parece corrompido en tránsito -- reintentando.`);
+            }
+
+        }
+
+        console.warn(`[ReplPanel] Ejecutar siguió fallando tras ${ReplPanel.USER_CODE_PASTE_ATTEMPTS} intentos -- puede ser un error real del código, no transmisión.`);
+
+    }
+
     // Un solo intento del sondeo -- devuelve true/false si llegó una
     // respuesta real, o null si agotó el timeout sin ver nada
     // reconocible (señal de "reintentá", no "es un boot frío" --
@@ -2160,8 +2268,12 @@ class ReplPanel {
         } else {
             // _enqueuePaste hace que esto espere su turno si justo había
             // una precarga de HAL (preloadHal) todavía mandándose --
-            // nunca se pisan los dos Ctrl+E entre sí.
-            await this._enqueuePaste(() => this._pasteBlock(fullCode, halLineCount, { silent: false }));
+            // nunca se pisan los dos Ctrl+E entre sí. Ver
+            // _pasteUserCodeWithRetry() -- reintenta solo ante señales
+            // de corrupción en tránsito (SyntaxError/IndentationError
+            // apenas termina el paste), sin que el usuario tenga que
+            // notar el fallo y volver a clickear "Ejecutar" él mismo.
+            await this._enqueuePaste(() => this._pasteUserCodeWithRetry(fullCode, halLineCount));
         }
 
         this._running = false;
