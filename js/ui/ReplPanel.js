@@ -84,6 +84,21 @@ class ReplPanel {
         // tanda por clickear varias veces seguidas.
         this._running = false;
 
+        // BUG REAL (reportado: "ya detuve el simulador... pero sigue
+        // corriendo por detrás"): "⏹ Detener" (evento "simulation:stop",
+        // ver bindBusEvents) solo cerraba el WebSocket del lado del
+        // navegador -- el bucle de reintento de _pasteUserCodeWithRetry()
+        // (hasta 6 intentos, cada uno con su propio pacing línea a
+        // línea) seguía corriendo igual del lado de JS, mandando al
+        // vacío (QemuBridge.send() ya no hace nada sin conexión) pero
+        // sin enterarse de que el usuario pidió parar -- el panel
+        // seguía mostrando "reintentando (N/6)" varios segundos/minutos
+        // después del click. Esta bandera la chequean _pasteBlock()
+        // (corta el envío línea a línea) y _pasteUserCodeWithRetry()
+        // (corta entre intentos) para abortar de inmediato en vez de
+        // agotar los 6 intentos igual.
+        this._stopRequested = false;
+
         // Actividad de pines (📌 GPIOxx → LOW/HIGH): con un teclado
         // matricial (o cualquier cosa que escanee GPIOs seguido) esto
         // puede inundar el panel con MUCHO ruido -- get_key() revisa
@@ -1652,8 +1667,15 @@ class ReplPanel {
             this.simulator.eventBus.emit("qemu:send", "\x05"); // Ctrl+E: paste mode
 
             const lines = fullCode.split("\n");
+            let stoppedEarly = false;
 
             for (let i = 0; i < lines.length; i++) {
+                // Ver this._stopRequested en el constructor -- corta el
+                // envío línea a línea apenas el usuario pide "Detener",
+                // en vez de seguir mandando (al vacío, si ya se cerró
+                // el WS) el resto de un bloque que ya no le importa a
+                // nadie.
+                if (this._stopRequested) { stoppedEarly = true; break; }
                 await this._sleep(this._lineDelayMs(lines[i], marginMultiplier));
                 if (!silent && i === halLineCount) {
                     // A partir de acá lo que se pega es código del
@@ -1661,6 +1683,16 @@ class ReplPanel {
                     this._suppressEcho = false;
                 }
                 this.simulator.eventBus.emit("qemu:send", lines[i] + "\n");
+            }
+
+            if (stoppedEarly) {
+                // Ctrl+C (no Ctrl+D) -- cancela paste mode de una, sin
+                // intentar ejecutar un bloque a medio mandar (eso solo
+                // generaría un SyntaxError más, sin sentido si ya nadie
+                // va a leer el resultado).
+                this._suppressEcho = false;
+                this.simulator.eventBus.emit("qemu:send", "\x03");
+                return;
             }
 
             await this._sleep(ReplPanel.PASTE_LINE_DELAY_MS);
@@ -1956,6 +1988,12 @@ class ReplPanel {
         const startedAt = Date.now();
 
         for (let attempt = 1; attempt <= ReplPanel.USER_CODE_PASTE_ATTEMPTS; attempt++) {
+
+            // Ver this._stopRequested en el constructor -- "⏹ Detener"
+            // corta el reintento entre tandas, no solo el presupuesto
+            // de tiempo de más abajo. Sin mensaje propio: "qemu:disconnected"
+            // (disparado por el mismo Detener) ya avisa "🔴 ESP32 desconectada".
+            if (this._stopRequested) return;
 
             if (Date.now() - startedAt > ReplPanel.USER_CODE_PASTE_TIME_BUDGET_MS) {
                 this.appendOutput(
@@ -2407,6 +2445,7 @@ class ReplPanel {
         if (this._running) return;
 
         this._running = true;
+        this._stopRequested = false;
         const runBtn = document.getElementById("replBtnRun");
         if (runBtn) runBtn.disabled = true;
 
@@ -2867,6 +2906,14 @@ class ReplPanel {
             // .hal.py del componente registre su protocolo, se
             // pierde igual que cualquier mensaje sin listener.
             this.simulator.signalEngine.resyncAllComponents();
+        });
+
+        // Ver el comentario grande de this._stopRequested en el
+        // constructor -- esto es lo que faltaba para que "⏹ Detener"
+        // corte de verdad un reintento de "Ejecutar" en curso, en vez
+        // de dejarlo terminar sus hasta 6 intentos solo.
+        this.simulator.eventBus.on("simulation:stop", () => {
+            this._stopRequested = true;
         });
 
         this.simulator.eventBus.on("qemu:disconnected", () => {

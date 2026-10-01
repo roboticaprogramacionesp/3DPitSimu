@@ -247,6 +247,67 @@ test('_pasteUserCodeWithRetry se rinde tras agotar los intentos si la corrupció
 
 });
 
+test('_pasteUserCodeWithRetry corta entre intentos si el usuario pide "Detener" (no agota los 6 intentos)', async () => {
+
+    // BUG REAL (reportado, 2026-10-01): "⏹ Detener" solo cerraba el
+    // WebSocket -- el reintento de "Ejecutar" (este bucle) no se
+    // enteraba y seguía mandando/reintentando hasta agotar sus 6
+    // intentos, varios minutos después de que el usuario ya había
+    // pedido parar ("sigue corriendo por detrás").
+
+    const ReplPanel = loadReplPanel();
+    let calls = 0;
+    const ctx = makeCtx(ReplPanel, async () => {
+        calls++;
+        if (calls === 1) {
+            // Simula el click en "Detener" llegando a mitad del primer intento.
+            ctx._stopRequested = true;
+        }
+        ctx.simulator.eventBus.emit('qemu:output', fakeCorruptMessage(ReplPanel));
+    });
+
+    await ctx._pasteUserCodeWithRetry('codigo que se corrompe', 0);
+
+    assert.equal(calls, 1, 'no debería arrancar un segundo intento una vez pedido "Detener"');
+
+});
+
+test('_pasteBlock (real) corta el envío línea a línea y manda Ctrl+C en vez de Ctrl+D si "Detener" llega a mitad del pegado', async () => {
+
+    // Mismo bug que el test anterior, pero probando _pasteBlock() de
+    // verdad (no el mock de makeCtx) -- confirma que el corte real
+    // manda Ctrl+C (cancela paste mode) y NUNCA llega a mandar las
+    // líneas restantes ni el Ctrl+D final.
+
+    const ReplPanel = loadReplPanel();
+    const ctx = Object.create(ReplPanel.prototype);
+    const sent = [];
+    ctx.simulator = {
+        eventBus: makeEventBus(),
+        qemuBridge: { beginPasteLock() {}, endPasteLock() {}, interrupt() {} },
+    };
+    ctx.simulator.eventBus.on('qemu:send', (text) => sent.push(text));
+    ctx._sleep = (ms) => new Promise((resolve) => setTimeout(resolve, Math.min(ms, 5)));
+
+    const lines = ['linea1', 'linea2', 'linea3', 'linea4', 'linea5'];
+    // Pedimos "Detener" apenas se manda Ctrl+E (la primera línea del
+    // envío real, antes que cualquier línea de código).
+    ctx.simulator.eventBus.on('qemu:send', (text) => {
+        if (text === '\x05') ctx._stopRequested = true;
+    });
+
+    await ctx._pasteBlock(lines.join('\n'), 0, { silent: false });
+
+    assert.ok(sent.includes('\x05'), 'debería haber entrado a paste mode');
+    assert.ok(sent.includes('\x03'), 'debería cancelar paste mode con Ctrl+C al cortar');
+    assert.ok(!sent.includes('\x04'), 'no debería llegar a mandar Ctrl+D (ejecutar) si se canceló');
+    assert.ok(
+        !lines.some((l) => sent.includes(l + '\n')),
+        'no debería haber mandado ninguna línea del bloque después de pedir "Detener"'
+    );
+
+});
+
 test('_pasteUserCodeWithRetry corta por tope de tiempo si los reintentos se combinan con el reintento del HAL y tardan demasiado', async () => {
 
     // BUG REAL (reportado, 2026-10-01): con el .exe real, un log de
