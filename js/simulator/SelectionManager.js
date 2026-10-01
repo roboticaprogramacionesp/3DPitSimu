@@ -33,6 +33,20 @@ class SelectionManager {
 
             if (!group) return;
 
+            // BUG REAL (reportado: "es incómodo que se muestren las
+            // propiedades al hacer clic y conectar un cable"): los
+            // pines son parte del grupo SVG del componente (".component"
+            // los contiene), así que ESTE mismo listener disparaba
+            // también al clickear un pin -- WireManager.onPinDown()
+            // está bindeado al mismo pointerdown de componentLayer para
+            // arrancar/terminar el cable, pero acá se seleccionaba el
+            // componente de paso, abriendo PropertyPanel sin que el
+            // usuario quisiera inspeccionarlo. Un clic en un pin
+            // SIEMPRE es "conectar un cable", nunca "seleccionar el
+            // componente" -- seleccionarlo sigue andando igual que
+            // siempre clickeando su cuerpo.
+            if (e.target.closest(".pin")) return;
+
             const id = group.getAttribute("data-id");
 
             // BUG REAL encontrado (arrastre en grupo no movía a los
