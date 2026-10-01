@@ -1365,6 +1365,39 @@ class ReplPanel {
     // tal cual, como siempre, no camuflarse como "corrupción".
     static USER_CODE_CORRUPT_MARKER = "USER_CODE_CORRUPT:";
 
+    // BUG REAL (reportado con 3 corridas reales seguidas, TODAS
+    // corrompidas -- ni una mostró el resultado esperado, y NINGUNA
+    // reintentó sola): hasta acá, la detección de corrupción solo
+    // cubría DOS formas de perder datos: (1) el checksum del PAYLOAD
+    // del usuario no da (USER_CODE_CORRUPT_MARKER), o (2) paste mode
+    // se corta ANTES de tiempo (un ">>> " real apareciendo a mitad del
+    // envío). Pero una línea de CONTROL del wrapper (no del payload
+    // del usuario -- ESTE código, el `if`/`print`/`else`/`exec`) puede
+    // corromperse de formas que NO entran en ninguna de las dos
+    // categorías: ej. se pierde un "\n" entre dos líneas (confirmado
+    // en un log real: "!= 32290:" quedó pegado con el "print(" de la
+    // línea siguiente) o se pierde un paréntesis de apertura, y el
+    // bloque entero queda sintácticamente MAL FORMADO pero de una
+    // manera que Python no rechaza hasta compilar TODO el bloque en el
+    // Ctrl+D final (no "a mitad del envío") -- a veces ni siquiera
+    // produce un SyntaxError visible (un paréntesis sin cerrar puede
+    // tragarse silenciosamente el resto del bloque como una expresión
+    // gigante que nunca se imprime, sin error, sin ejecutar nada,
+    // CERO señales). En CUALQUIERA de estos casos, ni el checksum llega
+    // a imprimirse NI el código del usuario llega a correr -- pero
+    // antes asumíamos éxito por default con tal de no ver el marcador
+    // de corrupción, un default peligroso.
+    //
+    // Arreglo: un marcador de ÉXITO explícito, impreso DELIBERADAMENTE
+    // ANTES del exec() real (así confirma que la lógica del checksum
+    // completó su veredicto, incluso si el código del usuario después
+    // cuelga en un "while True:"). Ahora el resultado de un intento
+    // tiene que ser SIEMPRE uno de los dos marcadores -- si no llega
+    // NINGUNO de los dos dentro del margen de espera, eso YA ES la
+    // señal de corrupción (ver _pasteUserCodeWithRetry), sin importar
+    // qué forma exacta tomó la pérdida de bytes.
+    static USER_CODE_OK_MARKER = "USER_CODE_OK:";
+
     // BUG REAL (confirmado con un test directo contra el método real:
     // una tanda PERFECTA, sin ninguna corrupción, agotaba igual los 6
     // intentos): el wrapper de más abajo imprime USER_CODE_CORRUPT_MARKER
@@ -1415,6 +1448,10 @@ class ReplPanel {
         const markerPart1 = ReplPanel.USER_CODE_CORRUPT_MARKER.slice(0, markerSplit);
         const markerPart2 = ReplPanel.USER_CODE_CORRUPT_MARKER.slice(markerSplit);
 
+        const okSplit = Math.ceil(ReplPanel.USER_CODE_OK_MARKER.length / 2);
+        const okPart1 = ReplPanel.USER_CODE_OK_MARKER.slice(0, okSplit);
+        const okPart2 = ReplPanel.USER_CODE_OK_MARKER.slice(okSplit);
+
         return (
             `# -- Tu codigo (verificado) --\n` +
             `import ubinascii as _uc_iso\n` +
@@ -1427,6 +1464,7 @@ class ReplPanel {
             `if len(_uc_bytes) != ${expectedLen} or sum(_uc_bytes) % 65536 != ${checksum}:\n` +
             `    print("${markerPart1}" + ("${markerPart2}len=%d sum=%d esperado_len=${expectedLen} esperado_sum=${checksum}" % (len(_uc_bytes), sum(_uc_bytes) % 65536)))\n` +
             `else:\n` +
+            `    print("${okPart1}" + "${okPart2}")\n` +
             `    exec(_uc_bytes.decode(), globals())\n`
         );
 
@@ -2095,18 +2133,20 @@ class ReplPanel {
             // también imprime su propio ">>> " legítimo que no hay
             // que confundir con esto).
             let corruptionSeen = false;
+            let successSeen = false;
             let pasteModeConfirmed = false;
             let stillSending = true;
 
-            // Ver USER_CODE_PASTE_SETTLE_MS -- apenas se ve el marcador,
-            // resuelve la espera de abajo de una (sin esto, incluso
-            // encontrando el marcador rápido, se esperaría igual el
-            // tope entero antes de poder reintentar).
+            // Ver USER_CODE_PASTE_SETTLE_MS -- apenas se ve CUALQUIERA
+            // de los dos marcadores, resuelve la espera de abajo de una
+            // (sin esto, incluso encontrando el marcador rápido, se
+            // esperaría igual el tope entero antes de poder reintentar).
             let markerSeenEarly = () => {};
             const markerSeenPromise = new Promise((resolve) => { markerSeenEarly = resolve; });
 
             const onOutput = (text) => {
                 if (text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) { corruptionSeen = true; markerSeenEarly(); }
+                if (text.includes(ReplPanel.USER_CODE_OK_MARKER)) { successSeen = true; markerSeenEarly(); }
                 if (/paste mode|=== ?$/m.test(text)) pasteModeConfirmed = true;
                 if (pasteModeConfirmed && stillSending && />>> /.test(text)) { corruptionSeen = true; markerSeenEarly(); }
             };
@@ -2130,7 +2170,9 @@ class ReplPanel {
             // pasaba completamente desapercibida. Mismo chequeo,
             // mismo flag, la otra fuente posible.
             const onHistory = (text) => {
-                if (text && text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) { corruptionSeen = true; markerSeenEarly(); }
+                if (!text) return;
+                if (text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) { corruptionSeen = true; markerSeenEarly(); }
+                if (text.includes(ReplPanel.USER_CODE_OK_MARKER)) { successSeen = true; markerSeenEarly(); }
             };
             this.simulator.eventBus.on("qemu:history", onHistory);
 
@@ -2169,10 +2211,24 @@ class ReplPanel {
 
             }
 
-            if (!corruptionSeen) return;
+            // Ver USER_CODE_OK_MARKER -- si ninguno de los dos
+            // marcadores llegó (ni corrupción ni éxito confirmado), NO
+            // se asume éxito por default: una línea de CONTROL del
+            // wrapper corrompida (no el payload del usuario, que SÍ
+            // tiene checksum) puede dejar el bloque mal formado de
+            // maneras que ni imprimen el marcador de corrupción ni
+            // llegan al exec() real -- silencio total, cero señales.
+            // Tratar ese silencio como corrupción (reintentar) es el
+            // lado seguro -- la alternativa (asumir éxito) es
+            // exactamente el bug reportado: "no responde el código que
+            // debería realizar", sin ningún aviso de que algo falló.
+            if (successSeen && !corruptionSeen) return;
 
             if (attempt < ReplPanel.USER_CODE_PASTE_ATTEMPTS) {
-                console.warn(`[ReplPanel] Intento ${attempt}/${ReplPanel.USER_CODE_PASTE_ATTEMPTS} de Ejecutar parece corrompido en tránsito -- reintentando.`);
+                const motivo = corruptionSeen
+                    ? "parece corrompido en tránsito"
+                    : "no confirmó ni éxito ni corrupción (silencio -- probablemente una línea de control corrompida)";
+                console.warn(`[ReplPanel] Intento ${attempt}/${ReplPanel.USER_CODE_PASTE_ATTEMPTS} de Ejecutar ${motivo} -- reintentando.`);
             }
 
         }

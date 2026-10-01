@@ -82,13 +82,22 @@ function fakeCorruptMessage(ReplPanel) {
     return ReplPanel.USER_CODE_CORRUPT_MARKER + 'len=10 sum=20 esperado_len=12 esperado_sum=30\n';
 }
 
-test('_pasteUserCodeWithRetry no reintenta si no hay señales de corrupción', async () => {
+// Mensaje tal cual lo imprimiría MicroPython justo antes del exec()
+// real, cuando el checksum SÍ da -- ver USER_CODE_OK_MARKER.
+function fakeOkMessage(ReplPanel) {
+    return ReplPanel.USER_CODE_OK_MARKER + '\n';
+}
 
+test('_pasteUserCodeWithRetry no reintenta si llega el marcador de éxito, sin corrupción', async () => {
+
+    // Una tanda limpia de verdad SIEMPRE imprime USER_CODE_OK_MARKER
+    // (ver el comentario grande junto a esa constante) -- confirmar
+    // éxito explícito, no "no vi nada raro".
     const ReplPanel = loadReplPanel();
     let calls = 0;
     const ctx = makeCtx(ReplPanel, async () => {
         calls++;
-        await new Promise((r) => setTimeout(r, 10));
+        setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', fakeOkMessage(ReplPanel)), 5);
     });
 
     await ctx._pasteUserCodeWithRetry('codigo limpio', 0);
@@ -97,21 +106,57 @@ test('_pasteUserCodeWithRetry no reintenta si no hay señales de corrupción', a
 
 });
 
-test('_pasteUserCodeWithRetry NO reintenta ante un error real del usuario (sin el marcador de corrupción)', async () => {
+test('_pasteUserCodeWithRetry NO reintenta ante un error real del usuario (el marcador de éxito llegó, el checksum sí pasó)', async () => {
 
     // Un SyntaxError/NameError/lo que sea que el usuario haya escrito
-    // de verdad -- sin el marcador exacto, no es corrupción, es un bug
-    // genuino, y tiene que mostrarse tal cual sin reintentos de más.
+    // de verdad ocurre DENTRO del exec() -- después de que el checksum
+    // ya haya impreso USER_CODE_OK_MARKER (eso pasa SIEMPRE antes del
+    // exec() real, ver el wrapper). Sin el marcador de corrupción, y
+    // CON el de éxito, es un bug genuino del usuario, no transmisión --
+    // tiene que mostrarse tal cual sin reintentos de más.
     const ReplPanel = loadReplPanel();
     let calls = 0;
     const ctx = makeCtx(ReplPanel, async () => {
         calls++;
-        setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', 'Traceback...\nSyntaxError: invalid syntax\n'), 5);
+        setTimeout(() => {
+            ctx.simulator.eventBus.emit('qemu:output', fakeOkMessage(ReplPanel));
+            ctx.simulator.eventBus.emit('qemu:output', 'Traceback...\nSyntaxError: invalid syntax\n');
+        }, 5);
     });
 
     await ctx._pasteUserCodeWithRetry('codigo con un bug real del usuario', 0);
 
-    assert.equal(calls, 1, 'un error SIN el marcador de corrupción no debería disparar ningún reintento');
+    assert.equal(calls, 1, 'un error real del usuario (con el checksum ya confirmado OK) no debería disparar ningún reintento');
+
+});
+
+test('_pasteUserCodeWithRetry reintenta si NO llega NINGÚN marcador (ni éxito ni corrupción) -- silencio total también es corrupción', async () => {
+
+    // BUG REAL, el más reciente de esta saga (reportado con 3 corridas
+    // reales seguidas: ninguna mostró el resultado esperado, NINGUNA
+    // reintentó sola): una línea de CONTROL del wrapper (no el payload
+    // del usuario, que sí tiene checksum) corrompida -- ej. se pierde
+    // un "\n" o un paréntesis de apertura -- puede dejar el bloque mal
+    // formado de maneras que NI imprimen el marcador de corrupción NI
+    // llegan a ejecutar el exec() real (a veces sin ningún error
+    // visible siquiera -- un paréntesis sin cerrar puede tragarse el
+    // resto del bloque como una expresión que nunca se imprime). Antes
+    // de este fix, "no vi el marcador de corrupción" se interpretaba
+    // como "entonces salió bien" -- exactamente el bug reportado: "no
+    // responde el código que debería realizar", sin ningún aviso.
+    // Ahora el ÉXITO también necesita confirmación explícita -- si no
+    // llega ninguno de los dos marcadores, se trata como corrupción.
+    const ReplPanel = loadReplPanel();
+    let calls = 0;
+    const ctx = makeCtx(ReplPanel, async () => {
+        calls++;
+        // Ni fakeOkMessage ni fakeCorruptMessage -- silencio total,
+        // como un paréntesis corrompido que se traga todo sin avisar.
+    });
+
+    await ctx._pasteUserCodeWithRetry('codigo que se corrompio de una forma rara, sin ninguna señal', 0);
+
+    assert.equal(calls, ReplPanel.USER_CODE_PASTE_ATTEMPTS, 'el silencio total debería agotar los reintentos, no asumir éxito');
 
 });
 
@@ -133,6 +178,8 @@ test('_pasteUserCodeWithRetry reintenta si el marcador llega por "qemu:history" 
             // El marcador llega por el canal de HISTORIAL, no por
             // "qemu:output" -- simula la reconexión a mitad de paste.
             setTimeout(() => ctx.simulator.eventBus.emit('qemu:history', fakeCorruptMessage(ReplPanel)), 5);
+        } else {
+            setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', fakeOkMessage(ReplPanel)), 5);
         }
     });
 
@@ -150,6 +197,8 @@ test('_pasteUserCodeWithRetry reintenta si el marcador de corrupción llega DESP
         calls++;
         if (calls === 1) {
             setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', fakeCorruptMessage(ReplPanel)), 5);
+        } else {
+            setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', fakeOkMessage(ReplPanel)), 5);
         }
     });
 
@@ -172,6 +221,8 @@ test('_pasteUserCodeWithRetry reintenta si el marcador llega A MITAD de un enví
             // mitad del envío, no al final.
             setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', fakeCorruptMessage(ReplPanel)), 5);
             await new Promise((r) => setTimeout(r, 30));
+        } else {
+            setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', fakeOkMessage(ReplPanel)), 5);
         }
     });
 
@@ -205,6 +256,8 @@ test('_pasteUserCodeWithRetry no se cuelga esperando el tope completo si el marc
         calls++;
         if (calls === 1) {
             setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', fakeCorruptMessage(ReplPanel)), 10);
+        } else {
+            setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', fakeOkMessage(ReplPanel)), 10);
         }
     });
 
@@ -241,6 +294,8 @@ test('_pasteUserCodeWithRetry reintenta si paste mode se corta antes de tiempo (
             // envío (el await de abajo no resolvió todavía).
             setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', '>>> algo_suelto\r\n'), 5);
             await new Promise((r) => setTimeout(r, 30));
+        } else {
+            setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', fakeOkMessage(ReplPanel)), 5);
         }
     });
 
@@ -263,6 +318,7 @@ test('_pasteUserCodeWithRetry NO confunde el ">>> " legítimo del Ctrl+C inicial
         // asentamiento normal del Ctrl+C inicial, no una salida
         // prematura.
         ctx.simulator.eventBus.emit('qemu:output', '>>> \r\n');
+        setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', fakeOkMessage(ReplPanel)), 5);
         await new Promise((r) => setTimeout(r, 10));
     });
 
@@ -486,6 +542,24 @@ test('_wrapUserCodeForIntegrity NUNCA incluye el marcador de corrupción complet
 
 });
 
+test('_wrapUserCodeForIntegrity tampoco incluye el marcador de ÉXITO completo, de corrido, en su propio código fuente', () => {
+
+    // Mismo bug que el de arriba, pero para USER_CODE_OK_MARKER (ver su
+    // comentario grande) -- si este también se auto-matcheara contra su
+    // propio eco, cualquier intento (corrupto o no) terminaría viéndose
+    // "exitoso" apenas se pegara esa línea, mucho antes del Ctrl+D real.
+    const ReplPanel = loadReplPanel();
+    const ctx = Object.create(ReplPanel.prototype);
+
+    const wrapped = ctx._wrapUserCodeForIntegrity('print("hola")');
+
+    assert.ok(
+        !wrapped.includes(ReplPanel.USER_CODE_OK_MARKER),
+        'el código fuente del wrapper no debería contener el marcador de éxito completo -- solo imprimirlo en runtime, justo antes del exec() real'
+    );
+
+});
+
 test('_pasteUserCodeWithRetry NO reintenta en un pegado perfecto (sin corrupción real) -- el eco de su propio wrapper no debe confundirse con el marcador', async () => {
 
     // Reproduce el bug de arriba contra _pasteUserCodeWithRetry
@@ -510,7 +584,12 @@ test('_pasteUserCodeWithRetry NO reintenta en un pegado perfecto (sin corrupció
         for (const line of code.split('\n')) {
             ctx.simulator.eventBus.emit('qemu:output', line + '\n');
         }
-        ctx.simulator.eventBus.emit('qemu:output', 'hola\n'); // salida real, sin corrupción
+        // Salida real de ejecutar el wrapper SIN corrupción: primero el
+        // marcador de éxito (lo imprime el wrapper mismo, justo antes
+        // del exec() real -- ver USER_CODE_OK_MARKER), después lo que
+        // haya impreso el código del usuario.
+        ctx.simulator.eventBus.emit('qemu:output', fakeOkMessage(ReplPanel));
+        ctx.simulator.eventBus.emit('qemu:output', 'hola\n');
     };
 
     await ctx._pasteUserCodeWithRetry(wrapped, halLineCount);
