@@ -114,9 +114,19 @@ class _QuietHandler(http.server.SimpleHTTPRequestHandler):
         pass
 
 
+class _StaticServer(http.server.ThreadingHTTPServer):
+    # BUG REAL: socketserver usa request_queue_size = 5 (el backlog de
+    # listen()). WebView2 pide ~30 CSS/JS en paralelo al cargar; si el
+    # hilo que hace accept() se atrasa (equipo cargado, p. ej. con otra
+    # app abierta), Windows rechaza las conexiones que no caben en la
+    # cola con ERR_CONNECTION_REFUSED -- de ahi CSS sin cargar (menus
+    # sin estilo) y componentes que no aparecen, de forma intermitente.
+    request_queue_size = 256
+
+
 def start_static_server(root_dir):
     handler = functools.partial(_QuietHandler, directory=str(root_dir))
-    httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    httpd = _StaticServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     port = httpd.server_address[1]
