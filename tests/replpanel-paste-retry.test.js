@@ -154,6 +154,57 @@ test('_pasteUserCodeWithRetry reintenta si el marcador llega A MITAD de un enví
 
 });
 
+test('_pasteUserCodeWithRetry reintenta si paste mode se corta antes de tiempo (el checksum nunca llega a evaluarse)', async () => {
+
+    // BUG REAL encontrado probando el checksum contra el .exe real: el
+    // checksum protege el CONTENIDO, pero si se pierde un byte de
+    // CONTROL que corta "paste mode" antes de tiempo, el resto del
+    // código se tipea suelto como comandos individuales -- ni siquiera
+    // llega a ejecutarse el chequeo de checksum. Señal: un ">>> " de
+    // verdad apareciendo MIENTRAS todavía se están mandando líneas,
+    // DESPUÉS de haber confirmado que paste mode arrancó.
+    const ReplPanel = loadReplPanel();
+    let calls = 0;
+    const ctx = makeCtx(ReplPanel, async () => {
+        calls++;
+        if (calls === 1) {
+            ctx.simulator.eventBus.emit('qemu:output', 'paste mode; Ctrl-C to cancel, Ctrl-D to finish\r\n=== \n');
+            // Paste mode se corta antes de tiempo -- aparece un ">>> "
+            // real MIENTRAS _pasteBlock() todavía sigue en su loop de
+            // envío (el await de abajo no resolvió todavía).
+            setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', '>>> algo_suelto\r\n'), 5);
+            await new Promise((r) => setTimeout(r, 30));
+        }
+    });
+
+    await ctx._pasteUserCodeWithRetry('codigo largo', 0);
+
+    assert.equal(calls, 2, 'debería haber detectado la salida prematura de paste mode y reintentado');
+
+});
+
+test('_pasteUserCodeWithRetry NO confunde el ">>> " legítimo del Ctrl+C inicial (antes de que arranque paste mode) con una salida prematura', async () => {
+
+    // _pasteBlock() manda un Ctrl+C + espera un prompt limpio ANTES de
+    // mandar el Ctrl+E que arranca paste mode -- ese ">>> " inicial es
+    // normal y no debería disparar ningún reintento.
+    const ReplPanel = loadReplPanel();
+    let calls = 0;
+    const ctx = makeCtx(ReplPanel, async () => {
+        calls++;
+        // ">>> " ANTES de que "paste mode" se haya confirmado -- es el
+        // asentamiento normal del Ctrl+C inicial, no una salida
+        // prematura.
+        ctx.simulator.eventBus.emit('qemu:output', '>>> \r\n');
+        await new Promise((r) => setTimeout(r, 10));
+    });
+
+    await ctx._pasteUserCodeWithRetry('codigo normal', 0);
+
+    assert.equal(calls, 1, 'el ">>> " previo a paste mode no debería disparar ningún reintento');
+
+});
+
 test('_pasteUserCodeWithRetry se rinde tras agotar los intentos si la corrupción es persistente', async () => {
 
     const ReplPanel = loadReplPanel();

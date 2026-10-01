@@ -1960,9 +1960,31 @@ class ReplPanel {
             // -- se acumula un solo flag en vez de resolver apenas se ve
             // el primero, por si la corrupción pegara más de una vez en
             // la misma tanda.
+            // BUG REAL encontrado probando el checksum de arriba contra
+            // el .exe real: el checksum protege el CONTENIDO, pero no
+            // alcanza si se pierde un byte de CONTROL -- si el ">>> "
+            // de paste mode (o algo que MicroPython interpreta como
+            // tal) se corta antes de tiempo, el resto de fullCode
+            // (que _pasteBlock() sigue mandando igual, ajeno a que
+            // paste mode ya terminó del otro lado) se tipea SUELTO
+            // como comandos individuales -- ni siquiera llega a
+            // ejecutarse el chequeo de checksum, porque la línea
+            // "_uc_bytes = ..." nunca se completa como una unidad.
+            // Señal: un ">>> " de verdad apareciendo MIENTRAS
+            // _pasteBlock() todavía está mandando líneas (nunca
+            // debería verse hasta el Ctrl+D final) -- pero recién
+            // DESPUÉS de confirmar que el "paste mode" realmente
+            // arrancó (el Ctrl+C inicial de _pasteBlock(), para
+            // asentar un prompt limpio ANTES de entrar a paste mode,
+            // también imprime su propio ">>> " legítimo que no hay
+            // que confundir con esto).
             let corruptionSeen = false;
+            let pasteModeConfirmed = false;
+            let stillSending = true;
             const onOutput = (text) => {
                 if (text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) corruptionSeen = true;
+                if (/paste mode|=== ?$/m.test(text)) pasteModeConfirmed = true;
+                if (pasteModeConfirmed && stillSending && />>> /.test(text)) corruptionSeen = true;
             };
             this.simulator.eventBus.on("qemu:output", onOutput);
 
@@ -1977,6 +1999,7 @@ class ReplPanel {
             try {
 
                 await this._pasteBlock(fullCode, halLineCount, { silent: false, marginMultiplier });
+                stillSending = false;
                 // Margen corto post Ctrl+D -- el último error de la
                 // tanda puede llegar un instante después de que
                 // _pasteBlock() ya resolvió (mismo motivo que
