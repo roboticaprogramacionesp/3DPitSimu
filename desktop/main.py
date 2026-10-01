@@ -141,6 +141,18 @@ def start_static_server(root_dir):
 def main():
 
     _log("[desktop] Arrancando...")
+
+    # Solo para diagnostico (igual criterio que PIT_DESKTOP_AUTOCLOSE_SECONDS
+    # mas abajo) -- con esta variable seteada, el .exe final (el mismo
+    # que se le da al usuario, no uno aparte) expone DevTools remoto en
+    # ese puerto, para poder automatizar/inspeccionar una sesion real
+    # con las mismas herramientas que en desarrollo (ver tests/stress/).
+    # Nunca esta seteada en el uso normal -- no cambia nada por default.
+    debug_port = os.environ.get("PIT_REMOTE_DEBUG_PORT")
+    if debug_port:
+        webview.settings['REMOTE_DEBUGGING_PORT'] = int(debug_port)
+        _log(f"[desktop] DevTools remoto habilitado en el puerto {debug_port} (PIT_REMOTE_DEBUG_PORT).")
+
     httpd, port = start_static_server(BASE_DIR)
 
     # Estado mutable compartido con el watcher de abajo -- un dict en

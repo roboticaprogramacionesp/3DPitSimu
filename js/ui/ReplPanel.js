@@ -1315,6 +1315,81 @@ class ReplPanel {
     }
 
     // ====================================================
+    // BUG REAL (reportado: un script largo -- NeoMatrix con arrays de
+    // píxeles -- fallaba sin que el reintento automático se diera
+    // cuenta): la primera versión de esto detectaba corrupción
+    // buscando SyntaxError/IndentationError en la salida -- pero
+    // confirmado en la práctica (con el .exe real, no un mock) que la
+    // UART emulada puede perder caracteres de una forma que deja el
+    // código IGUAL de sintácticamente válido, solo con el valor
+    // equivocado ("NeoMatrix(12,8,8,layout=0,rotation=0)" llegó como
+    // "NeoMatrix(12,8,8,laytation=0)" -- perdió "out=0,ro" del medio,
+    // nada que un parser de Python note). Esa corrupción silenciosa no
+    // deja NINGÚN rastro reconocible -- puede fallar con cualquier
+    // excepción (o ninguna, con un valor simplemente incorrecto),
+    // indistinguible de un bug real del usuario. Perseguir cada vez
+    // más patrones de error específicos nunca cierra el caso del todo.
+    //
+    // Mismo mecanismo que ya protege al HAL (_wrapHalForIsolation) --
+    // checksum verificado ANTES de ejecutar nada, así que CUALQUIER
+    // pérdida se detecta con certeza, sin importar qué forma tome.
+    // Deliberadamente SEPARADO del paste grande "HAL siempre presente"
+    // que SÍ se probó envolver así y empeoró las cosas (ver
+    // "REVERTIDO" en _buildPendingHal) -- acá es un bloque propio,
+    // del tamaño real del código del usuario, no combinado con otros
+    // 3-4 bloques grandes. Costo asumido a propósito: se pierde la
+    // vista en vivo del código tipeándose en el panel REPL (el código
+    // en sí se sigue viendo en la pestaña Editor) -- lo que se
+    // muestra en el REPL ahora es la salida REAL del programa
+    // (prints, errores, tracebacks de bugs genuinos), nunca el eco
+    // del pegado en sí.
+    //
+    // A diferencia de _wrapHalForIsolation(), acá el exec() real NO
+    // va envuelto en try/except -- un error genuino del código del
+    // usuario (el que escribió a propósito, mal) tiene que mostrarse
+    // tal cual, como siempre, no camuflarse como "corrupción".
+    static USER_CODE_CORRUPT_MARKER = "USER_CODE_CORRUPT:";
+
+    _wrapUserCodeForIntegrity(userCode) {
+
+        // Misma técnica que _wrapHalForIsolation() -- ver los
+        // comentarios grandes de ese método para el porqué de cada
+        // paso (representación binaria/checksum/_breakRepeatedPatterns).
+        const binaryStr = unescape(encodeURIComponent(userCode));
+        const b64 = btoa(binaryStr);
+
+        let checksum = 0;
+        for (let i = 0; i < binaryStr.length; i++) {
+            checksum = (checksum + binaryStr.charCodeAt(i)) % 65536;
+        }
+        const expectedLen = binaryStr.length;
+
+        const b64NoRuns = ReplPanel._breakRepeatedPatterns(b64);
+        const width = ReplPanel.HAL_B64_LINE_WIDTH;
+        const rawLines = [];
+        for (let i = 0; i < b64NoRuns.length; i += width) {
+            rawLines.push(b64NoRuns.slice(i, i + width));
+        }
+        const rawBlock = rawLines.join("\n");
+
+        return (
+            `# -- Tu codigo (verificado) --\n` +
+            `import ubinascii as _uc_iso\n` +
+            `_uc_raw = """` + rawBlock + `"""\n` +
+            `_uc_joined = "".join(_uc_raw.split())\n` +
+            `try:\n` +
+            `    _uc_bytes = _uc_iso.a2b_base64(_uc_joined)\n` +
+            `except Exception:\n` +
+            `    _uc_bytes = b""\n` +
+            `if len(_uc_bytes) != ${expectedLen} or sum(_uc_bytes) % 65536 != ${checksum}:\n` +
+            `    print("${ReplPanel.USER_CODE_CORRUPT_MARKER}len=%d sum=%d esperado_len=${expectedLen} esperado_sum=${checksum}" % (len(_uc_bytes), sum(_uc_bytes) % 65536))\n` +
+            `else:\n` +
+            `    exec(_uc_bytes.decode(), globals())\n`
+        );
+
+    }
+
+    // ====================================================
     // Camino RÁPIDO: el firmware conectado PODRÍA tener el .hal.py de
     // este tipo CONGELADO (ver firmware/frozen_hal/README.md y
     // PIT_FROZEN_HAL_TYPES en js/simulator/FrozenHalTypes.js) -- en vez de pastear ~100-200
@@ -1461,17 +1536,29 @@ class ReplPanel {
 
         const { halBlock, newlySent } = await this._buildPendingHal();
 
-        // Líneas que ocupa todo el HAL junto (antes de agregar el
-        // código del usuario) -- +1 por cada "\n\n" de separación
-        // entre partes que se agrega más abajo con parts.join.
-        const halLineCount = halBlock ? halBlock.split("\n").length + 1 : 0;
+        // ── Código del usuario, envuelto con verificación de integridad ──
+        // Ver _wrapUserCodeForIntegrity() -- todo este bloque (HAL +
+        // wrapper) viaja OCULTO del eco (ver halLineCount más abajo);
+        // lo único que se muestra en el panel es la salida REAL del
+        // programa del usuario, que llega recién cuando el exec() de
+        // adentro del wrapper corre de verdad.
+        const userBlock = this._wrapUserCodeForIntegrity(userCode);
 
-        // ── Código del usuario ─────────────────────────────────────────
         const parts = [];
         if (halBlock) parts.push(halBlock);
-        parts.push(`# -- Tu codigo --\n${userCode}`);
+        parts.push(userBlock);
 
         const fullCode = this._sanitizeForSerial(parts.join("\n\n"));
+
+        // Más allá de la última línea a propósito -- el loop de envío
+        // de _pasteBlock() solo saca la supresión de eco si "i ===
+        // halLineCount" ocurre A MITAD del envío (no pasa nunca acá,
+        // nunca llega a serlo), así que el eco se mantiene oculto
+        // durante TODO el envío. _pasteBlock() ya saca la supresión
+        // sola, sin depender de este número, un instante después del
+        // Ctrl+D final (ver el "finally" de ese método) -- ahí es
+        // cuando empieza a verse la salida real del programa.
+        const halLineCount = fullCode.split("\n").length;
 
         return { fullCode, halLineCount, newlySent };
 
@@ -1858,17 +1945,24 @@ class ReplPanel {
                 );
             }
 
-            // SyntaxError/IndentationError son la firma de "el texto
-            // que llegó no compila" -- nunca de un bug real del
-            // usuario, que recién se manifestaría en tiempo de
-            // EJECUCIÓN (después de que esto ya compiló bien). Se
-            // acumula un solo flag en vez de resolver apenas se ve el
-            // primero -- importa HABER VISTO corrupción en algún
-            // momento del envío, no en qué orden llegó respecto a
-            // otra cosa.
+            // BUG REAL (reportado, confirmado con el .exe real): antes
+            // acá se buscaba SyntaxError/IndentationError en la salida
+            // -- pero una corrupción que deja el código sintácticamente
+            // válido (perder caracteres del MEDIO de una línea sin
+            // romper la gramática de Python) no produce ninguno de los
+            // dos, y pasaba completamente desapercibida. Ahora el
+            // propio código (ver _wrapUserCodeForIntegrity()) se
+            // verifica con checksum ANTES de ejecutar nada -- el único
+            // marcador que indica corrupción es USER_CODE_CORRUPT_MARKER,
+            // exacto, sin ambigüedad, sea cual sea la forma que tomó la
+            // pérdida. Un bug real del usuario (código que sí pasó el
+            // checksum pero falla al correr) nunca imprime este marcador
+            // -- se acumula un solo flag en vez de resolver apenas se ve
+            // el primero, por si la corrupción pegara más de una vez en
+            // la misma tanda.
             let corruptionSeen = false;
             const onOutput = (text) => {
-                if (/SyntaxError|IndentationError/.test(text)) corruptionSeen = true;
+                if (text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) corruptionSeen = true;
             };
             this.simulator.eventBus.on("qemu:output", onOutput);
 
