@@ -118,3 +118,34 @@ test('_pasteUserCodeWithRetry se rinde tras agotar los intentos si el error es p
     assert.equal(calls, ReplPanel.USER_CODE_PASTE_ATTEMPTS, 'no debería reintentar más allá del tope, ni menos');
 
 });
+
+test('_pasteUserCodeWithRetry le da más margen (pacing más lento) a cada reintento sucesivo', async () => {
+
+    // BUG REAL (reportado, 2026-10-01): con líneas MUY largas (arrays
+    // de píxeles de un NeoMatrix), 3 intentos AL MISMO RITMO que ya
+    // había fallado no alcanzaron -- se corrompió las 3 veces seguidas
+    // en una máquina real. Reintentar exactamente igual que el intento
+    // que ya falló no le da ninguna ventaja extra a la UART emulada.
+
+    const ReplPanel = loadReplPanel();
+    const margins = [];
+    const ctx = makeCtx(ReplPanel, async (fullCode, halLineCount, opts) => {
+        margins.push(opts.marginMultiplier);
+        setTimeout(() => ctx.simulator.eventBus.emit('qemu:output', 'SyntaxError: invalid syntax\n'), 5);
+    });
+
+    await ctx._pasteUserCodeWithRetry('codigo con lineas largas', 0);
+
+    const expected = [];
+    for (let i = 0; i < ReplPanel.USER_CODE_PASTE_ATTEMPTS; i++) {
+        expected.push(Math.min(
+            ReplPanel.USER_CODE_PASTE_MARGIN_MAX,
+            1 + i * ReplPanel.USER_CODE_PASTE_MARGIN_STEP
+        ));
+    }
+
+    assert.deepEqual(margins, expected);
+    assert.ok(margins[0] === 1, 'el primer intento no debería tener margen extra (no hay corrupción todavía)');
+    assert.ok(margins[margins.length - 1] <= ReplPanel.USER_CODE_PASTE_MARGIN_MAX, 'el margen nunca debería superar el tope');
+
+});

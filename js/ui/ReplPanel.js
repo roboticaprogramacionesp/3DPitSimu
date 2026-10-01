@@ -1518,12 +1518,20 @@ class ReplPanel {
     // Bytes reales (no caracteres JS) que va a pesar la línea al
     // viajar por el WS -- importante si hay UTF-8 multibyte, aunque
     // _sanitizeForSerial ya debería dejar todo en ASCII puro.
-    _lineDelayMs(line) {
+    //
+    // marginMultiplier (default 1): ver _pasteUserCodeWithRetry() --
+    // en los reintentos se agranda esto para darle MÁS margen a la
+    // UART emulada, no el mismo que ya falló. Pensado sobre todo para
+    // líneas largas de una sola vez (ej. "img = [...]" con cientos de
+    // píxeles) -- confirmado en la práctica (reportado por un usuario,
+    // máquina real bajo carga normal) que esas líneas pueden corromperse
+    // varias veces SEGUIDAS incluso con el pacing normal.
+    _lineDelayMs(line, marginMultiplier = 1) {
         const bytes  = new TextEncoder().encode(line + "\r\n").length;
         const chunks = Math.max(1, Math.ceil(bytes / ReplPanel.SEND_CHUNK_SIZE));
         // El primer trozo sale ~inmediato; los siguientes pagan el
         // delay entre trozos (ver writeNextChunk en server.js).
-        const serverTimeMs = (chunks - 1) * ReplPanel.SEND_CHUNK_DELAY_MS;
+        const serverTimeMs = (chunks - 1) * ReplPanel.SEND_CHUNK_DELAY_MS * marginMultiplier;
         return Math.max(ReplPanel.PASTE_LINE_DELAY_MS, serverTimeMs + ReplPanel.PASTE_LINE_DELAY_MS);
     }
 
@@ -1532,7 +1540,7 @@ class ReplPanel {
     // de HAL en segundo plano, sin código de usuario de por medio).
     // Si no, se oculta el eco solo hasta halLineCount (uso normal:
     // Ejecutar, donde sí queremos ver correr el código del usuario).
-    async _pasteBlock(fullCode, halLineCount, { silent = false } = {}) {
+    async _pasteBlock(fullCode, halLineCount, { silent = false, marginMultiplier = 1 } = {}) {
 
         // Traba: mientras dure este bloque Ctrl+E...Ctrl+D, ningún otro
         // emisor (RTC:/TEMP:/DIST:/ADC:/IN:/etc. -- ver la nota grande
@@ -1559,7 +1567,7 @@ class ReplPanel {
             const lines = fullCode.split("\n");
 
             for (let i = 0; i < lines.length; i++) {
-                await this._sleep(this._lineDelayMs(lines[i]));
+                await this._sleep(this._lineDelayMs(lines[i], marginMultiplier));
                 if (!silent && i === halLineCount) {
                     // A partir de acá lo que se pega es código del
                     // usuario: dejamos de ocultar el eco.
@@ -1798,7 +1806,22 @@ class ReplPanel {
     // que sin este mecanismo, solo que unos segundos más tarde.
     // ====================================================
 
-    static USER_CODE_PASTE_ATTEMPTS = 3;
+    // BUG REAL (reportado, 2026-10-01): con un script de líneas MUY
+    // largas (arrays de píxeles de un NeoMatrix, ~300+ caracteres por
+    // línea), 3 intentos no alcanzaron -- se corrompió las 3 veces
+    // SEGUIDAS en una máquina real bajo carga normal (no un caso de
+    // laboratorio). Subido a 6 -- mismo orden de magnitud que
+    // HAL_RETRY_MAX (8) para el HAL por componente, que sí tiene
+    // margen de sobra en la práctica.
+    static USER_CODE_PASTE_ATTEMPTS = 6;
+
+    // Cuánto más lento (multiplicador sobre el pacing normal de
+    // _lineDelayMs) va cada intento sucesivo -- reintentar EXACTAMENTE
+    // al mismo ritmo que ya falló no le da ninguna ventaja extra a la
+    // UART emulada. 1x, 1.5x, 2x, 2.5x... -- tope en 3x para no volver
+    // insoportablemente lento un script ya largo de por sí.
+    static USER_CODE_PASTE_MARGIN_STEP = 0.5;
+    static USER_CODE_PASTE_MARGIN_MAX = 3;
 
     // BUG REAL encontrado probando el fix de arriba con un script
     // largo de verdad (un NeoMatrix con arrays de píxeles, ~90
@@ -1849,9 +1872,17 @@ class ReplPanel {
             };
             this.simulator.eventBus.on("qemu:output", onOutput);
 
+            // Ver USER_CODE_PASTE_MARGIN_STEP/_MAX arriba -- más
+            // margen en cada reintento sucesivo, no el mismo ritmo que
+            // ya falló.
+            const marginMultiplier = Math.min(
+                ReplPanel.USER_CODE_PASTE_MARGIN_MAX,
+                1 + (attempt - 1) * ReplPanel.USER_CODE_PASTE_MARGIN_STEP
+            );
+
             try {
 
-                await this._pasteBlock(fullCode, halLineCount, { silent: false });
+                await this._pasteBlock(fullCode, halLineCount, { silent: false, marginMultiplier });
                 // Margen corto post Ctrl+D -- el último error de la
                 // tanda puede llegar un instante después de que
                 // _pasteBlock() ya resolvió (mismo motivo que
