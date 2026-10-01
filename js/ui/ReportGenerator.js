@@ -216,11 +216,98 @@ class ReportGenerator {
 
         const url = URL.createObjectURL(blob);
 
-        // Se abre en una pestaña nueva -- no hace falta revocar el
-        // object URL nosotros mismos, esa pestaña lo mantiene vivo
-        // mientras esté abierta. Un PDF se abre en el visor nativo del
-        // navegador, igual que el SVG se abre como imagen.
-        window.open(url, "_blank");
+        // BUG REAL (reportado en la app de escritorio): window.open()
+        // de una URL "blob:" funciona perfecto en un navegador real
+        // (abre una pestaña nueva, el visor nativo del navegador
+        // muestra el PDF/SVG) -- pero adentro de pywebview (WebView2)
+        // CUALQUIER window.open()/target="_blank" se intercepta como
+        // "abrir en una ventana/app externa" y se lo pasa al sistema
+        // operativo. Windows no tiene ningún programa asociado al
+        // esquema "blob:" (solo existe DENTRO de la página que lo
+        // creó, no se puede "entregar" a otro proceso) -- de ahí el
+        // cartel "Obtén una aplicación para abrir este vínculo de
+        // 'blob'". window.pywebview solo existe adentro de la app de
+        // escritorio (nunca en el navegador/GitHub Pages), así que
+        // alcanza para elegir el camino correcto en cada entorno sin
+        // romper el que ya funcionaba.
+        if (window.pywebview) {
+            this._showPreviewInline(url);
+        } else {
+            // Se abre en una pestaña nueva -- no hace falta revocar el
+            // object URL nosotros mismos, esa pestaña lo mantiene vivo
+            // mientras esté abierta. Un PDF se abre en el visor nativo
+            // del navegador, igual que el SVG se abre como imagen.
+            window.open(url, "_blank");
+        }
+
+    }
+
+    // ====================================================
+    // Vista previa INLINE (app de escritorio) -- un <iframe> apuntando
+    // a la blob: URL es navegación DENTRO del mismo documento (no un
+    // window.open a un contexto nuevo), así que pywebview nunca
+    // intercepta esto ni intenta mandarlo afuera. Overlay propio,
+    // separado del modal del formulario (que sigue abierto detrás,
+    // por si el usuario quiere ajustar algo y volver a previsualizar).
+    // ====================================================
+
+    _ensurePreviewOverlay() {
+
+        if (this._previewOverlay) return this._previewOverlay;
+
+        const overlay = document.createElement("div");
+        overlay.className = "report-preview-overlay hidden";
+        overlay.innerHTML = `
+            <div class="report-preview-bar">
+                <span>Vista previa del reporte</span>
+                <button type="button" class="report-preview-close" title="Cerrar vista previa">✕</button>
+            </div>
+            <iframe class="report-preview-frame"></iframe>
+        `;
+
+        overlay.querySelector(".report-preview-close").addEventListener("click", () => this._closePreviewInline());
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) this._closePreviewInline(); });
+
+        document.body.appendChild(overlay);
+
+        this._previewOverlay = overlay;
+        this._previewFrame   = overlay.querySelector(".report-preview-frame");
+
+        return overlay;
+
+    }
+
+    _showPreviewInline(url) {
+
+        const overlay = this._ensurePreviewOverlay();
+
+        // Revocar cualquier blob: URL previa que haya quedado cargada
+        // en el iframe antes de pisarla -- si no, cada "Vista previa"
+        // seguida deja el PDF/SVG anterior vivo en memoria para
+        // siempre (URL.revokeObjectURL es la única forma de liberarlo,
+        // a diferencia de la pestaña del navegador que lo libera sola
+        // al cerrarse).
+        if (this._previewUrl) {
+            URL.revokeObjectURL(this._previewUrl);
+        }
+        this._previewUrl = url;
+
+        this._previewFrame.src = url;
+        overlay.classList.remove("hidden");
+
+    }
+
+    _closePreviewInline() {
+
+        if (!this._previewOverlay) return;
+
+        this._previewOverlay.classList.add("hidden");
+        this._previewFrame.src = "about:blank";
+
+        if (this._previewUrl) {
+            URL.revokeObjectURL(this._previewUrl);
+            this._previewUrl = null;
+        }
 
     }
 

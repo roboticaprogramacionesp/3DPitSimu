@@ -6,6 +6,58 @@
    componentes, captura del circuito, código y notas).
    ========================================================== */
 
+/* Vista previa inline (app de escritorio) -- ver
+   ReportGenerator._showPreviewInline(). z-index por encima del modal
+   del formulario (500) a propósito: se abre ENCIMA de él, que sigue
+   intacto atrás por si el usuario cierra la vista previa y quiere
+   ajustar algo antes de generar el reporte de verdad. */
+.report-preview-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 600;
+    background: #1e1f22;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.report-preview-overlay.hidden { display: none; }
+
+.report-preview-bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+
+    background: #26272b;
+    border-bottom: 1px solid #444;
+    color: #ddd;
+    font-family: Segoe UI, Arial, sans-serif;
+    font-size: 14px;
+}
+
+.report-preview-close {
+    background: #3a3b40;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.report-preview-close:hover { background: #4a4b52; }
+
+.report-preview-frame {
+    flex: 1 1 auto;
+    width: 100%;
+    border: none;
+    background: #fff;
+}
+
 .report-modal-overlay {
     position: fixed;
     inset: 0;
