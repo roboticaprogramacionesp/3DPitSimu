@@ -247,6 +247,45 @@ test('_pasteUserCodeWithRetry se rinde tras agotar los intentos si la corrupció
 
 });
 
+test('_pasteUserCodeWithRetry corta por tope de tiempo si los reintentos se combinan con el reintento del HAL y tardan demasiado', async () => {
+
+    // BUG REAL (reportado, 2026-10-01): con el .exe real, un log de
+    // varios MINUTOS mostró que el reintento de "Ejecutar" (este) y el
+    // reintento YA EXISTENTE del HAL por componente (HAL_RETRY_MAX=8,
+    // que se resetea en cada reset real de QEMU -- ver
+    // _resyncHalAfterBoot) pueden combinarse sin ningún tope conjunto.
+    // Acá se simula ese peor caso con cada intento tardando más que el
+    // presupuesto total -- debe abortar ANTES de agotar
+    // USER_CODE_PASTE_ATTEMPTS, avisando con un mensaje claro, en vez
+    // de seguir reintentando en silencio por minutos.
+
+    const ReplPanel = loadReplPanel();
+    const originalBudget = ReplPanel.USER_CODE_PASTE_TIME_BUDGET_MS;
+    ReplPanel.USER_CODE_PASTE_TIME_BUDGET_MS = 15; // acelerado para el test
+
+    let calls = 0;
+    const messages = [];
+    const ctx = makeCtx(ReplPanel, async () => {
+        calls++;
+        await new Promise((r) => setTimeout(r, 20)); // más lento que el presupuesto
+        ctx.simulator.eventBus.emit('qemu:output', fakeCorruptMessage(ReplPanel));
+    });
+    ctx.appendOutput = (text) => messages.push(text);
+
+    try {
+        await ctx._pasteUserCodeWithRetry('codigo que siempre se corrompe y tarda', 0);
+    } finally {
+        ReplPanel.USER_CODE_PASTE_TIME_BUDGET_MS = originalBudget;
+    }
+
+    assert.ok(calls < ReplPanel.USER_CODE_PASTE_ATTEMPTS, 'debería cortar antes de agotar todos los intentos configurados');
+    assert.ok(
+        messages.some((m) => /más de .*s reintentando/.test(m)),
+        'debería avisar con un mensaje claro de que cortó por tiempo, no por intentos'
+    );
+
+});
+
 test('_pasteUserCodeWithRetry le da más margen (pacing más lento) a cada reintento sucesivo', async () => {
 
     // BUG REAL (reportado, 2026-10-01): con líneas MUY largas (arrays

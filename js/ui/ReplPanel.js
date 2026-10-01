@@ -1931,12 +1931,40 @@ class ReplPanel {
     // corto después del Ctrl+D final), sin importar cuánto tarde.
     static USER_CODE_PASTE_SETTLE_MS = 1500;
 
+    // BUG REAL (reportado: "se demora demasiado" -- confirmado con un
+    // log real de varios minutos): este reintento (hasta
+    // USER_CODE_PASTE_ATTEMPTS intentos) no es el único nivel de
+    // reintento en juego -- cada intento puede A SU VEZ disparar el
+    // reintento YA EXISTENTE del HAL por componente
+    // (_retryHalAfterError, HAL_RETRY_MAX=8), y si la corrupción llega
+    // a crashear el firmware (QEMU hace su propio reset real --
+    // "Guru Meditation Error" + reboot, confirmado en el log, SIN que
+    // el proceso de QEMU en sí se reinicie), ESE reset borra
+    // _halRetryCounts enteros (ver _resyncHalAfterBoot) -- el contador
+    // del HAL vuelve a arrancar de cero en cada reset, así que en el
+    // peor caso los dos niveles se multiplican en vez de sumarse.
+    // Tope de tiempo real (no de intentos) como red de seguridad --
+    // sin esto, una mala racha podía estirarse varios minutos sin
+    // ningún aviso de que eventualmente se iba a rendir.
+    static USER_CODE_PASTE_TIME_BUDGET_MS = 75000;
+
     // Pega el código del usuario (+ HAL pendiente) con reintento
     // automático si la tanda anterior dio señales de corrupción en
     // tránsito -- ver el comentario grande más arriba.
     async _pasteUserCodeWithRetry(fullCode, halLineCount) {
 
+        const startedAt = Date.now();
+
         for (let attempt = 1; attempt <= ReplPanel.USER_CODE_PASTE_ATTEMPTS; attempt++) {
+
+            if (Date.now() - startedAt > ReplPanel.USER_CODE_PASTE_TIME_BUDGET_MS) {
+                this.appendOutput(
+                    `\n⚠️ "Ejecutar" lleva más de ${Math.round(ReplPanel.USER_CODE_PASTE_TIME_BUDGET_MS / 1000)}s reintentando -- ` +
+                    `algo anda mal con la conexión (no es tu código). Probá "⏹ Detener" y "▶ Simular" de nuevo.\n`,
+                    "repl-error"
+                );
+                return;
+            }
 
             if (attempt > 1) {
                 this.appendOutput(
