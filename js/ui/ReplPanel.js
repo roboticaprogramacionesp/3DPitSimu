@@ -1988,6 +1988,28 @@ class ReplPanel {
             };
             this.simulator.eventBus.on("qemu:output", onOutput);
 
+            // BUG REAL (reportado y confirmado: el marcador de
+            // corrupción SÍ se imprimía -- el checksum detectó bien
+            // que faltaban 72 bytes -- pero el reintento automático
+            // NUNCA se disparaba). Causa: si la conexión WS se corta y
+            // reconecta DURANTE este paste (algo que venimos viendo
+            // seguido en este proyecto bajo carga real -- ver
+            // QemuBridge.onMessage()/"\x00HISTORY:"), el contenido que
+            // se perdió en el momento del corte le llega al cliente
+            // RECONECTADO por el canal de historial ("qemu:history"),
+            // no como "qemu:output" en vivo -- ese canal existe
+            // justamente para mostrar el banner de arranque real
+            // aunque el cliente se haya conectado tarde. El
+            // onOutput() de arriba solo escucha "qemu:output" --
+            // cualquier corrupción que llegue por el canal de
+            // historial (incluido el propio marcador de corrupción)
+            // pasaba completamente desapercibida. Mismo chequeo,
+            // mismo flag, la otra fuente posible.
+            const onHistory = (text) => {
+                if (text && text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) corruptionSeen = true;
+            };
+            this.simulator.eventBus.on("qemu:history", onHistory);
+
             // Ver USER_CODE_PASTE_MARGIN_STEP/_MAX arriba -- más
             // margen en cada reintento sucesivo, no el mismo ritmo que
             // ya falló.
@@ -2010,6 +2032,7 @@ class ReplPanel {
             } finally {
 
                 this.simulator.eventBus.off("qemu:output", onOutput);
+                this.simulator.eventBus.off("qemu:history", onHistory);
 
             }
 

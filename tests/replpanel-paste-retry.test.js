@@ -115,6 +115,33 @@ test('_pasteUserCodeWithRetry NO reintenta ante un error real del usuario (sin e
 
 });
 
+test('_pasteUserCodeWithRetry reintenta si el marcador llega por "qemu:history" (reconexión a mitad del paste), no solo por "qemu:output"', async () => {
+
+    // BUG REAL (reportado y confirmado: el checksum detectaba bien la
+    // corrupción -- el marcador se imprimía -- pero el reintento
+    // automático nunca se disparaba): si la conexión WS se corta y
+    // reconecta DURANTE el paste, el contenido que se perdió en el
+    // corte le llega al cliente reconectado por el canal de historial
+    // ("qemu:history", ver QemuBridge.onMessage()/"\x00HISTORY:"), NO
+    // como "qemu:output" en vivo. Escuchar solo "qemu:output" se
+    // perdía el marcador entero en ese escenario.
+    const ReplPanel = loadReplPanel();
+    let calls = 0;
+    const ctx = makeCtx(ReplPanel, async () => {
+        calls++;
+        if (calls === 1) {
+            // El marcador llega por el canal de HISTORIAL, no por
+            // "qemu:output" -- simula la reconexión a mitad de paste.
+            setTimeout(() => ctx.simulator.eventBus.emit('qemu:history', fakeCorruptMessage(ReplPanel)), 5);
+        }
+    });
+
+    await ctx._pasteUserCodeWithRetry('codigo corto', 0);
+
+    assert.equal(calls, 2, 'debería haber detectado la corrupción llegada por "qemu:history" y reintentado');
+
+});
+
 test('_pasteUserCodeWithRetry reintenta si el marcador de corrupción llega DESPUÉS de que _pasteBlock ya resolvió', async () => {
 
     const ReplPanel = loadReplPanel();
