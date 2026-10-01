@@ -445,6 +445,42 @@ function isSafeControlMessage(text) {
     return /^SYNC:\r?\n$/.test(text) || /^IN:\d+:\d+\r?\n$/.test(text);
 }
 
+// BUG REAL (reportado: "en ocasiones me impide enviar comandos o
+// ejecutar código, se queda trabado" -- confirmado con el log: un
+// sondeo de "arranque en caliente" llegó corrompido, perdiendo
+// caracteres del medio -- 'print("_PIT_WARM_" + ("1" if "_p" in
+// ...' en vez de '"_pit_state" in ...' -- lo que lo hacía concluir
+// "arranque frío" por error y disparar un repasteo completo e
+// innecesario del HAL). Causa: Ctrl+C/Ctrl+D (ver mas abajo, "EXCEPCIÓN
+// Ctrl+C/Ctrl+D") escriben DIRECTO a qemuProc.stdin, A PROPÓSITO
+// saltándose sendQueue -- pero sin ninguna protección contra escribir
+// A MITAD de un stdin.write() de un trozo que writeNextChunk() ya
+// había lanzado, partiéndolo en dos a nivel de BYTES. Clickear
+// Simular/Detener rápido varias veces seguidas (cada reconexión manda
+// su propio sondeo, cada "Detener" manda su propio Ctrl+C) multiplica
+// las chances de pisar un trozo en vuelo. rawStdinWrite() es ahora el
+// ÚNICO lugar de este archivo que escribe a qemuProc.stdin -- tanto el
+// pegado trozeado (writeNextChunk) como el bypass de Ctrl+C/Ctrl+D
+// pasan por acá, encadenados en orden, así que nunca puede haber dos
+// escrituras al pipe del sistema operativo superpuestas. Esto NO le
+// agrega la pausa de SEND_CHUNK_DELAY_MS al Ctrl+C (sigue siendo
+// mucho más rápido que esperar toda la sendQueue) -- como mucho
+// espera a que termine la escritura de un trozo de 8 bytes ya en
+// curso, un retraso de microsegundos/pocos ms, imperceptible para
+// "Interrumpir" pero suficiente para no partir nada a la mitad.
+let rawWriteChain = Promise.resolve();
+
+function rawStdinWrite(buf) {
+    rawWriteChain = rawWriteChain.then(() => new Promise((resolve) => {
+        if (!qemuProc || !qemuProc.stdin.writable) {
+            resolve();
+            return;
+        }
+        qemuProc.stdin.write(buf, () => resolve());
+    }));
+    return rawWriteChain;
+}
+
 // Cola global (no por-conexión): si dos pegados llegaran casi
 // juntos (ej. navegador + terminal a la vez), esto evita que sus
 // trozos se intercalen entre sí en el stdin de QEMU.
@@ -507,11 +543,7 @@ function writeToQemuThrottled(data) {
         // real que justificó bajar el umbral general.
         if (!isBulk && (buf.length <= LINE_CHUNK_THRESHOLD_BYTES || isSafeControlMessage(asText))) {
 
-            if (qemuProc && qemuProc.stdin.writable) {
-                qemuProc.stdin.write(buf);
-            }
-
-            resolve();
+            rawStdinWrite(buf).then(resolve);
             return;
 
         }
@@ -542,7 +574,7 @@ function writeToQemuThrottled(data) {
             // ahí arranca la pausa de SEND_CHUNK_DELAY_MS, así que el
             // tiempo entre trozos que ve QEMU es el que realmente
             // configuramos, no una suposición.
-            qemuProc.stdin.write(chunk, () => {
+            rawStdinWrite(chunk).then(() => {
                 setTimeout(writeNextChunk, SEND_CHUNK_DELAY_MS);
             });
 
@@ -720,11 +752,13 @@ function startWebSocketServer() {
             // "no funciona" cuando en realidad solo estaba esperando su
             // turno. Un botón de INTERRUMPIR tiene que poder
             // saltarse la cola -- ese es el sentido de que exista.
+            // Sigue saltándose sendQueue (la pausa pacing de
+            // SEND_CHUNK_DELAY_MS) -- rawStdinWrite() solo evita pisar
+            // a nivel de BYTES un trozo que ya esté en pleno vuelo (ver
+            // el comentario grande junto a rawStdinWrite()).
             const asBuf = Buffer.isBuffer(data) ? data : Buffer.from(data);
             if (asBuf.length === 1 && (asBuf[0] === 0x03 || asBuf[0] === 0x04)) {
-                if (qemuProc && qemuProc.stdin.writable) {
-                    qemuProc.stdin.write(asBuf);
-                }
+                rawStdinWrite(asBuf);
                 return;
             }
 

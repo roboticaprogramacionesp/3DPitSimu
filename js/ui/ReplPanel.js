@@ -2446,11 +2446,7 @@ class ReplPanel {
                 this._halRetryCounts = {};
                 this._halSentToFirmware = new Set(ReplPanel.ALWAYS_HAL_TYPES);
 
-                this._replReady = true;
-                this.input.disabled   = false;
-                this.sendBtn.disabled = false;
-                const runBtn = document.getElementById("replBtnRun");
-                if (runBtn) runBtn.disabled = false;
+                this._onReplReady();
 
                 // Mismo motivo que preloadHal() en QEMU (ver
                 // _resyncHalAfterBoot): un componente que YA está en
@@ -2616,6 +2612,22 @@ class ReplPanel {
 
         const runBtn = document.getElementById("replBtnRun");
         if (runBtn) runBtn.disabled = false;
+
+        // BUG REAL (reportado: "en ocasiones me impide enviar comandos
+        // o ejecutar código, se queda trabado" -- clickeando Simular/
+        // Detener rápido varias veces seguidas): Toolbar.js mantenía el
+        // botón "⏹ Detener" habilitado desde que el WebSocket abría
+        // (evento "simulation:started"), mucho antes de este punto --
+        // GDB puede tardar varios segundos más en adjuntarse (ver
+        // bridgeReady en QemuBridge/server.js). Un click en "Detener"
+        // en esa ventana manda su propio Ctrl+C, que puede interrumpir
+        // a mitad de camino el sondeo de arranque en caliente de la
+        // PRÓXIMA conexión -- no corrompe datos (ver rawStdinWrite en
+        // server.js), pero fuerza un repasteo completo más lento en
+        // vez de uno instantáneo, dando la sensación de "trabado".
+        // Este evento le avisa a Toolbar.js que recién ACÁ es seguro
+        // habilitar "Detener" de verdad -- ver bindSimToggle().
+        this.simulator.eventBus.emit("repl:ready");
 
     }
 

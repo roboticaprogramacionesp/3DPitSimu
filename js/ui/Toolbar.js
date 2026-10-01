@@ -598,14 +598,22 @@ class Toolbar {
             btn.textContent = "⏳ Iniciando...";
             this.simulator.eventBus.emit("simulation:start");
 
-            // Si bridge.js no responde (o QEMU no llega a conectar),
-            // no dejamos el botón trabado en "Iniciando..." para siempre.
+            // Si bridge.js no responde (o GDB nunca termina de
+            // adjuntarse) no dejamos el botón trabado para siempre --
+            // subido de 6s a 20s porque ahora este mismo watchdog
+            // también cubre la espera de "repl:ready" (ver
+            // updateUI()/bindSimulationEvents() y
+            // ReplPanel.BRIDGE_READY_TIMEOUT_MS=15000), no solo la
+            // apertura del WebSocket. Revisa btn.disabled en vez de
+            // isRunning -- cubre los dos casos ("nunca llegó a
+            // conectar" Y "conectó pero el REPL nunca avisó listo")
+            // con la misma condición.
             setTimeout(() => {
-                if (!this.simulator.isRunning) {
+                if (btn.disabled) {
                     btn.disabled = false;
-                    btn.textContent = "▶ Simular";
+                    btn.textContent = this.simulator.isRunning ? "⏹ Detener" : "▶ Simular";
                 }
-            }, 6000);
+            }, 20000);
 
         });
 
@@ -930,6 +938,17 @@ class Toolbar {
         this.simulator.eventBus.on("simulation:started", () => this.updateUI(true));
         this.simulator.eventBus.on("simulation:stopped", () => this.updateUI(false));
 
+        // Ver el comentario grande en ReplPanel._onReplReady() -- recién
+        // acá es seguro habilitar "⏹ Detener" de verdad (antes de esto,
+        // updateUI(true) lo deja deshabilitado con "⏳ Conectando...").
+        this.simulator.eventBus.on("repl:ready", () => {
+            const btn = document.getElementById("btnSimToggle");
+            if (btn && this.simulator.isRunning) {
+                btn.disabled = false;
+                btn.textContent = "⏹ Detener";
+            }
+        });
+
     }
 
     updateUI(isRunning) {
@@ -951,9 +970,27 @@ class Toolbar {
         // Botón ▶ Simular / ⏹ Detener
         const btnSim = document.getElementById("btnSimToggle");
         if (btnSim) {
-            btnSim.disabled = false;
-            btnSim.textContent = isRunning ? "⏹ Detener" : "▶ Simular";
+
+            if (isRunning) {
+                // BUG REAL -- ver el comentario grande en
+                // ReplPanel._onReplReady(): "simulation:started" dispara
+                // apenas el WebSocket abre (QemuBridge.onOpen), mucho
+                // antes de que GDB termine de adjuntarse. Si "Detener"
+                // quedara habilitado acá, un click rápido podía
+                // interrumpir a mitad de camino el sondeo de arranque en
+                // caliente de la conexión que recién empieza. Se queda
+                // deshabilitado con "Conectando..." hasta "repl:ready"
+                // (ver bindSimulationEvents()) -- el watchdog de
+                // bindSimToggle() lo destraba solo si eso nunca llega.
+                btnSim.disabled = true;
+                btnSim.textContent = "⏳ Conectando...";
+            } else {
+                btnSim.disabled = false;
+                btnSim.textContent = "▶ Simular";
+            }
+
             btnSim.classList.toggle("running", isRunning);
+
         }
 
         // Al iniciar, quitamos la manija de rotación / marco de edición
