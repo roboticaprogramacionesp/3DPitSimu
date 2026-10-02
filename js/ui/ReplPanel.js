@@ -1888,7 +1888,21 @@ class ReplPanel {
     // armado final) -- si algo anda mal con la conexión en general (no
     // con un pedazo puntual), cortar con un aviso claro en vez de
     // reintentar en silencio por minutos.
-    static USER_CODE_SEND_TIME_BUDGET_MS = 75000;
+    //
+    // BUG REAL probado contra el .exe real con el script largo de
+    // NeoMatrix en una máquina con una tasa de corrupción muy alta:
+    // con reintentos POR PEDAZO (baratos, el punto central de este
+    // mecanismo) un envío de ~16 pedazos puede necesitar bastante más
+    // de 75s en un caso realmente malo (confirmado: 10 pedazos ya
+    // habían consumido ~79s). Subido a 180s -- el usuario pidió
+    // explícitamente confiabilidad por sobre velocidad ("de nada sirve
+    // intentarlo 6 veces si en todas falla, necesitamos que se
+    // ejecute"), y cada reintento individual sigue siendo barato
+    // (nunca se vuelve a mandar el payload entero) -- lo único que
+    // compra este tope más alto es margen para que una conexión
+    // realmente mala tenga tiempo de terminar en vez de cortar a mitad
+    // de camino.
+    static USER_CODE_SEND_TIME_BUDGET_MS = 180000;
 
     // BUG REAL encontrado probando esto contra el .exe real: un pedazo
     // de ~200 caracteres puede corromperse VARIAS VECES SEGUIDAS al
@@ -2030,6 +2044,19 @@ class ReplPanel {
         }
         if (chunks.length === 0) chunks.push(""); // código vacío -- igual hace falta el paso final (_uc_parts = [])
 
+        // Aviso de progreso -- sin esto, un script largo (muchos
+        // pedazos, cada uno silencioso si sale bien a la primera) no
+        // muestra NADA en el panel hasta terminar, indistinguible de un
+        // cuelgue real (mismo motivo que el aviso de "esto puede
+        // tardar" del lado WASM). Solo para scripts que de verdad
+        // tardan varios pedazos -- no tiene sentido para uno chico.
+        if (chunks.length > 3) {
+            this.appendOutput(
+                `\n⏳ Mandando tu código en ${chunks.length} pedazos chicos (más confiable que uno solo gigante)...\n`,
+                "repl-info"
+            );
+        }
+
         const startedAt = Date.now();
 
         const withinTimeBudget = () => {
@@ -2088,6 +2115,14 @@ class ReplPanel {
                     "repl-error"
                 );
                 return;
+            }
+
+            // Latido de progreso cada 5 pedazos -- para un envío largo
+            // SIN ningún problema de transmisión (ninguna de las líneas
+            // de arriba se imprime), el panel se quedaría mudo hasta el
+            // final, indistinguible de un cuelgue real.
+            if (chunks.length > 5 && (chunkIndex + 1) % 5 === 0 && chunkIndex + 1 < chunks.length) {
+                this.appendOutput(`   (pedazo ${chunkIndex + 1}/${chunks.length} confirmado)\n`, "repl-info");
             }
 
         }
