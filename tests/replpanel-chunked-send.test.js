@@ -23,7 +23,7 @@ const vm = require('vm');
 function loadReplPanel() {
     const code = fs.readFileSync(path.join(__dirname, '..', 'js', 'ui', 'ReplPanel.js'), 'utf8');
     const context = {
-        console, setTimeout, clearTimeout,
+        console, setTimeout, clearTimeout, TextEncoder,
         btoa: (s) => Buffer.from(s, 'binary').toString('base64'),
         atob: (s) => Buffer.from(s, 'base64').toString('binary'),
         unescape, encodeURIComponent, decodeURIComponent,
@@ -387,5 +387,102 @@ test('_sendUserCodeChunked corta con un aviso claro si se excede el tope de tiem
 
     assert.ok(calls < 5, 'debería haber cortado bastante antes de terminar todos los pedazos');
     assert.ok(appended.some((m) => /más de .*s reintentando/.test(m)), 'debería avisar que cortó por tiempo');
+
+});
+
+// ==========================================================
+// _pasteBlock() (real, no mockeado) -- confirmación de que paste mode
+// arrancó de verdad antes de mandar el cuerpo.
+//
+// BUG REAL, severo, encontrado probando _sendUserCodeChunked() contra
+// el .exe real en una máquina con una tasa de corrupción muy alta:
+// con decenas de pedazos chicos seguidos (un Ctrl+E por pedazo), las
+// chances de perder EL BYTE del Ctrl+E en al menos uno se multiplican
+// -- y cuando pasa, cada línea del pedazo se tipea suelta en el prompt
+// normal (cascada de IndentationError/SyntaxError), y el Ctrl+D final
+// cae en el prompt interactivo normal y dispara un SOFT REBOOT real
+// del firmware (confirmado en un log real: "MPY: soft reboot"
+// repetido), borrando TODO lo acumulado en _uc_parts hasta ese
+// momento -- mucho peor que "hay que reintentar este pedazo".
+// ==========================================================
+
+test('_pasteBlock (real) no manda ninguna línea del cuerpo, y cancela con Ctrl+C (nunca Ctrl+D), si paste mode nunca llega a confirmarse', async () => {
+
+    const ReplPanel = loadReplPanel();
+    ReplPanel.PASTE_MODE_START_TIMEOUT_MS = 20; // acelerado para el test
+    const ctx = Object.create(ReplPanel.prototype);
+    const sent = [];
+    let interrupted = false;
+    ctx.simulator = {
+        eventBus: makeEventBus(),
+        qemuBridge: { beginPasteLock() {}, endPasteLock() {}, interrupt() { interrupted = true; } },
+    };
+    ctx.simulator.eventBus.on('qemu:send', (text) => sent.push(text));
+    ctx._sleep = (ms) => new Promise((resolve) => setTimeout(resolve, Math.min(ms, 5)));
+
+    // Nunca se emite "paste mode"/"=== " -- simula el Ctrl+E perdido en tránsito.
+    await ctx._pasteBlock('linea1\nlinea2', 0, { silent: false });
+
+    assert.ok(sent.includes('\x05'), 'debería haber intentado entrar a paste mode (el Ctrl+E se manda igual, se pierde DESPUÉS)');
+    assert.ok(interrupted, 'debería cancelar con Ctrl+C (vía interrupt()) si paste mode nunca se confirma');
+    assert.ok(!sent.includes('linea1\n') && !sent.includes('linea2\n'), 'no debería haber mandado ninguna línea del cuerpo');
+    assert.ok(!sent.includes('\x04'), 'no debería haber mandado Ctrl+D -- eso es lo que dispara el soft reboot real');
+
+});
+
+test('_pasteBlock (real) manda el cuerpo normalmente en cuanto paste mode SÍ se confirma', async () => {
+
+    const ReplPanel = loadReplPanel();
+    const ctx = Object.create(ReplPanel.prototype);
+    const sent = [];
+    ctx.simulator = {
+        eventBus: makeEventBus(),
+        qemuBridge: { beginPasteLock() {}, endPasteLock() {}, interrupt() {} },
+    };
+    ctx.simulator.eventBus.on('qemu:send', (text) => {
+        sent.push(text);
+        // Este harness mínimo no tiene el listener permanente de
+        // bindBusEvents() que arma/dispara _pasteModeWatcher a partir
+        // de texto real -- se simula directo el efecto de "paste mode
+        // confirmado" (esa lógica de matcheo de texto ya se prueba
+        // indirectamente en otros lados del proyecto).
+        if (text === '\x05') {
+            setTimeout(() => { if (ctx._pasteModeWatcher) ctx._pasteModeWatcher(); }, 2);
+        }
+    });
+    ctx._sleep = (ms) => new Promise((resolve) => setTimeout(resolve, Math.min(ms, 5)));
+
+    await ctx._pasteBlock('linea1\nlinea2', 0, { silent: false });
+
+    assert.ok(sent.includes('linea1\n'), 'debería haber mandado la primera línea');
+    assert.ok(sent.includes('linea2\n'), 'debería haber mandado la segunda línea');
+    assert.ok(sent.includes('\x04'), 'debería haber mandado Ctrl+D al terminar, una vez confirmado paste mode');
+
+});
+
+test('_pasteBlock (real) sigue cortando de inmediato si "Detener" llega a mitad del cuerpo (ya con paste mode confirmado)', async () => {
+
+    const ReplPanel = loadReplPanel();
+    const ctx = Object.create(ReplPanel.prototype);
+    const sent = [];
+    ctx.simulator = {
+        eventBus: makeEventBus(),
+        qemuBridge: { beginPasteLock() {}, endPasteLock() {}, interrupt() {} },
+    };
+    ctx.simulator.eventBus.on('qemu:send', (text) => {
+        sent.push(text);
+        if (text === '\x05') {
+            setTimeout(() => { if (ctx._pasteModeWatcher) ctx._pasteModeWatcher(); }, 2);
+        }
+        if (text === 'linea1\n') ctx._stopRequested = true;
+    });
+    ctx._sleep = (ms) => new Promise((resolve) => setTimeout(resolve, Math.min(ms, 5)));
+
+    await ctx._pasteBlock('linea1\nlinea2\nlinea3', 0, { silent: false });
+
+    assert.ok(sent.includes('linea1\n'), 'la línea enviada antes de "Detener" sí debería haber salido');
+    assert.ok(!sent.includes('linea2\n') && !sent.includes('linea3\n'), 'no debería haber mandado nada después de "Detener"');
+    assert.ok(sent.includes('\x03'), 'debería cancelar paste mode con Ctrl+C al cortar por "Detener"');
+    assert.ok(!sent.includes('\x04'), 'no debería mandar Ctrl+D si se canceló por "Detener"');
 
 });

@@ -1569,6 +1569,19 @@ class ReplPanel {
             this._suppressEcho = true;
             this.simulator.eventBus.emit("qemu:send", "\x05"); // Ctrl+E: paste mode
 
+            // Ver el comentario grande de _waitForPasteModeStart() --
+            // confirmar que paste mode arrancó de VERDAD antes de
+            // mandar una sola línea del cuerpo. Si el Ctrl+E se perdió
+            // en tránsito, cada línea de abajo se tiparía suelta en el
+            // prompt normal, y el Ctrl+D final dispararía un soft
+            // reboot real en vez de ejecutar nada.
+            const pasteModeStarted = await this._waitForPasteModeStart(ReplPanel.PASTE_MODE_START_TIMEOUT_MS);
+            if (!pasteModeStarted) {
+                this._suppressEcho = false;
+                this.simulator.qemuBridge?.interrupt(); // Ctrl+C -- nunca Ctrl+D acá
+                return;
+            }
+
             const lines = fullCode.split("\n");
             let stoppedEarly = false;
 
@@ -2278,6 +2291,55 @@ class ReplPanel {
 
     }
 
+    // BUG REAL, severo, encontrado probando _sendUserCodeChunked() de
+    // punta a punta con muchos pedazos chicos en una máquina con una
+    // tasa de corrupción muy alta: _pasteBlock() mandaba Ctrl+E y
+    // asumía (con un sleep fijo de 150ms, pensado para el Ctrl+C
+    // ANTERIOR, no para esto) que paste mode ya había arrancado antes
+    // de empezar a mandar líneas. Con UN SOLO pegado grande, perder el
+    // byte de Ctrl+E era raro y, aunque pasara, el checksum lo
+    // detectaba al final igual. Con DECENAS de pegados chicos
+    // seguidos (un Ctrl+E por pedazo), las chances de perder ESE byte
+    // puntual en AL MENOS uno se multiplican -- y cuando pasa, cada
+    // línea del pedazo se tipea SUELTA en el prompt normal
+    // (IndentationError/SyntaxError en cascada), y el Ctrl+D final
+    // -- que debería terminar paste mode -- cae en el prompt
+    // interactivo normal y dispara un SOFT REBOOT real del firmware
+    // (confirmado en un log real: "MPY: soft reboot" repetido),
+    // borrando TODO lo acumulado en _uc_parts hasta ese momento.
+    //
+    // Ahora _pasteBlock() confirma que paste mode arrancó de verdad
+    // (ve "paste mode;" o "=== " en la salida) ANTES de mandar una sola
+    // línea del cuerpo -- si no lo confirma a tiempo, cancela con
+    // Ctrl+C (nunca con Ctrl+D) y no manda nada más, dejando que el
+    // llamador reintente desde cero (ver _sendStepAndConfirm: ningún
+    // marcador de éxito/mal llega, silencio total, mismo criterio de
+    // "silencio = hay que reintentar" ya usado en todos lados).
+    static PASTE_MODE_START_TIMEOUT_MS = 1500;
+
+    _waitForPasteModeStart(timeoutMs) {
+
+        return new Promise((resolve) => {
+
+            let settled = false;
+            const timer = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                this._pasteModeWatcher = null;
+                resolve(false);
+            }, timeoutMs);
+
+            this._pasteModeWatcher = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                resolve(true);
+            };
+
+        });
+
+    }
+
     // ====================================================
     // Precargar el HAL pendiente en segundo plano, apenas se
     // conecta a QEMU -- así, cuando el usuario le da "Ejecutar" más
@@ -2714,6 +2776,14 @@ class ReplPanel {
             // mismo criterio que _warmProbe de arriba: se chequea
             // ANTES del "if (this._suppressEcho) return;", porque
             // esto se usa justo MIENTRAS el eco sigue oculto.
+            // Marcador de _waitForPasteModeStart() (ver _pasteBlock())
+            // -- mismo criterio: chequeado mientras _suppressEcho sigue
+            // prendido, porque es justo cuando se usa.
+            if (this._pasteModeWatcher && /paste mode|=== ?$/m.test(text)) {
+                this._pasteModeWatcher();
+                this._pasteModeWatcher = null;
+            }
+
             if (this._promptWatcher && text.includes(">>>")) {
                 this._promptWatcher();
                 this._promptWatcher = null;
