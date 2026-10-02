@@ -3020,6 +3020,20 @@ class ReplPanel {
             // bridge antes de sondear nada -- ver _waitForBridgeReady().
             await this._waitForBridgeReady();
 
+            // BUG REAL sospechado (no 100% confirmado, pero con indicios
+            // fuertes en un log real): "bridgeReady" se pone en true
+            // apenas gdb.resume() vuelve -- pero eso es el MOMENTO EXACTO
+            // en que GDB recién termina su propio trabajo interno (cargar
+            // símbolos, armar el breakpoint). Se vio en vivo texto de
+            // diagnóstico del bridge ("[Bridge] Breakpoint listo...")
+            // mezclado CARACTER A CARACTER con el eco del primer paste
+            // de HAL que arranca apenas llega esta señal -- consistente
+            // con que todavía no pasó margen real desde que GDB se
+            // "asentó" del todo. Un respiro corto, una sola vez por
+            // conexión (no por pedazo -- no vale la pena para HAL ya
+            // cacheado), antes del primer repasteo.
+            await this._sleep(400);
+
             // Ver _resyncHalAfterBoot() -- sondea primero (¿ya está
             // "_pit_state" en sys.modules, sea por reconexión en
             // caliente o por HAL congelado en el firmware?) y recién
