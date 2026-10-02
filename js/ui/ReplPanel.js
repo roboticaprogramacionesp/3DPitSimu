@@ -1861,8 +1861,13 @@ class ReplPanel {
     static USER_CODE_CHUNK_B64_SIZE = 200;
 
     // Reintentos POR PEDAZO -- mucho más baratos que reintentar el
-    // envío entero, así que se puede ser generoso.
-    static USER_CODE_CHUNK_ATTEMPTS = 4;
+    // envío entero, así que se puede ser generoso. Confirmado con un
+    // log real (máquina bajo carga pesada) que un mismo pedazo puede
+    // corromperse 4 veces seguidas, cada vez de una forma distinta --
+    // subido a 5 para darle un intento más de margen (con el margen
+    // creciente de USER_CODE_CHUNK_MARGIN_STEP ya deberían alcanzar,
+    // pero no cuesta nada tener uno de más).
+    static USER_CODE_CHUNK_ATTEMPTS = 5;
 
     // Reintentos para el paso FINAL (armar + verificar + ejecutar) --
     // separado de los pedazos: si este paso falla, NO hay que volver a
@@ -1884,6 +1889,19 @@ class ReplPanel {
     // con un pedazo puntual), cortar con un aviso claro en vez de
     // reintentar en silencio por minutos.
     static USER_CODE_SEND_TIME_BUDGET_MS = 75000;
+
+    // BUG REAL encontrado probando esto contra el .exe real: un pedazo
+    // de ~200 caracteres puede corromperse VARIAS VECES SEGUIDAS al
+    // mismo ritmo (confirmado con un log real: el mismo pedazo falló 4
+    // veces de 4, cada vez de una forma distinta -- comillas cortadas,
+    // nombre de variable truncado, un byte cambiado) -- reintentar
+    // EXACTAMENTE al mismo ritmo que ya falló no le da ninguna ventaja
+    // extra a la UART emulada (misma lección que ya se había aprendido
+    // y se había sacado sin querer al simplificar esto para pedazos
+    // chicos). Mismo esquema de antes: más margen en cada reintento
+    // sucesivo, tope en 3x.
+    static USER_CODE_CHUNK_MARGIN_STEP = 0.5;
+    static USER_CODE_CHUNK_MARGIN_MAX  = 3;
 
     // Arma el bloque de UN pedazo del payload -- isFirst agrega el
     // preámbulo (import + lista vacía). Mismo truco que
@@ -1959,7 +1977,7 @@ class ReplPanel {
     // igual que una corrupción explícita (ver USER_CODE_STEP_SETTLE_MS).
     // Devuelve true (confirmado, sin corrupción) / false (hay que
     // reintentar este mismo paso).
-    async _sendStepAndConfirm(block, { silent, halLineCount, okMarker, badMarker }) {
+    async _sendStepAndConfirm(block, { silent, halLineCount, okMarker, badMarker, marginMultiplier = 1 }) {
 
         let okSeen = false;
         let badSeen = false;
@@ -1976,9 +1994,9 @@ class ReplPanel {
         this.simulator.eventBus.on("qemu:history", check);
 
         try {
-            await this._pasteBlock(block, halLineCount, { silent });
+            await this._pasteBlock(block, halLineCount, { silent, marginMultiplier });
             await Promise.race([
-                this._waitForNextPrompt(ReplPanel.USER_CODE_STEP_SETTLE_MS),
+                this._waitForNextPrompt(Math.round(ReplPanel.USER_CODE_STEP_SETTLE_MS * marginMultiplier)),
                 markerSeenPromise,
             ]);
         } finally {
@@ -2044,11 +2062,19 @@ class ReplPanel {
 
                 const block = this._sanitizeForSerial(this._buildUserCodeChunkBlock(chunks[chunkIndex], chunkIndex, isFirst));
 
+                // Ver USER_CODE_CHUNK_MARGIN_STEP/_MAX -- más margen en
+                // cada reintento sucesivo de ESTE pedazo puntual.
+                const marginMultiplier = Math.min(
+                    ReplPanel.USER_CODE_CHUNK_MARGIN_MAX,
+                    1 + (attempt - 1) * ReplPanel.USER_CODE_CHUNK_MARGIN_STEP
+                );
+
                 confirmed = await this._sendStepAndConfirm(block, {
                     silent: true,
                     halLineCount: 0,
                     okMarker: ReplPanel.USER_CODE_CHUNK_OK_MARKER,
                     badMarker: ReplPanel.USER_CODE_CHUNK_BAD_MARKER,
+                    marginMultiplier,
                 });
 
                 if (confirmed) break;
@@ -2085,11 +2111,17 @@ class ReplPanel {
 
             const { block, execLineIndex } = this._buildUserCodeFinalBlock(expectedLen, checksum);
 
+            const marginMultiplier = Math.min(
+                ReplPanel.USER_CODE_CHUNK_MARGIN_MAX,
+                1 + (attempt - 1) * ReplPanel.USER_CODE_CHUNK_MARGIN_STEP
+            );
+
             const confirmed = await this._sendStepAndConfirm(this._sanitizeForSerial(block), {
                 silent: false,
                 halLineCount: execLineIndex,
                 okMarker: ReplPanel.USER_CODE_OK_MARKER,
                 badMarker: ReplPanel.USER_CODE_CORRUPT_MARKER,
+                marginMultiplier,
             });
 
             if (confirmed) return;
