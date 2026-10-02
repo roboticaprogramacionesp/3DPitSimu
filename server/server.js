@@ -329,8 +329,17 @@ function startQemu(wss) {
 // wrapper para poder DETECTAR corrupción con certeza en vez de
 // inferirla de un traceback -- ver la nota en
 // ReplPanel._wrapHalForIsolation() si se llega a ese punto.
-const SEND_CHUNK_SIZE = 8;      // antes: 16 (48, 256, y 32 antes de eso) // bytes por trozo
-const SEND_CHUNK_DELAY_MS = 25; // antes: 20 (10, 2, y 8 antes de eso) // pausa entre trozos
+// TERCERA vuelta (2026-10-02): con el envío del código del usuario por
+// PEDAZOS chicos confirmados (ver ReplPanel._sendUserCodeChunked),
+// confirmado en una máquina real que un mismo pedazo de apenas ~200
+// caracteres podía corromperse 5 de 5 veces seguidas, SIN mejorar nada
+// al subir el margen del lado del cliente (ver USER_CODE_CHUNK_MARGIN_STEP
+// en ReplPanel.js) -- esa evidencia es clave: el margen del cliente
+// solo cambia CUÁNDO el navegador manda el próximo mensaje por WS,
+// nunca CUÁN RÁPIDO este archivo empuja esos bytes al stdin de QEMU.
+// Subiendo acá (lo único que de verdad cambia esa velocidad real).
+const SEND_CHUNK_SIZE = 6;      // antes: 8 (16, 48, 256, y 32 antes de eso) // bytes por trozo
+const SEND_CHUNK_DELAY_MS = 35; // antes: 25 (20, 10, 2, y 8 antes de eso) // pausa entre trozos
 
 // Pausa ÚNICA antes del PRIMER trozo de un pegado grande (bulk) --
 // ver el comentario grande en writeToQemuThrottled(). Comparando
@@ -345,7 +354,7 @@ const SEND_CHUNK_DELAY_MS = 25; // antes: 20 (10, 2, y 8 antes de eso) // pausa 
 // sin ningún respiro previo -- esta pausa extra, una sola vez al
 // principio, le da ese margen antes de que empiece la parte
 // riesgosa.
-const SEND_BULK_PRIME_DELAY_MS = 60;
+const SEND_BULK_PRIME_DELAY_MS = 90; // antes: 60 -- ver el comentario grande de SEND_CHUNK_SIZE más arriba
 
 // ============================================
 // Stripper de comentarios/líneas vacías para pegados de

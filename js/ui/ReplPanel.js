@@ -1514,8 +1514,8 @@ class ReplPanel {
     // por línea, calculada contra los mismos SEND_CHUNK_SIZE/
     // SEND_CHUNK_DELAY_MS reales de server.js -- si esos valores
     // cambian de un lado, cambiar del otro también.
-    static SEND_CHUNK_SIZE      = 8;  // debe igualar a server.js
-    static SEND_CHUNK_DELAY_MS  = 25; // ms -- debe igualar a server.js
+    static SEND_CHUNK_SIZE      = 6;  // debe igualar a server.js
+    static SEND_CHUNK_DELAY_MS  = 35; // ms -- debe igualar a server.js
     static PASTE_LINE_DELAY_MS  = 20; // piso mínimo, para líneas cortas
 
     // Tope de espera post-Ctrl+D para pegados SILENCIOSOS (preloadHal)
