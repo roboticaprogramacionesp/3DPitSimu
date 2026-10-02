@@ -6,12 +6,13 @@
 
  Flujo de ejecución:
    1. El usuario escribe código limpio (igual que en Wokwi)
-   2. runEditorCode() ensambla automáticamente:
-        _base.hal.py          ← siempre
-        <tipo>.hal.py         ← por cada componente en el canvas
-        código del usuario    ← sin modificar
-   3. El bloque completo se envía a QEMU por paste mode
-      (Ctrl+E … líneas … Ctrl+D)
+   2. runEditorCode() manda primero el HAL pendiente (preloadHal():
+        _base.hal.py ← siempre, <tipo>.hal.py ← por cada componente
+        en el canvas), cada uno por paste mode (Ctrl+E … Ctrl+D)
+   3. Recién después, el código del usuario viaja por PEDAZOS chicos
+      confirmados uno por uno (_sendUserCodeChunked() -- ver el
+      comentario grande junto a USER_CODE_CHUNK_B64_SIZE), no en un
+      solo bloque gigante
 ==========================================================
 */
 
@@ -87,16 +88,14 @@ class ReplPanel {
         // BUG REAL (reportado: "ya detuve el simulador... pero sigue
         // corriendo por detrás"): "⏹ Detener" (evento "simulation:stop",
         // ver bindBusEvents) solo cerraba el WebSocket del lado del
-        // navegador -- el bucle de reintento de _pasteUserCodeWithRetry()
-        // (hasta 6 intentos, cada uno con su propio pacing línea a
-        // línea) seguía corriendo igual del lado de JS, mandando al
-        // vacío (QemuBridge.send() ya no hace nada sin conexión) pero
-        // sin enterarse de que el usuario pidió parar -- el panel
-        // seguía mostrando "reintentando (N/6)" varios segundos/minutos
-        // después del click. Esta bandera la chequean _pasteBlock()
-        // (corta el envío línea a línea) y _pasteUserCodeWithRetry()
-        // (corta entre intentos) para abortar de inmediato en vez de
-        // agotar los 6 intentos igual.
+        // navegador -- el envío del código (ver _sendUserCodeChunked())
+        // seguía corriendo igual del lado de JS, mandando al vacío
+        // (QemuBridge.send() ya no hace nada sin conexión) pero sin
+        // enterarse de que el usuario pidió parar -- el panel seguía
+        // mostrando "reintentando" varios segundos/minutos después del
+        // click. Esta bandera la chequean _pasteBlock() (corta el envío
+        // línea a línea) y _sendUserCodeChunked() (corta entre pedazos)
+        // para abortar de inmediato en vez de seguir reintentando igual.
         this._stopRequested = false;
 
         // Actividad de pines (📌 GPIOxx → LOW/HIGH): con un teclado
@@ -1044,16 +1043,9 @@ class ReplPanel {
     }
 
     // ====================================================
-    // Ensamblar el código completo:
+    // Ensamblar el código pendiente de pegar:
     //   1. HAL base (siempre)
     //   2. HAL de cada tipo de componente en el canvas
-    //   3. Código del usuario (sin modificar)
-    //
-    // Devuelve también halLineCount: cuántas líneas del bloque
-    // final corresponden al HAL (base + componentes), para que
-    // runEditorCode() sepa hasta dónde ocultar el eco del paste
-    // mode y a partir de dónde es "código del usuario" -- así
-    // el HAL queda invisible en el panel, igual que en Wokwi.
     // ====================================================
 
     // Módulos "siempre presentes", en el orden EXACTO en que tienen
@@ -1330,147 +1322,6 @@ class ReplPanel {
     }
 
     // ====================================================
-    // BUG REAL (reportado: un script largo -- NeoMatrix con arrays de
-    // píxeles -- fallaba sin que el reintento automático se diera
-    // cuenta): la primera versión de esto detectaba corrupción
-    // buscando SyntaxError/IndentationError en la salida -- pero
-    // confirmado en la práctica (con el .exe real, no un mock) que la
-    // UART emulada puede perder caracteres de una forma que deja el
-    // código IGUAL de sintácticamente válido, solo con el valor
-    // equivocado ("NeoMatrix(12,8,8,layout=0,rotation=0)" llegó como
-    // "NeoMatrix(12,8,8,laytation=0)" -- perdió "out=0,ro" del medio,
-    // nada que un parser de Python note). Esa corrupción silenciosa no
-    // deja NINGÚN rastro reconocible -- puede fallar con cualquier
-    // excepción (o ninguna, con un valor simplemente incorrecto),
-    // indistinguible de un bug real del usuario. Perseguir cada vez
-    // más patrones de error específicos nunca cierra el caso del todo.
-    //
-    // Mismo mecanismo que ya protege al HAL (_wrapHalForIsolation) --
-    // checksum verificado ANTES de ejecutar nada, así que CUALQUIER
-    // pérdida se detecta con certeza, sin importar qué forma tome.
-    // Deliberadamente SEPARADO del paste grande "HAL siempre presente"
-    // que SÍ se probó envolver así y empeoró las cosas (ver
-    // "REVERTIDO" en _buildPendingHal) -- acá es un bloque propio,
-    // del tamaño real del código del usuario, no combinado con otros
-    // 3-4 bloques grandes. Costo asumido a propósito: se pierde la
-    // vista en vivo del código tipeándose en el panel REPL (el código
-    // en sí se sigue viendo en la pestaña Editor) -- lo que se
-    // muestra en el REPL ahora es la salida REAL del programa
-    // (prints, errores, tracebacks de bugs genuinos), nunca el eco
-    // del pegado en sí.
-    //
-    // A diferencia de _wrapHalForIsolation(), acá el exec() real NO
-    // va envuelto en try/except -- un error genuino del código del
-    // usuario (el que escribió a propósito, mal) tiene que mostrarse
-    // tal cual, como siempre, no camuflarse como "corrupción".
-    static USER_CODE_CORRUPT_MARKER = "USER_CODE_CORRUPT:";
-
-    // BUG REAL (reportado con 3 corridas reales seguidas, TODAS
-    // corrompidas -- ni una mostró el resultado esperado, y NINGUNA
-    // reintentó sola): hasta acá, la detección de corrupción solo
-    // cubría DOS formas de perder datos: (1) el checksum del PAYLOAD
-    // del usuario no da (USER_CODE_CORRUPT_MARKER), o (2) paste mode
-    // se corta ANTES de tiempo (un ">>> " real apareciendo a mitad del
-    // envío). Pero una línea de CONTROL del wrapper (no del payload
-    // del usuario -- ESTE código, el `if`/`print`/`else`/`exec`) puede
-    // corromperse de formas que NO entran en ninguna de las dos
-    // categorías: ej. se pierde un "\n" entre dos líneas (confirmado
-    // en un log real: "!= 32290:" quedó pegado con el "print(" de la
-    // línea siguiente) o se pierde un paréntesis de apertura, y el
-    // bloque entero queda sintácticamente MAL FORMADO pero de una
-    // manera que Python no rechaza hasta compilar TODO el bloque en el
-    // Ctrl+D final (no "a mitad del envío") -- a veces ni siquiera
-    // produce un SyntaxError visible (un paréntesis sin cerrar puede
-    // tragarse silenciosamente el resto del bloque como una expresión
-    // gigante que nunca se imprime, sin error, sin ejecutar nada,
-    // CERO señales). En CUALQUIERA de estos casos, ni el checksum llega
-    // a imprimirse NI el código del usuario llega a correr -- pero
-    // antes asumíamos éxito por default con tal de no ver el marcador
-    // de corrupción, un default peligroso.
-    //
-    // Arreglo: un marcador de ÉXITO explícito, impreso DELIBERADAMENTE
-    // ANTES del exec() real (así confirma que la lógica del checksum
-    // completó su veredicto, incluso si el código del usuario después
-    // cuelga en un "while True:"). Ahora el resultado de un intento
-    // tiene que ser SIEMPRE uno de los dos marcadores -- si no llega
-    // NINGUNO de los dos dentro del margen de espera, eso YA ES la
-    // señal de corrupción (ver _pasteUserCodeWithRetry), sin importar
-    // qué forma exacta tomó la pérdida de bytes.
-    static USER_CODE_OK_MARKER = "USER_CODE_OK:";
-
-    // BUG REAL (confirmado con un test directo contra el método real:
-    // una tanda PERFECTA, sin ninguna corrupción, agotaba igual los 6
-    // intentos): el wrapper de más abajo imprime USER_CODE_CORRUPT_MARKER
-    // armado como UN SOLO string literal -- pero paste mode ECOA el
-    // código tal cual se pega, ANTES de que se ejecute una sola línea
-    // (ver _pasteUserCodeWithRetry(), el listener de "qemu:output" NO
-    // depende de _suppressEcho, lo escucha TODO). Eso significa que el
-    // propio texto fuente `print("USER_CODE_CORRUPT:...")` -- el
-    // código, no su resultado -- ya contiene el marcador completo, así
-    // que el detector de corrupción se disparaba SOLO, SIEMPRE, con
-    // cada "Ejecutar", exitoso o no (6 intentos de margen creciente en
-    // CADA corrida, sin relación con la UART real -- el contribuyente
-    // más grande, de lejos, a "tarda demasiado"). Partiendo el marcador
-    // en dos strings de Python que se concatenan en tiempo de
-    // ejecución (`%` liga más fuerte que `+`, así que el orden da lo
-    // mismo sin paréntesis extra, aunque igual los sumamos por
-    // claridad), el texto PEGADO nunca contiene el marcador completo
-    // de corrido -- solo el RESULTADO real de imprimir (ejecutado de
-    // verdad, tras el Ctrl+D) lo arma completo. _wrapHalForIsolation()
-    // no sufre esto porque su propio marcador (HAL_ERROR:) viaja
-    // dentro de un try/except que si acaso se arma en runtime distinto.
-    _wrapUserCodeForIntegrity(userCode) {
-
-        // Misma técnica que _wrapHalForIsolation() -- ver los
-        // comentarios grandes de ese método para el porqué de cada
-        // paso (representación binaria/checksum/_breakRepeatedPatterns).
-        const binaryStr = unescape(encodeURIComponent(userCode));
-        const b64 = btoa(binaryStr);
-
-        let checksum = 0;
-        for (let i = 0; i < binaryStr.length; i++) {
-            checksum = (checksum + binaryStr.charCodeAt(i)) % 65536;
-        }
-        const expectedLen = binaryStr.length;
-
-        const b64NoRuns = ReplPanel._breakRepeatedPatterns(b64);
-        const width = ReplPanel.HAL_B64_LINE_WIDTH;
-        const rawLines = [];
-        for (let i = 0; i < b64NoRuns.length; i += width) {
-            rawLines.push(b64NoRuns.slice(i, i + width));
-        }
-        const rawBlock = rawLines.join("\n");
-
-        // Ver el comentario grande de arriba (junto a USER_CODE_CORRUPT_MARKER)
-        // -- partido a la mitad nomás para que ninguna mitad por sí
-        // sola parezca el marcador completo a simple vista en el fuente.
-        const markerSplit = Math.ceil(ReplPanel.USER_CODE_CORRUPT_MARKER.length / 2);
-        const markerPart1 = ReplPanel.USER_CODE_CORRUPT_MARKER.slice(0, markerSplit);
-        const markerPart2 = ReplPanel.USER_CODE_CORRUPT_MARKER.slice(markerSplit);
-
-        const okSplit = Math.ceil(ReplPanel.USER_CODE_OK_MARKER.length / 2);
-        const okPart1 = ReplPanel.USER_CODE_OK_MARKER.slice(0, okSplit);
-        const okPart2 = ReplPanel.USER_CODE_OK_MARKER.slice(okSplit);
-
-        return (
-            `# -- Tu codigo (verificado) --\n` +
-            `import ubinascii as _uc_iso\n` +
-            `_uc_raw = """` + rawBlock + `"""\n` +
-            `_uc_joined = "".join(_uc_raw.split())\n` +
-            `try:\n` +
-            `    _uc_bytes = _uc_iso.a2b_base64(_uc_joined)\n` +
-            `except Exception:\n` +
-            `    _uc_bytes = b""\n` +
-            `if len(_uc_bytes) != ${expectedLen} or sum(_uc_bytes) % 65536 != ${checksum}:\n` +
-            `    print("${markerPart1}" + ("${markerPart2}len=%d sum=%d esperado_len=${expectedLen} esperado_sum=${checksum}" % (len(_uc_bytes), sum(_uc_bytes) % 65536)))\n` +
-            `else:\n` +
-            `    print("${okPart1}" + "${okPart2}")\n` +
-            `    exec(_uc_bytes.decode(), globals())\n`
-        );
-
-    }
-
-    // ====================================================
     // Camino RÁPIDO: el firmware conectado PODRÍA tener el .hal.py de
     // este tipo CONGELADO (ver firmware/frozen_hal/README.md y
     // PIT_FROZEN_HAL_TYPES en js/simulator/FrozenHalTypes.js) -- en vez de pastear ~100-200
@@ -1613,35 +1464,23 @@ class ReplPanel {
 
     }
 
+    // Usado SOLO por WasmBridge (ejecución in-process en el Worker del
+    // navegador, ver runEditorCode()) -- sin pty/serie de por medio ahí,
+    // así que no hace falta el checksum/chunking que sí necesita QEMU
+    // (ver _sendUserCodeChunked()). El código del usuario viaja tal
+    // cual, sin envolver, para que lo que se muestra en el panel
+    // (idéntico a lo que se manda) sea legible.
     async _assembleCode(userCode) {
 
         const { halBlock, newlySent } = await this._buildPendingHal();
 
-        // ── Código del usuario, envuelto con verificación de integridad ──
-        // Ver _wrapUserCodeForIntegrity() -- todo este bloque (HAL +
-        // wrapper) viaja OCULTO del eco (ver halLineCount más abajo);
-        // lo único que se muestra en el panel es la salida REAL del
-        // programa del usuario, que llega recién cuando el exec() de
-        // adentro del wrapper corre de verdad.
-        const userBlock = this._wrapUserCodeForIntegrity(userCode);
-
         const parts = [];
         if (halBlock) parts.push(halBlock);
-        parts.push(userBlock);
+        parts.push(userCode);
 
         const fullCode = this._sanitizeForSerial(parts.join("\n\n"));
 
-        // Más allá de la última línea a propósito -- el loop de envío
-        // de _pasteBlock() solo saca la supresión de eco si "i ===
-        // halLineCount" ocurre A MITAD del envío (no pasa nunca acá,
-        // nunca llega a serlo), así que el eco se mantiene oculto
-        // durante TODO el envío. _pasteBlock() ya saca la supresión
-        // sola, sin depender de este número, un instante después del
-        // Ctrl+D final (ver el "finally" de ese método) -- ahí es
-        // cuando empieza a verse la salida real del programa.
-        const halLineCount = fullCode.split("\n").length;
-
-        return { fullCode, halLineCount, newlySent };
+        return { fullCode, newlySent };
 
     }
 
@@ -1687,13 +1526,11 @@ class ReplPanel {
     // viajar por el WS -- importante si hay UTF-8 multibyte, aunque
     // _sanitizeForSerial ya debería dejar todo en ASCII puro.
     //
-    // marginMultiplier (default 1): ver _pasteUserCodeWithRetry() --
-    // en los reintentos se agranda esto para darle MÁS margen a la
-    // UART emulada, no el mismo que ya falló. Pensado sobre todo para
-    // líneas largas de una sola vez (ej. "img = [...]" con cientos de
-    // píxeles) -- confirmado en la práctica (reportado por un usuario,
-    // máquina real bajo carga normal) que esas líneas pueden corromperse
-    // varias veces SEGUIDAS incluso con el pacing normal.
+    // marginMultiplier (default 1): deja margen para que un futuro
+    // llamador agrande el pacing (ej. en un reintento) sin tocar esta
+    // función -- actualmente ningún llamador lo usa (el código del
+    // usuario viaja por pedazos chicos, ver _sendUserCodeChunked(), que
+    // no lo necesitó).
     _lineDelayMs(line, marginMultiplier = 1) {
         const bytes  = new TextEncoder().encode(line + "\r\n").length;
         const chunks = Math.max(1, Math.ceil(bytes / ReplPanel.SEND_CHUNK_SIZE));
@@ -1963,277 +1800,307 @@ class ReplPanel {
     }
 
     // ====================================================
-    // BUG REAL (reportado: "a medida que el código crece -- ej. un
-    // NeoMatrix con arrays grandes de píxeles -- Ejecutar falla cada
-    // vez más seguido, con SyntaxError/IndentationError en cascada,
-    // y hay que darle a Ejecutar varias veces a mano hasta que uno
-    // sale bien"): el código del usuario viaja en texto plano (sin el
-    // checksum que protege al HAL -- ver _wrapHalForIsolation) para
-    // que el estudiante pueda VER su código tipeándose en el panel
-    // mientras corre. Envolverlo en base64+checksum como el HAL ya se
-    // probó para el bloque grande "siempre presente" y empeoró las
-    // cosas (ver el comentario "REVERTIDO" en _buildPendingHal) --
-    // más tamaño por el base64 es MÁS superficie para que la UART
-    // pierda bytes, no menos, y acá además se perdería la vista previa
-    // en vivo del código.
+    // Envío CONFIABLE del código del usuario: por PEDAZOS chicos,
+    // confirmados uno por uno, en vez de un bloque gigante verificado
+    // recién al final.
     //
-    // En vez de proteger la TRANSMISIÓN, se detecta la FALLA típica
-    // que deja (un SyntaxError/IndentationError apenas termina el
-    // paste -- la firma exacta de "el texto que llegó no compila",
-    // nunca de un bug real del usuario que recién se manifiesta en
-    // tiempo de ejecución) y se reintenta todo el paste automático,
-    // en vez de obligar al estudiante a notar el error y volver a
-    // clickear "Ejecutar" él mismo cada vez -- mismo patrón que ya usa
-    // _retryHalAfterError()/_probeWarmBoot() en este archivo. Si el
-    // error es un bug REAL del código (no transmisión), reintentar
-    // reproduce el mismo error de forma determinística -- se agota el
-    // cupo de intentos y se muestra tal cual, mismo resultado final
-    // que sin este mecanismo, solo que unos segundos más tarde.
+    // HISTORIA (2026-10-01, con un script real de NeoMatrix -- arrays de
+    // píxeles largos -- en una máquina real bajo carga normal):
+    //   1. Detectar por SyntaxError/IndentationError -- corrupción
+    //      silenciosa (código sintácticamente válido con un valor
+    //      cualquiera) pasaba desapercibida.
+    //   2. Checksum sobre el bloque ENTERO (mismo mecanismo que ya
+    //      protege el HAL, ver _wrapHalForIsolation) -- detecta
+    //      CUALQUIER pérdida con certeza, pero reintentar significa
+    //      volver a mandar los ~2-3KB enteros de nuevo, con las MISMAS
+    //      chances de corromperse otra vez. Confirmado en la práctica:
+    //      6 reintentos completos del bloque entero, los 6 fallaron --
+    //      "de nada sirve intentarlo 6 veces si en todas falla".
+    //   3. Exigir confirmación POSITIVA (USER_CODE_OK_MARKER), no solo
+    //      ausencia del marcador de corrupción -- una línea de CONTROL
+    //      corrompida (no el payload) podía dejar todo en silencio, sin
+    //      marcador de corrupción NI ejecución real, asumiendo éxito
+    //      por error.
+    //   4. ACTUAL: el mismo checksum, pero por PEDAZO chico (~200
+    //      caracteres de base64), confirmado ANTES de mandar el
+    //      siguiente. Un pedazo chico tiene mucha menos superficie para
+    //      corromperse que el bloque entero, y reintentarlo es barato
+    //      (unos pocos cientos de bytes, no 2-3KB) -- en vez de apostar
+    //      todo a que el bloque GIGANTE llegue entero de una, cada
+    //      pedazo se confirma por separado antes de seguir. Una vez
+    //      confirmados TODOS los pedazos, un último paso arma y
+    //      verifica el PAYLOAD COMPLETO (mismo checksum de siempre,
+    //      como red de seguridad final) antes de ejecutar.
     // ====================================================
 
-    // BUG REAL (reportado, 2026-10-01): con un script de líneas MUY
-    // largas (arrays de píxeles de un NeoMatrix, ~300+ caracteres por
-    // línea), 3 intentos no alcanzaron -- se corrompió las 3 veces
-    // SEGUIDAS en una máquina real bajo carga normal (no un caso de
-    // laboratorio). Subido a 6 -- mismo orden de magnitud que
-    // HAL_RETRY_MAX (8) para el HAL por componente, que sí tiene
-    // margen de sobra en la práctica.
-    static USER_CODE_PASTE_ATTEMPTS = 6;
+    static USER_CODE_CORRUPT_MARKER   = "USER_CODE_CORRUPT:";
+    static USER_CODE_OK_MARKER        = "USER_CODE_OK:";
+    static USER_CODE_CHUNK_OK_MARKER  = "UC_CHUNK_OK:";
+    static USER_CODE_CHUNK_BAD_MARKER = "UC_CHUNK_BAD:";
 
-    // Cuánto más lento (multiplicador sobre el pacing normal de
-    // _lineDelayMs) va cada intento sucesivo -- reintentar EXACTAMENTE
-    // al mismo ritmo que ya falló no le da ninguna ventaja extra a la
-    // UART emulada. 1x, 1.5x, 2x, 2.5x... -- tope en 3x para no volver
-    // insoportablemente lento un script ya largo de por sí.
-    static USER_CODE_PASTE_MARGIN_STEP = 0.5;
-    static USER_CODE_PASTE_MARGIN_MAX = 3;
+    // Paste mode ecoa el código tal cual se pega, ANTES de ejecutar nada
+    // -- si un marcador aparece completo, de corrido, en el propio texto
+    // fuente (ej. `print("USER_CODE_CORRUPT:...")` como UN SOLO string
+    // literal), el detector de corrupción lo confunde con el RESULTADO
+    // real (BUG REAL, confirmado con un test directo: una tanda
+    // perfecta, sin ninguna corrupción, agotaba igual todos los
+    // reintentos). Por eso TODOS los marcadores de acá se arman en
+    // runtime con dos strings de Python concatenados -- el texto PEGADO
+    // nunca contiene el marcador completo de corrido, solo el RESULTADO
+    // real de ejecutarlo lo arma.
+    static _splitMarker(marker) {
+        const mid = Math.ceil(marker.length / 2);
+        return [marker.slice(0, mid), marker.slice(mid)];
+    }
 
-    // BUG REAL encontrado probando el fix de arriba con un script
-    // largo de verdad (un NeoMatrix con arrays de píxeles, ~90
-    // líneas): la primera versión de esto esperaba la señal de
-    // corrupción recién DESPUÉS de que _pasteBlock() ya hubiera
-    // terminado de mandar TODO -- para un pegado corto eso alcanza
-    // (todo pasa en milisegundos), pero un pegado largo puede tardar
-    // varios segundos completos (el pacing de server.js, SEND_CHUNK_SIZE/
-    // SEND_CHUNK_DELAY_MS), y la corrupción -- confirmado con un log
-    // real -- puede pasar A MITAD de ese envío, no al final: si un
-    // byte se pierde y hace que MicroPython salga de paste mode antes
-    // de tiempo, TODO lo que _pasteBlock() siga mandando después (el
-    // resto de fullCode, todavía en su loop de líneas, ajeno a que
-    // paste mode ya terminó) se tipea suelto en el prompt normal,
-    // cascada de SyntaxError tras SyntaxError -- pero para cuando
-    // _pasteBlock() por fin resolvía, un watcher que recién arrancaba
-    // AHÍ se perdía toda esa cascada, viendo como mucho el último
-    // prompt limpio y concluyendo (mal) "undió bien". Ahora se escucha
-    // DURANTE todo el envío (desde antes del Ctrl+E hasta un margen
-    // corto después del Ctrl+D final), sin importar cuánto tarde.
-    //
-    // BUG REAL (reportado con dos corridas reales, ya SIN el falso
-    // positivo del propio eco -- ver el comentario grande de
-    // USER_CODE_CORRUPT_MARKER): el checksum SÍ detectaba la
-    // corrupción de verdad (quedaba impreso "USER_CODE_CORRUPT:...",
-    // visible en el panel), pero el reintento automático NUNCA se
-    // disparaba -- ningún "reintentando (2/6)". Causa: este margen era
-    // un _sleep() FIJO de 1.5s -- en una máquina real, bajo carga,
-    // confirmado en otras partes de esta misma sesión que una sola
-    // línea puede tardar varios segundos (hasta 60s en un pico) en
-    // ecoar/ejecutarse -- el checksum real corre DESPUÉS del Ctrl+D,
-    // así que si tarda más de 1.5s en imprimirse, el listener de
-    // onOutput/onHistory ya se había desarmado (ver el "finally" más
-    // abajo) antes de que el marcador llegara, y _pasteUserCodeWithRetry
-    // concluía (mal) "no hubo corrupción" -- el usuario SÍ veía el
-    // aviso en el panel (ese listener permanente no tiene timeout),
-    // solo que ya era tarde para que ESTE reintento se enterara.
-    // Ahora se espera (con tope, no a ciegas) un ">>>" real -- más
-    // margen en reintentos sucesivos, igual que el pacing de líneas --
-    // en vez de un sleep fijo. Para un "while True:" que nunca vuelve
-    // al prompt, esto solo significa esperar el tope completo UNA vez
-    // (el programa ya se ve corriendo mientras tanto, igual que antes).
-    static USER_CODE_PASTE_SETTLE_MS = 4000;
+    // Caracteres de base64 (no bytes crudos) por pedazo -- chico a
+    // propósito. Tunable: más chico = menos superficie de corrupción
+    // por pedazo pero más vueltas de Ctrl+E...Ctrl+D (cada una con su
+    // propio overhead fijo, ~150ms de Ctrl+C+asentamiento); más grande
+    // = menos vueltas pero más parecido al problema original.
+    static USER_CODE_CHUNK_B64_SIZE = 200;
 
-    // BUG REAL (reportado: "se demora demasiado" -- confirmado con un
-    // log real de varios minutos): este reintento (hasta
-    // USER_CODE_PASTE_ATTEMPTS intentos) no es el único nivel de
-    // reintento en juego -- cada intento puede A SU VEZ disparar el
-    // reintento YA EXISTENTE del HAL por componente
-    // (_retryHalAfterError, HAL_RETRY_MAX=8), y si la corrupción llega
-    // a crashear el firmware (QEMU hace su propio reset real --
-    // "Guru Meditation Error" + reboot, confirmado en el log, SIN que
-    // el proceso de QEMU en sí se reinicie), ESE reset borra
-    // _halRetryCounts enteros (ver _resyncHalAfterBoot) -- el contador
-    // del HAL vuelve a arrancar de cero en cada reset, así que en el
-    // peor caso los dos niveles se multiplican en vez de sumarse.
-    // Tope de tiempo real (no de intentos) como red de seguridad --
-    // sin esto, una mala racha podía estirarse varios minutos sin
-    // ningún aviso de que eventualmente se iba a rendir.
-    static USER_CODE_PASTE_TIME_BUDGET_MS = 75000;
+    // Reintentos POR PEDAZO -- mucho más baratos que reintentar el
+    // envío entero, así que se puede ser generoso.
+    static USER_CODE_CHUNK_ATTEMPTS = 4;
 
-    // Pega el código del usuario (+ HAL pendiente) con reintento
-    // automático si la tanda anterior dio señales de corrupción en
-    // tránsito -- ver el comentario grande más arriba.
-    async _pasteUserCodeWithRetry(fullCode, halLineCount) {
+    // Reintentos para el paso FINAL (armar + verificar + ejecutar) --
+    // separado de los pedazos: si este paso falla, NO hay que volver a
+    // mandar ningún pedazo (ya están confirmados y guardados en
+    // _uc_parts del lado de MicroPython), solo repetir este bloque chico.
+    static USER_CODE_FINAL_ATTEMPTS = 3;
+
+    // Tope de espera por paso (pedazo o final) -- ver la lección de
+    // USER_CODE_OK_MARKER: si no llega NINGÚN marcador (ni éxito ni
+    // corrupción/mal) dentro de este margen, se trata como fallo del
+    // paso, no como éxito por default -- silencio total (ej. una línea
+    // de control corrompida de una forma que ni imprime error ni
+    // ejecuta nada) es tan buena señal de "reintentá" como un marcador
+    // explícito de corrupción.
+    static USER_CODE_STEP_SETTLE_MS = 2500;
+
+    // Tope de tiempo TOTAL para todo el envío (todos los pedazos + el
+    // armado final) -- si algo anda mal con la conexión en general (no
+    // con un pedazo puntual), cortar con un aviso claro en vez de
+    // reintentar en silencio por minutos.
+    static USER_CODE_SEND_TIME_BUDGET_MS = 75000;
+
+    // Arma el bloque de UN pedazo del payload -- isFirst agrega el
+    // preámbulo (import + lista vacía). Mismo truco que
+    // _wrapHalForIsolation() para el contenido (base64 +
+    // _breakRepeatedPatterns + ancho fijo dentro de un string
+    // triple-comillado).
+    _buildUserCodeChunkBlock(chunkB64, index, isFirst) {
+
+        const chunkBroken = ReplPanel._breakRepeatedPatterns(chunkB64);
+        const width = ReplPanel.HAL_B64_LINE_WIDTH;
+        const chunkLines = [];
+        for (let i = 0; i < chunkBroken.length; i += width) {
+            chunkLines.push(chunkBroken.slice(i, i + width));
+        }
+        const chunkBlock = chunkLines.join("\n");
+
+        let chunkChecksum = 0;
+        for (let i = 0; i < chunkB64.length; i++) {
+            chunkChecksum = (chunkChecksum + chunkB64.charCodeAt(i)) % 65536;
+        }
+
+        const [badPart1, badPart2] = ReplPanel._splitMarker(ReplPanel.USER_CODE_CHUNK_BAD_MARKER);
+        const [okPart1, okPart2]   = ReplPanel._splitMarker(ReplPanel.USER_CODE_CHUNK_OK_MARKER);
+
+        return (
+            (isFirst ? `import ubinascii as _uc_iso\n_uc_parts = []\n` : ``) +
+            `_uc_c_raw = """` + chunkBlock + `"""\n` +
+            `_uc_c = "".join(_uc_c_raw.split())\n` +
+            `if len(_uc_c) != ${chunkB64.length} or sum(_uc_c.encode()) % 65536 != ${chunkChecksum}:\n` +
+            `    print("${badPart1}" + ("${badPart2}%d" % ${index}))\n` +
+            `else:\n` +
+            `    _uc_parts.append(_uc_c)\n` +
+            `    print("${okPart1}" + ("${okPart2}%d" % ${index}))\n`
+        );
+
+    }
+
+    // Arma el bloque FINAL: junta todos los pedazos ya confirmados,
+    // verifica el checksum del payload COMPLETO (red de seguridad
+    // final, mismo mecanismo de siempre) y recién ahí ejecuta. También
+    // devuelve el índice de la línea "exec(...)" -- _pasteBlock()
+    // oculta el eco hasta esa línea, así la salida real del programa se
+    // ve apenas arranca (sin esperar a que vuelva un prompt que un
+    // "while True:" nunca va a dar).
+    _buildUserCodeFinalBlock(expectedLen, checksum) {
+
+        const [corruptPart1, corruptPart2] = ReplPanel._splitMarker(ReplPanel.USER_CODE_CORRUPT_MARKER);
+        const [okPart1, okPart2]           = ReplPanel._splitMarker(ReplPanel.USER_CODE_OK_MARKER);
+
+        const lines = [
+            `_uc_joined = "".join(_uc_parts)`,
+            `try:`,
+            `    _uc_bytes = _uc_iso.a2b_base64(_uc_joined)`,
+            `except Exception:`,
+            `    _uc_bytes = b""`,
+            `if len(_uc_bytes) != ${expectedLen} or sum(_uc_bytes) % 65536 != ${checksum}:`,
+            `    print("${corruptPart1}" + ("${corruptPart2}len=%d sum=%d esperado_len=${expectedLen} esperado_sum=${checksum}" % (len(_uc_bytes), sum(_uc_bytes) % 65536)))`,
+            `else:`,
+            `    print("${okPart1}" + "${okPart2}")`,
+            `    exec(_uc_bytes.decode(), globals())`,
+        ];
+
+        return { block: lines.join("\n") + "\n", execLineIndex: lines.length - 1 };
+
+    }
+
+    // Manda UN paso (un pedazo, o el bloque final) y espera su
+    // confirmación -- busca okMarker/badMarker en "qemu:output" Y
+    // "qemu:history" (una reconexión a mitad de envío puede hacer
+    // llegar la respuesta por el canal de historial, no en vivo -- ver
+    // QemuBridge/"\x00HISTORY:"), y NO asume éxito si no ve NINGUNO de
+    // los dos dentro del margen -- silencio total se trata como fallo,
+    // igual que una corrupción explícita (ver USER_CODE_STEP_SETTLE_MS).
+    // Devuelve true (confirmado, sin corrupción) / false (hay que
+    // reintentar este mismo paso).
+    async _sendStepAndConfirm(block, { silent, halLineCount, okMarker, badMarker }) {
+
+        let okSeen = false;
+        let badSeen = false;
+
+        let markerSeenEarly = () => {};
+        const markerSeenPromise = new Promise((resolve) => { markerSeenEarly = resolve; });
+
+        const check = (text) => {
+            if (!text) return;
+            if (text.includes(okMarker))  { okSeen = true; markerSeenEarly(); }
+            if (text.includes(badMarker)) { badSeen = true; markerSeenEarly(); }
+        };
+        this.simulator.eventBus.on("qemu:output", check);
+        this.simulator.eventBus.on("qemu:history", check);
+
+        try {
+            await this._pasteBlock(block, halLineCount, { silent });
+            await Promise.race([
+                this._waitForNextPrompt(ReplPanel.USER_CODE_STEP_SETTLE_MS),
+                markerSeenPromise,
+            ]);
+        } finally {
+            this.simulator.eventBus.off("qemu:output", check);
+            this.simulator.eventBus.off("qemu:history", check);
+        }
+
+        return okSeen && !badSeen;
+
+    }
+
+    // Manda el código del usuario COMPLETO: por pedazos chicos
+    // confirmados uno por uno, y recién al final un armado+verificación
+    // del payload entero antes de ejecutar -- ver el comentario grande
+    // más arriba para la historia completa de por qué.
+    async _sendUserCodeChunked(userCode) {
+
+        const binaryStr = unescape(encodeURIComponent(userCode));
+        const b64 = btoa(binaryStr);
+
+        let checksum = 0;
+        for (let i = 0; i < binaryStr.length; i++) {
+            checksum = (checksum + binaryStr.charCodeAt(i)) % 65536;
+        }
+        const expectedLen = binaryStr.length;
+
+        const chunkSize = ReplPanel.USER_CODE_CHUNK_B64_SIZE;
+        const chunks = [];
+        for (let i = 0; i < b64.length; i += chunkSize) {
+            chunks.push(b64.slice(i, i + chunkSize));
+        }
+        if (chunks.length === 0) chunks.push(""); // código vacío -- igual hace falta el paso final (_uc_parts = [])
 
         const startedAt = Date.now();
 
-        for (let attempt = 1; attempt <= ReplPanel.USER_CODE_PASTE_ATTEMPTS; attempt++) {
+        const withinTimeBudget = () => {
+            if (Date.now() - startedAt <= ReplPanel.USER_CODE_SEND_TIME_BUDGET_MS) return true;
+            this.appendOutput(
+                `\n⚠️ "Ejecutar" lleva más de ${Math.round(ReplPanel.USER_CODE_SEND_TIME_BUDGET_MS / 1000)}s reintentando -- ` +
+                `algo anda mal con la conexión (no es tu código). Probá "⏹ Detener" y "▶ Simular" de nuevo.\n`,
+                "repl-error"
+            );
+            return false;
+        };
 
-            // Ver this._stopRequested en el constructor -- "⏹ Detener"
-            // corta el reintento entre tandas, no solo el presupuesto
-            // de tiempo de más abajo. Sin mensaje propio: "qemu:disconnected"
-            // (disparado por el mismo Detener) ya avisa "🔴 ESP32 desconectada".
-            if (this._stopRequested) return;
+        for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
 
-            if (Date.now() - startedAt > ReplPanel.USER_CODE_PASTE_TIME_BUDGET_MS) {
+            const isFirst = chunkIndex === 0;
+            let confirmed = false;
+
+            for (let attempt = 1; attempt <= ReplPanel.USER_CODE_CHUNK_ATTEMPTS; attempt++) {
+
+                if (this._stopRequested) return;
+                if (!withinTimeBudget()) return;
+
+                if (attempt > 1) {
+                    this.appendOutput(
+                        `\n⚠️ Posible error de transmisión -- reintentando pedazo ${chunkIndex + 1}/${chunks.length} ` +
+                        `(intento ${attempt}/${ReplPanel.USER_CODE_CHUNK_ATTEMPTS})...\n`,
+                        "repl-info"
+                    );
+                }
+
+                const block = this._sanitizeForSerial(this._buildUserCodeChunkBlock(chunks[chunkIndex], chunkIndex, isFirst));
+
+                confirmed = await this._sendStepAndConfirm(block, {
+                    silent: true,
+                    halLineCount: 0,
+                    okMarker: ReplPanel.USER_CODE_CHUNK_OK_MARKER,
+                    badMarker: ReplPanel.USER_CODE_CHUNK_BAD_MARKER,
+                });
+
+                if (confirmed) break;
+
+            }
+
+            if (!confirmed) {
                 this.appendOutput(
-                    `\n⚠️ "Ejecutar" lleva más de ${Math.round(ReplPanel.USER_CODE_PASTE_TIME_BUDGET_MS / 1000)}s reintentando -- ` +
-                    `algo anda mal con la conexión (no es tu código). Probá "⏹ Detener" y "▶ Simular" de nuevo.\n`,
+                    `\n⚠️ No se pudo mandar el código de forma confiable (el pedazo ${chunkIndex + 1}/${chunks.length} ` +
+                    `falló ${ReplPanel.USER_CODE_CHUNK_ATTEMPTS} veces seguidas) -- probá "⏹ Detener" y "▶ Simular" de nuevo.\n`,
                     "repl-error"
                 );
                 return;
             }
 
+        }
+
+        // Todos los pedazos confirmados y guardados en _uc_parts (del
+        // lado de MicroPython) -- último paso: armar el payload
+        // completo, verificarlo (red de seguridad final) y ejecutar. Si
+        // ESTE paso falla, se reintenta SOLO ESTE bloque chico -- nunca
+        // hay que volver a mandar ningún pedazo.
+        for (let attempt = 1; attempt <= ReplPanel.USER_CODE_FINAL_ATTEMPTS; attempt++) {
+
+            if (this._stopRequested) return;
+            if (!withinTimeBudget()) return;
+
             if (attempt > 1) {
                 this.appendOutput(
-                    `\n⚠️ Posible error de transmisión -- reintentando (${attempt}/${ReplPanel.USER_CODE_PASTE_ATTEMPTS})...\n`,
+                    `\n⚠️ Posible error de transmisión en el paso final -- reintentando (${attempt}/${ReplPanel.USER_CODE_FINAL_ATTEMPTS})...\n`,
                     "repl-info"
                 );
             }
 
-            // BUG REAL (reportado, confirmado con el .exe real): antes
-            // acá se buscaba SyntaxError/IndentationError en la salida
-            // -- pero una corrupción que deja el código sintácticamente
-            // válido (perder caracteres del MEDIO de una línea sin
-            // romper la gramática de Python) no produce ninguno de los
-            // dos, y pasaba completamente desapercibida. Ahora el
-            // propio código (ver _wrapUserCodeForIntegrity()) se
-            // verifica con checksum ANTES de ejecutar nada -- el único
-            // marcador que indica corrupción es USER_CODE_CORRUPT_MARKER,
-            // exacto, sin ambigüedad, sea cual sea la forma que tomó la
-            // pérdida. Un bug real del usuario (código que sí pasó el
-            // checksum pero falla al correr) nunca imprime este marcador
-            // -- se acumula un solo flag en vez de resolver apenas se ve
-            // el primero, por si la corrupción pegara más de una vez en
-            // la misma tanda.
-            // BUG REAL encontrado probando el checksum de arriba contra
-            // el .exe real: el checksum protege el CONTENIDO, pero no
-            // alcanza si se pierde un byte de CONTROL -- si el ">>> "
-            // de paste mode (o algo que MicroPython interpreta como
-            // tal) se corta antes de tiempo, el resto de fullCode
-            // (que _pasteBlock() sigue mandando igual, ajeno a que
-            // paste mode ya terminó del otro lado) se tipea SUELTO
-            // como comandos individuales -- ni siquiera llega a
-            // ejecutarse el chequeo de checksum, porque la línea
-            // "_uc_bytes = ..." nunca se completa como una unidad.
-            // Señal: un ">>> " de verdad apareciendo MIENTRAS
-            // _pasteBlock() todavía está mandando líneas (nunca
-            // debería verse hasta el Ctrl+D final) -- pero recién
-            // DESPUÉS de confirmar que el "paste mode" realmente
-            // arrancó (el Ctrl+C inicial de _pasteBlock(), para
-            // asentar un prompt limpio ANTES de entrar a paste mode,
-            // también imprime su propio ">>> " legítimo que no hay
-            // que confundir con esto).
-            let corruptionSeen = false;
-            let successSeen = false;
-            let pasteModeConfirmed = false;
-            let stillSending = true;
+            const { block, execLineIndex } = this._buildUserCodeFinalBlock(expectedLen, checksum);
 
-            // Ver USER_CODE_PASTE_SETTLE_MS -- apenas se ve CUALQUIERA
-            // de los dos marcadores, resuelve la espera de abajo de una
-            // (sin esto, incluso encontrando el marcador rápido, se
-            // esperaría igual el tope entero antes de poder reintentar).
-            let markerSeenEarly = () => {};
-            const markerSeenPromise = new Promise((resolve) => { markerSeenEarly = resolve; });
+            const confirmed = await this._sendStepAndConfirm(this._sanitizeForSerial(block), {
+                silent: false,
+                halLineCount: execLineIndex,
+                okMarker: ReplPanel.USER_CODE_OK_MARKER,
+                badMarker: ReplPanel.USER_CODE_CORRUPT_MARKER,
+            });
 
-            const onOutput = (text) => {
-                if (text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) { corruptionSeen = true; markerSeenEarly(); }
-                if (text.includes(ReplPanel.USER_CODE_OK_MARKER)) { successSeen = true; markerSeenEarly(); }
-                if (/paste mode|=== ?$/m.test(text)) pasteModeConfirmed = true;
-                if (pasteModeConfirmed && stillSending && />>> /.test(text)) { corruptionSeen = true; markerSeenEarly(); }
-            };
-            this.simulator.eventBus.on("qemu:output", onOutput);
-
-            // BUG REAL (reportado y confirmado: el marcador de
-            // corrupción SÍ se imprimía -- el checksum detectó bien
-            // que faltaban 72 bytes -- pero el reintento automático
-            // NUNCA se disparaba). Causa: si la conexión WS se corta y
-            // reconecta DURANTE este paste (algo que venimos viendo
-            // seguido en este proyecto bajo carga real -- ver
-            // QemuBridge.onMessage()/"\x00HISTORY:"), el contenido que
-            // se perdió en el momento del corte le llega al cliente
-            // RECONECTADO por el canal de historial ("qemu:history"),
-            // no como "qemu:output" en vivo -- ese canal existe
-            // justamente para mostrar el banner de arranque real
-            // aunque el cliente se haya conectado tarde. El
-            // onOutput() de arriba solo escucha "qemu:output" --
-            // cualquier corrupción que llegue por el canal de
-            // historial (incluido el propio marcador de corrupción)
-            // pasaba completamente desapercibida. Mismo chequeo,
-            // mismo flag, la otra fuente posible.
-            const onHistory = (text) => {
-                if (!text) return;
-                if (text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) { corruptionSeen = true; markerSeenEarly(); }
-                if (text.includes(ReplPanel.USER_CODE_OK_MARKER)) { successSeen = true; markerSeenEarly(); }
-            };
-            this.simulator.eventBus.on("qemu:history", onHistory);
-
-            // Ver USER_CODE_PASTE_MARGIN_STEP/_MAX arriba -- más
-            // margen en cada reintento sucesivo, no el mismo ritmo que
-            // ya falló.
-            const marginMultiplier = Math.min(
-                ReplPanel.USER_CODE_PASTE_MARGIN_MAX,
-                1 + (attempt - 1) * ReplPanel.USER_CODE_PASTE_MARGIN_STEP
-            );
-
-            try {
-
-                await this._pasteBlock(fullCode, halLineCount, { silent: false, marginMultiplier });
-                stillSending = false;
-                // Margen post Ctrl+D -- el checksum real (o un bug
-                // genuino del usuario) puede tardar en imprimirse más
-                // de lo que tardaría en una máquina sin carga (ver el
-                // comentario grande de USER_CODE_PASTE_SETTLE_MS). Se
-                // resuelve apenas aparece el próximo ">>>" real O el
-                // marcador de corrupción (lo que llegue primero,
-                // vía markerSeenPromise) -- nunca más tarde que el tope
-                // (con el mismo margen creciente que el pacing de
-                // líneas). Un "while True:" que nunca vuelve al prompt
-                // simplemente agota el tope una vez -- el programa ya
-                // se ve corriendo mientras tanto.
-                await Promise.race([
-                    this._waitForNextPrompt(Math.round(ReplPanel.USER_CODE_PASTE_SETTLE_MS * marginMultiplier)),
-                    markerSeenPromise,
-                ]);
-
-            } finally {
-
-                this.simulator.eventBus.off("qemu:output", onOutput);
-                this.simulator.eventBus.off("qemu:history", onHistory);
-
-            }
-
-            // Ver USER_CODE_OK_MARKER -- si ninguno de los dos
-            // marcadores llegó (ni corrupción ni éxito confirmado), NO
-            // se asume éxito por default: una línea de CONTROL del
-            // wrapper corrompida (no el payload del usuario, que SÍ
-            // tiene checksum) puede dejar el bloque mal formado de
-            // maneras que ni imprimen el marcador de corrupción ni
-            // llegan al exec() real -- silencio total, cero señales.
-            // Tratar ese silencio como corrupción (reintentar) es el
-            // lado seguro -- la alternativa (asumir éxito) es
-            // exactamente el bug reportado: "no responde el código que
-            // debería realizar", sin ningún aviso de que algo falló.
-            if (successSeen && !corruptionSeen) return;
-
-            if (attempt < ReplPanel.USER_CODE_PASTE_ATTEMPTS) {
-                const motivo = corruptionSeen
-                    ? "parece corrompido en tránsito"
-                    : "no confirmó ni éxito ni corrupción (silencio -- probablemente una línea de control corrompida)";
-                console.warn(`[ReplPanel] Intento ${attempt}/${ReplPanel.USER_CODE_PASTE_ATTEMPTS} de Ejecutar ${motivo} -- reintentando.`);
-            }
+            if (confirmed) return;
 
         }
 
-        console.warn(`[ReplPanel] Ejecutar siguió fallando tras ${ReplPanel.USER_CODE_PASTE_ATTEMPTS} intentos -- puede ser un error real del código, no transmisión.`);
+        this.appendOutput(
+            `\n⚠️ El paso final (verificar y correr tu código) falló ${ReplPanel.USER_CODE_FINAL_ATTEMPTS} veces seguidas -- ` +
+            `probá "⏹ Detener" y "▶ Simular" de nuevo.\n`,
+            "repl-error"
+        );
 
     }
 
@@ -2575,21 +2442,17 @@ class ReplPanel {
         this.switchTab("repl");
         this.appendOutput("\n▶ Ejecutando...\n", "repl-info");
 
-        const { fullCode, halLineCount, newlySent } = await this._assembleCode(userCode);
-
-        // Lo marcamos ya acá (optimista, antes de confirmar que QEMU
-        // terminó de procesar el paste) -- si esta tanda falla a mitad
-        // de camino, el peor caso es que algún HAL quede "marcado"
-        // sin haberse pegado del todo, y el usuario tenga que volver
-        // a intentar/perder ese componente puntual. Preferible a
-        // esperar una confirmación que este protocolo no tiene forma
-        // simple de dar.
-        newlySent.forEach(type => {
-            this._halSentToFirmware.add(type);
-            delete this._halRetryCounts[type]; // exito -- si vuelve a fallar mas adelante, cuenta de nuevo desde 0
-        });
-
         if (this.simulator.qemuBridge?.isWasmBridge) {
+
+            const { fullCode, newlySent } = await this._assembleCode(userCode);
+
+            // Lo marcamos ya acá (optimista, antes de confirmar que
+            // terminó de correr) -- mismo criterio que preloadHal().
+            newlySent.forEach(type => {
+                this._halSentToFirmware.add(type);
+                delete this._halRetryCounts[type]; // exito -- si vuelve a fallar mas adelante, cuenta de nuevo desde 0
+            });
+
             // Modo navegador: no hay pty/paste mode que proteger --
             // se manda el código entero de una sola vez (ver
             // WasmBridge.sendData()/wasmWorker.js, mp.runPython()
@@ -2626,15 +2489,21 @@ class ReplPanel {
 
             await this.simulator.qemuBridge.sendData(fullCode);
             clearTimeout(hintTimer);
+
         } else {
-            // _enqueuePaste hace que esto espere su turno si justo había
-            // una precarga de HAL (preloadHal) todavía mandándose --
-            // nunca se pisan los dos Ctrl+E entre sí. Ver
-            // _pasteUserCodeWithRetry() -- reintenta solo ante señales
-            // de corrupción en tránsito (SyntaxError/IndentationError
-            // apenas termina el paste), sin que el usuario tenga que
-            // notar el fallo y volver a clickear "Ejecutar" él mismo.
-            await this._enqueuePaste(() => this._pasteUserCodeWithRetry(fullCode, halLineCount));
+            // DOS llamadas separadas a propósito, no una sola anidada
+            // adentro de _enqueuePaste -- preloadHal() YA encola su
+            // propio _pasteBlock() internamente (ver _enqueuePaste()),
+            // así que envolver todo esto en OTRO _enqueuePaste() de
+            // afuera encadenaría la cola contra sí misma (la llamada de
+            // adentro esperaría a que la de afuera termine, y la de
+            // afuera está esperando a la de adentro -- deadlock real,
+            // encontrado al escribir esto, nunca llegó a correr así).
+            // Dos awaits seguidos alcanzan: _enqueuePaste() ya garantiza
+            // que cada uno espera su turno en orden, sin que se pisen
+            // los Ctrl+E entre sí.
+            await this.preloadHal();
+            await this._enqueuePaste(() => this._sendUserCodeChunked(userCode));
         }
 
         this._running = false;
