@@ -101,11 +101,14 @@ class ReplPanel {
         // Se pone en true la primera vez que el firmware conectado
         // contesta "R\x00" (raw-paste NO soportado, ver
         // _sendUserCodeViaRawPaste()/server.js runRawPasteExec()) --
-        // así el resto de ESTA conexión salta directo al envío por
-        // pedazos de siempre, sin perder tiempo repitiendo una
-        // negociación que ya sabemos que va a fallar. Se resetea en
-        // cada conexión nueva (ver "qemu:connected" en bindBusEvents)
-        // -- un firmware distinto (tras reflashear) podría soportarlo.
+        // así el resto de ESTA SESIÓN de la app salta directo al
+        // envío por pedazos de siempre, sin perder tiempo repitiendo
+        // una negociación que ya sabemos que va a fallar. Ya NO se
+        // resetea en cada reconexión (ver "qemu:connected" en
+        // bindBusEvents) -- dentro de una misma sesión el firmware no
+        // cambia entre reconexiones, y reintentar la negociación cada
+        // vez solo sumaba ~8s perdidos por cada "Ejecutar". Solo se
+        // resetea acá, en el constructor (recarga de página completa).
         this._rawPasteUnsupported = false;
 
         // BUG REAL, grave, encontrado en vivo (confirmado con un log
@@ -3261,12 +3264,23 @@ class ReplPanel {
 
             this._lastGpioLogged = {};
 
-            // Ver el comentario grande en el constructor -- una
-            // conexión nueva (reflasheo, reinicio del bridge) podría
-            // tener un firmware distinto, así que vale la pena volver
-            // a intentar raw-paste en vez de asumir que sigue sin
-            // soportarlo para siempre.
-            this._rawPasteUnsupported = false;
+            // BUG REAL (reportado: "si ya sabemos que no funciona el
+            // raw-paste, para qué lo seguimos probando"): esto ANTES
+            // reseteaba this._rawPasteUnsupported acá, con la idea de
+            // "una conexión nueva podría tener un firmware distinto".
+            // En la práctica, dentro de una misma sesión de la app,
+            // el firmware NUNCA cambia entre reconexiones (son el
+            // mismo QEMU/.exe de siempre reconectando el WebSocket,
+            // no un reflasheo real) -- y las reconexiones son bastante
+            // frecuentes en una máquina con mucha corrupción. Resetear
+            // esto en cada una hacía que CADA "Ejecutar" pagara de
+            // nuevo los ~8s de negociación de raw-paste para
+            // descubrir, otra vez, que este firmware no lo soporta --
+            // puro desperdicio para scripts cortos, donde esos 8s son
+            // la mayor parte del tiempo total. Ya NO se resetea acá --
+            // solo en el constructor (una recarga de página SÍ cuenta
+            // como "quizás cambió algo", vale la pena probar de nuevo
+            // una sola vez ahí).
 
             // Modo navegador (WasmBridge, ver plan "PitSimulator en
             // GitHub Pages"): nada de lo de abajo aplica -- no hay
