@@ -71,10 +71,11 @@
 
         <div class="toolbar-buttons">
             <button id="btnCanvasTheme" class="btn-canvas-theme" title="Cambiar a fondo oscuro (noche)">🌙</button>
-            <!-- Reactivado (2026-10) para poder probar el modo navegador
-                 (WASM) en vivo sin tocar el hash de la URL a mano -- ver
-                 Toolbar.bindWasmModeToggle(), que ya tenía todo listo. -->
-            <button id="btnWasmModeToggle" class="btn-canvas-theme" title="Cambiar entre modo escritorio y modo navegador (experimental)">🌐</button>
+            <!-- Reactivado (2026-10): modo navegador (WASM) ahora es el
+                 default (ver js/app.js) -- este botón deja probar el
+                 modo QEMU explícitamente sin tocar el hash a mano. Ver
+                 Toolbar.bindWasmModeToggle(). -->
+            <button id="btnWasmModeToggle" class="btn-canvas-theme" title="Modo navegador activo (default) -- clic para probar el modo QEMU">🌐</button>
             <button id="btnSimToggle" class="btn-sim-toggle">▶ Simular</button>
         </div>
 

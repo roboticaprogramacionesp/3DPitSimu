@@ -22,12 +22,14 @@ class Toolbar {
     }
 
     //------------------------------------------------------
-    // Botón 🌐 -- alternar entre modo escritorio (QEMU) y modo
-    // navegador (WasmBridge, experimental -- ver plan "PitSimulator
-    // en GitHub Pages"). Recarga la página a propósito: los dos
-    // bridges se deciden UNA sola vez en js/app.js antes de crear
-    // nada, nunca se reemplazan en caliente (ver el comentario
-    // grande ahí sobre por qué).
+    // Botón 🌐 -- alternar entre modo navegador (WasmBridge, AHORA EL
+    // DEFAULT -- ver el comentario grande en js/app.js) y modo QEMU
+    // (QemuBridge, para quien lo necesite explícitamente -- no se
+    // borró nada de ese camino, solo se dejó de incorporar por
+    // default). Recarga la página a propósito: los dos bridges se
+    // deciden UNA sola vez en js/app.js antes de crear nada, nunca se
+    // reemplazan en caliente (ver el comentario grande ahí sobre por
+    // qué).
     //------------------------------------------------------
 
     bindWasmModeToggle() {
@@ -35,15 +37,15 @@ class Toolbar {
         const btn = document.getElementById("btnWasmModeToggle");
         if (!btn) return;
 
-        const isWasmMode = location.hash === "#modo=wasm";
-        btn.classList.toggle("active", isWasmMode);
-        btn.title = isWasmMode
-            ? "Modo navegador activo -- clic para volver al modo escritorio"
-            : "Modo escritorio activo -- clic para probar el modo navegador (experimental)";
+        const isQemuMode = location.hash === "#modo=qemu";
+        btn.classList.toggle("active", isQemuMode);
+        btn.title = isQemuMode
+            ? "Modo QEMU activo -- clic para volver al modo navegador (default)"
+            : "Modo navegador activo (default) -- clic para probar el modo QEMU";
 
         btn.addEventListener("click", () => {
 
-            location.hash = isWasmMode ? "" : "modo=wasm";
+            location.hash = isQemuMode ? "" : "modo=qemu";
             location.reload();
 
         });

@@ -155,32 +155,48 @@ def main():
 
     httpd, port = start_static_server(BASE_DIR)
 
-    # Estado mutable compartido con el watcher de abajo -- un dict en
-    # vez de una variable local de main() porque el hilo del watcher
-    # necesita LEER y ACTUALIZAR cuál es el proceso "actual" del
-    # bridge, y una closure sobre una variable local de otra función
-    # no se puede reasignar así nomás desde adentro (nonlocal andaría,
-    # pero un dict es más simple de pasar entre las funciones de acá
-    # abajo sin duplicar la lógica de arranque/parada en cada una).
-    bridge = {"proc": start_bridge(), "shutting_down": False}
+    # El modo navegador (WASM, ver js/app.js) es AHORA el default --
+    # no necesita QEMU/GDB/Node para nada, corre entero dentro del
+    # Worker del propio navegador. Lanzar el bridge de todas formas,
+    # SIEMPRE, en cada apertura de la app, era puro desperdicio (varios
+    # segundos de arranque de QEMU+GDB+Node, más RAM/CPU en uso todo el
+    # rato) para un proceso que la mayoría de las sesiones ya ni va a
+    # tocar. No se borra nada de ese camino (server.js/QemuBridge.js
+    # siguen intactos para quien entre con "#modo=qemu") -- esto solo
+    # deja de INCORPORARLO por default. PIT_USE_QEMU_BRIDGE=1 lo
+    # vuelve a arrancar igual que antes, para quien lo necesite.
+    use_qemu_bridge = os.environ.get("PIT_USE_QEMU_BRIDGE") == "1"
 
-    # BUG REAL que esto resuelve: si el bridge (QEMU/GDB) se cuelga o
-    # crashea de una forma que server.js no nota solo (server.js sí
-    # hace process.exit() cuando QEMU termina, ver el "proc.on(exit)"
-    # de server.js -- lo que faltaba era quién relanza TODO el proceso
-    # de Node después de eso), antes la única forma de recuperarse era
-    # cerrar la app entera y volver a abrirla. Este watcher nota que
-    # bridge_proc terminó (por el motivo que sea) y relanza todo de
-    # nuevo (stop_bridge por las dudas -- limpia cualquier GDB/QEMU
-    # huérfano que haya quedado -- y start_bridge de cero). El usuario
-    # no tiene que hacer nada -- el frontend (QemuBridge.js) ya sabe
-    # reconectar solo apenas el WS vuelve a estar arriba. La forma
-    # "normal" de destrabar un REPL colgado sigue siendo "🔄 Recargar"
-    # del menú de proyecto (recarga la página, ver Toolbar.js) -- este
-    # watcher es una red de seguridad aparte, para cuando el problema
-    # es más profundo (el proceso de QEMU/Node en sí murió). Implementación
-    # compartida con desktop/bridge_only.py, ver bridge_core.watch_bridge().
-    threading.Thread(target=watch_bridge, args=(bridge,), daemon=True).start()
+    bridge = None
+    if use_qemu_bridge:
+
+        # Estado mutable compartido con el watcher de abajo -- un dict
+        # en vez de una variable local de main() porque el hilo del
+        # watcher necesita LEER y ACTUALIZAR cuál es el proceso
+        # "actual" del bridge, y una closure sobre una variable local
+        # de otra función no se puede reasignar así nomás desde adentro
+        # (nonlocal andaría, pero un dict es más simple de pasar entre
+        # las funciones de acá abajo sin duplicar la lógica de
+        # arranque/parada en cada una).
+        bridge = {"proc": start_bridge(), "shutting_down": False}
+
+        # BUG REAL que esto resuelve: si el bridge (QEMU/GDB) se cuelga o
+        # crashea de una forma que server.js no nota solo (server.js sí
+        # hace process.exit() cuando QEMU termina, ver el "proc.on(exit)"
+        # de server.js -- lo que faltaba era quién relanza TODO el proceso
+        # de Node después de eso), antes la única forma de recuperarse era
+        # cerrar la app entera y volver a abrirla. Este watcher nota que
+        # bridge_proc terminó (por el motivo que sea) y relanza todo de
+        # nuevo (stop_bridge por las dudas -- limpia cualquier GDB/QEMU
+        # huérfano que haya quedado -- y start_bridge de cero). El usuario
+        # no tiene que hacer nada -- el frontend (QemuBridge.js) ya sabe
+        # reconectar solo apenas el WS vuelve a estar arriba. La forma
+        # "normal" de destrabar un REPL colgado sigue siendo "🔄 Recargar"
+        # del menú de proyecto (recarga la página, ver Toolbar.js) -- este
+        # watcher es una red de seguridad aparte, para cuando el problema
+        # es más profundo (el proceso de QEMU/Node en sí murió). Implementación
+        # compartida con desktop/bridge_only.py, ver bridge_core.watch_bridge().
+        threading.Thread(target=watch_bridge, args=(bridge,), daemon=True).start()
 
     _log("[desktop] Creando ventana...")
     window = webview.create_window(
@@ -202,6 +218,8 @@ def main():
     )
 
     def on_closing():
+        if not bridge:
+            return
         _log("[desktop] Cerrando -- deteniendo el bridge QEMU...")
         # Avisarle al watcher ANTES de matar el proceso -- si no, hay
         # una ventana real (hasta 2s, el intervalo de polling) donde
