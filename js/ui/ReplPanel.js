@@ -1817,8 +1817,37 @@ class ReplPanel {
 
         }
 
-        console.warn(`[ReplPanel] El sondeo de arranque no respondió en ${ReplPanel.PROBE_ATTEMPTS} intentos -- asumiendo boot frío.`);
-        return false;
+        // BUG REAL, el más caro de toda esta saga (reportado otra vez
+        // hoy, con un log real: 2+ MINUTOS antes de llegar siquiera a
+        // mandar el código del usuario): después de agotar los
+        // reintentos de arriba, esto asumía "boot frío" -- y un boot
+        // "frío" dispara el repasteo COMPLETO de los 4 módulos
+        // siempre presentes (_base/_i2c_bus/_adc_bus/_uart_bus,
+        // CIENTOS de líneas) por paste mode, sin ningún checksum (ver
+        // "REVERTIDO" en _buildPendingHal -- envolverlos con checksum
+        // ya se probó y empeoró las cosas, por el tamaño). Ese
+        // repasteo gigante, sin protección, es EXACTAMENTE la cascada
+        // de IndentationError/SyntaxError que se ve una y otra vez en
+        // una máquina con mucha corrupción -- mucha más superficie
+        // para fallar que la sonda misma que la disparó.
+        //
+        // Pero este proyecto SIEMPRE compila su propio firmware con
+        // esos 4 módulos CONGELADOS (ver firmware/frozen_hal/README.md
+        // -- boot.py los importa incondicionalmente en CUALQUIER
+        // boot, frío o tibio, sin que haga falta pastear nada). Si la
+        // sonda no pudo confirmar nada (ni "sí" ni "no" -- silencio
+        // total, la misma corrupción puntual de siempre), la razón
+        // MÁS PROBABLE, por lejos, es que la sonda en sí se perdió en
+        // tránsito, NO que este firmware particular sea uno viejo sin
+        // el freeze. Asumir "tibio" (no pastear nada) es el default
+        // seguro: si por algún motivo real el firmware NO los tiene
+        // congelados, el código del usuario va a fallar con un
+        // NameError claro y diagnosticable (ej. "machine.Pin" no
+        // definido) -- mucho mejor que una cascada de minutos
+        // reintentando un repasteo gigante sin checksum que la
+        // mayoría de las veces ni hacía falta.
+        console.warn(`[ReplPanel] El sondeo de arranque no respondió en ${ReplPanel.PROBE_ATTEMPTS} intentos -- asumiendo "tibio" (el HAL base de este proyecto siempre viaja congelado en el firmware, no hace falta pastearlo de nuevo).`);
+        return true;
 
     }
 

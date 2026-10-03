@@ -90,15 +90,30 @@ test('_probeWarmBoot reintenta si un intento se pierde (corrupción transitoria)
 
 });
 
-test('_probeWarmBoot asume arranque frío sin colgarse si TODOS los intentos se pierden', async () => {
+test('_probeWarmBoot asume "tibio" (no "frío") sin colgarse si TODOS los intentos se pierden -- este proyecto siempre congela el HAL base', async () => {
 
+    // BUG REAL, el más caro de toda esta saga (confirmado con un log
+    // real: 2+ minutos antes de llegar a mandar el código del usuario):
+    // asumir "frío" acá disparaba el repasteo COMPLETO de los 4
+    // módulos siempre presentes (sin checksum -- ver "REVERTIDO" en
+    // _buildPendingHal) por paste mode, cientos de líneas sin ninguna
+    // protección, EXACTAMENTE la cascada de corrupción que se venía
+    // viendo. Este proyecto SIEMPRE compila su propio firmware con
+    // esos 4 módulos ya congelados (ver firmware/frozen_hal/README.md)
+    // -- si la sonda no pudo confirmar nada (silencio total), lo más
+    // probable es que la sonda misma se haya perdido en tránsito, no
+    // que el firmware sea uno viejo sin el freeze. "Tibio" (no
+    // pastear nada) es el default seguro: si de verdad hiciera falta,
+    // el código del usuario falla con un NameError claro en vez de
+    // una cascada de minutos reintentando un repasteo que la mayoría
+    // de las veces ni hacía falta.
     const ReplPanel = loadReplPanel();
     let sendCount = 0;
     const ctx = makeCtx(ReplPanel, () => { sendCount++; });
 
     const result = await ctx._probeWarmBoot();
 
-    assert.equal(result, false);
+    assert.equal(result, true);
     assert.equal(sendCount, ReplPanel.PROBE_ATTEMPTS, 'debería agotar exactamente PROBE_ATTEMPTS intentos, nunca más ni menos');
 
 });
