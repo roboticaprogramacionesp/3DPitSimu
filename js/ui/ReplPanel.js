@@ -108,6 +108,26 @@ class ReplPanel {
         // -- un firmware distinto (tras reflashear) podría soportarlo.
         this._rawPasteUnsupported = false;
 
+        // BUG REAL, grave, encontrado en vivo (confirmado con un log
+        // real: el HAL base se mandaba DOS VECES seguidas, cada una
+        // compitiendo con la otra por el mismo canal): el primer
+        // ">>>" que imprime MicroPython -- el del banner de arranque,
+        // mucho ANTES de que _resyncHalAfterBoot() llegue a hacer
+        // nada -- disparaba _onReplReady() de una (ver el chequeo
+        // genérico de ">>>" en el listener de "qemu:output"),
+        // habilitando "▶ Ejecutar" mientras el resync inicial
+        // (sondeo + HAL pendiente) todavía estaba en curso. Si el
+        // usuario (o un test automatizado) clickeaba Ejecutar en esa
+        // ventana, runEditorCode() disparaba su PROPIO preloadHal()
+        // en PARALELO con el que ya estaba corriendo desde
+        // "qemu:connected" -- dos intentos de mandar el MISMO HAL
+        // base, pisándose la cola el uno al otro, duplicando el
+        // trabajo y la superficie de corrupción justo en el peor
+        // momento (una conexión recién asentándose). Esta bandera
+        // bloquea ese chequeo genérico mientras el resync inicial de
+        // "qemu:connected" está en curso -- ver ese handler más abajo.
+        this._awaitingInitialResync = false;
+
         // Actividad de pines (📌 GPIOxx → LOW/HIGH): con un teclado
         // matricial (o cualquier cosa que escanee GPIOs seguido) esto
         // puede inundar el panel con MUCHO ruido -- get_key() revisa
@@ -3185,7 +3205,7 @@ class ReplPanel {
             // respondió el print() de _probeWarmBoot() -- cualquiera
             // de los dos casos significa que el intérprete YA puede
             // recibir comandos de verdad.
-            if (!this._replReady && out.includes(">>>")) {
+            if (!this._replReady && !this._awaitingInitialResync && out.includes(">>>")) {
                 this._onReplReady();
             }
 
@@ -3300,6 +3320,14 @@ class ReplPanel {
             const runBtn = document.getElementById("replBtnRun");
             if (runBtn) runBtn.disabled = true;
 
+            // Ver el comentario grande de this._awaitingInitialResync
+            // en el constructor -- bloquea el chequeo genérico de
+            // ">>>" (que si no, dispara _onReplReady() con el primer
+            // prompt del banner de arranque, MUCHO antes de que el
+            // resync de más abajo termine) hasta que ese resync
+            // inicial termine de verdad.
+            this._awaitingInitialResync = true;
+
             // BUG REAL (reportado: "al ejecutar el código se carga
             // muy rápido, no se colocan bien las letras", con
             // repasteos completos de HAL pese a que el firmware ya lo
@@ -3337,6 +3365,16 @@ class ReplPanel {
             // después decide qué repastear, en vez de asumir "conexión
             // nueva = arrancar de cero" a ciegas.
             await this._resyncHalAfterBoot();
+
+            // Recién ACÁ el resync inicial terminó de verdad -- ver
+            // this._awaitingInitialResync en el constructor. Si algún
+            // ">>>" ya pasó mientras estaba bloqueado (lo normal: el
+            // propio resync genera varios), este es el que
+            // efectivamente habilita "Ejecutar" -- _onReplReady() ya
+            // es un no-op si por algún motivo el chequeo genérico de
+            // ">>>" alcanzó a dispararse después de este punto.
+            this._awaitingInitialResync = false;
+            if (!this._replReady) this._onReplReady();
 
             // Re-enviar estado de componentes tipo RC522 (tarjeta
             // "Hold" prendida desde un proyecto recién cargado, o
