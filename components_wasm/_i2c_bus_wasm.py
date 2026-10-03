@@ -37,11 +37,52 @@ def register_i2c_device(address, on_write=None, on_read=None, on_read_mem=None, 
     }
 
 
+def _gpio_num(pin_obj):
+    # Mismo criterio que _i2c_bus.hal.py (_gpio_num) -- acá el único
+    # atributo real posible es "_pin_num" (el que usa la Pin de
+    # _base_wasm.py), pero se revisa la misma lista completa por si
+    # algún día conviene aceptar un objeto Pin de otro origen.
+    if pin_obj is None:
+        return None
+    if isinstance(pin_obj, int):
+        return pin_obj
+    for attr in ("_pin_num", "id", "_id", "pin", "_pin", "num", "_num", "gpio", "_gpio"):
+        val = getattr(pin_obj, attr, None)
+        if isinstance(val, int):
+            return val
+    try:
+        return int(pin_obj)
+    except Exception:
+        return None
+
+
+_i2c_pins_declared = False
+
+
+def _declare_i2c_pins(kwargs):
+    # Mismo protocolo "PININFO:i2c:sda=N,scl=N" que _i2c_bus.hal.py --
+    # SIN esto, SignalEngine.isWiredToDeclaredPins() nunca recibe
+    # nada para la key "i2c" y cae siempre al respaldo genérico
+    # (isComponentPowered, "hay algún cable") en vez de validar el
+    # pin EXACTO que declaró el firmware -- funciona igual, pero la
+    # validación de cableado queda más floja que en QEMU para
+    # cualquier sensor I2C en modo navegador.
+    global _i2c_pins_declared
+    if _i2c_pins_declared:
+        return
+    sda_num = _gpio_num(kwargs.get("sda"))
+    scl_num = _gpio_num(kwargs.get("scl"))
+    if sda_num is not None and scl_num is not None:
+        _i2c_pins_declared = True
+        sys.stdout.write("PININFO:i2c:sda=%d,scl=%d\n" % (sda_num, scl_num))
+
+
 class I2C:
 
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
+        _declare_i2c_pins(kwargs)
 
     def start(self):
         pass
