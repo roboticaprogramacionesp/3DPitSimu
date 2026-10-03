@@ -236,6 +236,25 @@ class WasmBridge {
             return true;
         }
 
+        if (line.startsWith("NEOR:")) {
+            // Formato: NEOR:<n>:<RGB888 por pixel en hex, 6 hex chars cada
+            // uno> -- mismo protocolo y mismo método de render que ya usa
+            // QemuBridge.js (ver su propio comentario junto a "NEOR:") al
+            // recibir esto de neopixel_ring.hal.py. Acá lo manda
+            // _neopixel_wasm.py, idéntico salvo que corre en el Worker en
+            // vez de en QEMU -- SignalEngine.applyNeopixelRingFrame() no
+            // sabe ni le importa de dónde vino la línea.
+            const parts = line.split(":");
+            if (parts.length >= 3) {
+                const n = parseInt(parts[1], 10);
+                if (!Number.isNaN(n)) {
+                    const hex = parts.slice(2).join(":");
+                    this.simulator.signalEngine.applyNeopixelRingFrame(hex, n);
+                }
+            }
+            return true;
+        }
+
         if (line.startsWith("I2CW:")) {
             // Formato: I2CW:<addr>:<byte> -- ver _i2c_bus_wasm.py.
             const parts = line.split(":");
