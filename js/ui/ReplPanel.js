@@ -2962,9 +2962,22 @@ class ReplPanel {
             // real), así que sin este aviso "▶ Ejecutando..." se ve
             // igual que un cuelgue real. Con timeout para no
             // spamear scripts cortos que ya terminan solos.
+            //
+            // BUG REAL de redacción (reportado: un script con un FOR
+            // de pocas vueltas + sleep(), sin ningún "while" en todo
+            // el código, mostraba "si tu código tiene un bucle (while
+            // True:)..." -- el timer de acá es puramente POR TIEMPO
+            // transcurrido (2.5s), nunca mira el código fuente para
+            // ver si de verdad hay un "while" -- cualquier script que
+            // tarde más que eso lo dispara igual, aunque sea un FOR
+            // finito que SÍ va a terminar solo. El mensaje anterior
+            // afirmaba algo que no estaba verificando, confundiendo al
+            // usuario sobre si su script estaba realmente colgado.
+            // Generalizado para no mentir sobre la causa.
             const hintTimer = setTimeout(() => {
                 this.appendOutput(
-                    "\n⏳ Si tu código tiene un bucle (while True:), esto no va a terminar solo -- hacé clic en ■ Interrumpir para cortarlo (se pierden las variables).\n",
+                    "\n⏳ Tu código está tardando más de un par de segundos -- si tiene un bucle largo o un \"while True:\", " +
+                    "esto puede no terminar solo. Si necesitás cortarlo, hacé clic en ■ Interrumpir (se pierden las variables).\n",
                     "repl-info"
                 );
             }, 2500);
