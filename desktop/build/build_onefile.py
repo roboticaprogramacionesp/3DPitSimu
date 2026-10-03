@@ -33,7 +33,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 STAGING_DIR = REPO_ROOT / "build" / "_onefile_server_staging"
 
-FRONTEND_ITEMS = ["index.html", "3DPit.ico", "css", "js", "components", "assets", "lib"]
+FRONTEND_ITEMS = ["index.html", "3DPit.ico", "css", "js", "components", "components_wasm", "assets", "lib"]
 
 # Igual que _ignore_old_binaries de prepare_dist.py, pero ademas deja
 # afuera ESP32_GENERIC.bin (build intermedio pre-merge, server.js

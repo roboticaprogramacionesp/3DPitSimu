@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DIST_DIR = REPO_ROOT / "dist" / "3DPitSimu"
 VENDOR_SRC = REPO_ROOT / "desktop" / "vendor"
 
-FRONTEND_ITEMS = ["index.html", "3DPit.ico", "css", "js", "components", "assets", "lib"]
+FRONTEND_ITEMS = ["index.html", "3DPit.ico", "css", "js", "components", "components_wasm", "assets", "lib"]
 
 
 def _ignore_old_binaries(dirpath, names):
