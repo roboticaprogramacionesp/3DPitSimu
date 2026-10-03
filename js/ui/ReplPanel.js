@@ -1591,12 +1591,33 @@ class ReplPanel {
 
             // Interrumpe lo que estuviera corriendo antes y da un margen
             // para que MicroPython vuelva al prompt ">>>" antes del Ctrl+E.
-            // qemuBridge.interrupt() (no "qemu:send" -> _sendImmediate,
-            // que le agrega "\r\n" y le hace perder el bypass rápido de
-            // server.js para Ctrl+C/D -- ver el comentario grande en
-            // _probeWarmBoot()) para que esto corte YA lo que sea que
-            // esté trabado, sin quedar haciendo fila detrás de nada.
-            this.simulator.qemuBridge?.interrupt();
+            //
+            // BUG REAL, grave (reportado en vivo: "ni el LED más simple
+            // funciona ya", con tracebacks de KeyboardInterrupt cayendo
+            // A MITAD de un reboot de boot.py/_pit_base.py/machine.py, y
+            // líneas del bloque partidas a la mitad con un ">>>" de la
+            // nada en el medio): este Ctrl+C ANTES usaba
+            // qemuBridge.interrupt() -- el bypass RÁPIDO de server.js
+            // (un solo byte 0x03/0x04 que salta la cola throttled
+            // entera, ver ws.on("message") ahí) -- a propósito, para no
+            // quedar haciendo fila detrás de un posible "while True"
+            // trabado. Pero en los reintentos de _sendUserCodeChunked
+            // (varios _pasteBlock() seguidos, uno por intento), ese
+            // bypass salta por encima de lo que TODAVÍA está drenando
+            // de nuestro PROPIO intento anterior (que no estaba
+            // trabado, solo terminando de mandarse) -- el Ctrl+C
+            // adelantado corta ese drenaje a la mitad, y lo que queda
+            // sin drenar se mezcla con el intento nuevo que arranca
+            // acá. Usar "qemu:send" (como cualquier línea normal, por
+            // _sendImmediate -- que le agrega "\r\n" y SÍ cae en la
+            // misma cola lenta de siempre, nunca la salta) hace que
+            // este Ctrl+C espere su turno detrás de lo que de verdad
+            // falte drenar, en vez de atravesarlo. La probe de arranque
+            // (_probeWarmBootOnce) y el botón "■ Interrumpir" siguen
+            // usando el bypass real -- ahí sí hace falta cortar YA un
+            // "while True" genuinamente en curso, no un paste nuestro
+            // recién terminado.
+            this.simulator.eventBus.emit("qemu:send", "\x03");
             await this._sleep(150);
 
             this._suppressEcho = true;
