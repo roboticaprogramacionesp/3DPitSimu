@@ -2054,6 +2054,28 @@ class ReplPanel {
     // abortó a mitad de camino) reintenta el envío COMPLETO -- sigue
     // siendo barato porque raw-paste nunca tuvo que partirlo en
     // pedazos.
+    // Motivos de fallo durante la NEGOCIACIÓN (antes de que un solo
+    // byte de datos llegue a viajar) -- reintentar el envío COMPLETO
+    // ante estos no tiene sentido: si Ctrl+A no hizo entrar a raw
+    // REPL la primera vez, no lo va a hacer la segunda. Confirmado en
+    // vivo contra el firmware real de este proyecto: "no_raw_repl" en
+    // una conexión totalmente limpia (sin ninguna corrupción de por
+    // medio) -- este firmware puntual (compilado a medida para la
+    // integración con el puente GDB/GPIO) no responde al Ctrl+A
+    // estándar de MicroPython. Se trata igual que la señal explícita
+    // "raw_paste_unsupported" -- cae al respaldo DE UNA, sin gastar
+    // los 3 intentos completos (serían ~24s perdidos antes de llegar
+    // al mismo resultado). Reservado para DESPUÉS de la negociación
+    // (datos ya en vuelo, algo salió mal a mitad de camino):
+    // "device_aborted_or_timeout"/"no_eot_ack" -- esos SÍ vale la pena
+    // reintentar, porque ya sabemos que raw-paste funciona en esta
+    // conexión.
+    static RAW_PASTE_NEGOTIATION_FAILURES = new Set([
+        "no_process", "not_connected", "no_result",
+        "no_raw_repl", "no_response", "raw_paste_unsupported",
+        "unexpected_header", "no_window", "bad_window",
+    ]);
+
     async _sendUserCodeViaRawPaste(userCode) {
 
         if (this._rawPasteUnsupported) {
@@ -2110,7 +2132,7 @@ class ReplPanel {
                     this.simulator.eventBus.off("qemu:history", check);
                 }
 
-                if (result.reason === "raw_paste_unsupported") {
+                if (ReplPanel.RAW_PASTE_NEGOTIATION_FAILURES.has(result.reason)) {
                     fellBackUnsupported = true;
                     this._rawPasteUnsupported = true;
                     break;

@@ -166,6 +166,28 @@ test('_sendRawPasteExec devuelve {ok:false, reason:"no_result"} si nunca llega n
 
 });
 
+test('_sendUserCodeViaRawPaste cae al respaldo DE UNA ante CUALQUIER fallo de negociación (no solo "raw_paste_unsupported")', async () => {
+
+    // BUG REAL encontrado probando esto contra el firmware real de
+    // este proyecto, en una conexión totalmente limpia (sin ninguna
+    // corrupción de por medio): Ctrl+A nunca hizo entrar a raw REPL
+    // -- "no_raw_repl", no la señal explícita "R\x00". Reintentar el
+    // envío completo 3 veces ante esto es plata perdida (~24s) si ya
+    // sabemos que este firmware puntual no lo soporta -- se trata
+    // igual que la señal explícita.
+    const ReplPanel = loadReplPanel();
+    const ctx = makeCtx(ReplPanel, { rawPasteResults: [{ result: { ok: false, reason: 'no_raw_repl' } }] });
+    let chunkedCalls = 0;
+    ctx._sendUserCodeChunked = async () => { chunkedCalls++; };
+
+    await ctx._sendUserCodeViaRawPaste('print("hola")');
+
+    assert.equal(ctx.simulator.qemuBridge.sendRawPasteRequest.callCount(), 1, 'no debería reintentar un fallo de negociación');
+    assert.equal(chunkedCalls, 1, 'debería haber caído al respaldo de pedazos');
+    assert.equal(ctx._rawPasteUnsupported, true, 'debería recordar que este firmware no soporta raw-paste');
+
+});
+
 test('_sendUserCodeViaRawPaste no cae al respaldo si raw-paste confirma éxito de punta a punta', async () => {
 
     const ReplPanel = loadReplPanel();
