@@ -1,0 +1,70 @@
+{
+  "version": "1.0",
+  "timestamp": 1791100000000,
+  "components": [
+    {
+      "id": "esp32_wroom_matrix01",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 300,
+      "y": 140,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "neopixel_matrix_matrix01",
+      "type": "neopixel_matrix",
+      "name": "NeoPixel Matrix",
+      "x": 640,
+      "y": 100,
+      "width": 208,
+      "height": 208,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "cols": 8,
+        "rows": 8,
+        "shape": "square"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_matrix01_gnd",
+      "from": { "componentId": "neopixel_matrix_matrix01", "pinId": "gnd" },
+      "to": { "componentId": "esp32_wroom_matrix01", "pinId": "gnd_0" },
+      "points": [],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_matrix01_din",
+      "from": { "componentId": "neopixel_matrix_matrix01", "pinId": "din" },
+      "to": { "componentId": "esp32_wroom_matrix01", "pinId": "io12" },
+      "points": [],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_matrix01_vcc",
+      "from": { "componentId": "neopixel_matrix_matrix01", "pinId": "vcc" },
+      "to": { "componentId": "esp32_wroom_matrix01", "pinId": "3v3" },
+      "points": [],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}
