@@ -255,6 +255,159 @@ class WasmBridge {
             return true;
         }
 
+        if (line.startsWith("SERVOOUT:")) {
+            // Formato: SERVOOUT:<gpio>:<angulo> -- ver QemuBridge.js
+            // (sg90.hal.py al llamar servo.duty()/duty_u16()).
+            const parts = line.split(":");
+            if (parts.length >= 3) {
+                const gpio = parseInt(parts[1], 10);
+                const angle = parseFloat(parts[2]);
+                if (!isNaN(gpio) && !isNaN(angle)) {
+                    this.simulator.signalEngine.applyServoAngleFromFirmware(gpio, angle);
+                }
+            }
+            return true;
+        }
+
+        if (line.startsWith("OLED:")) {
+            // Formato: OLED:<ancho>x<alto>:<framebuffer en hex> -- mismo
+            // protocolo que QemuBridge.js (ver su propio comentario junto
+            // a "OLED:"), lo manda components/oled/oled.hal.py tal cual,
+            // corra en QEMU o en este Worker.
+            const parts = line.split(":");
+            if (parts.length >= 3) {
+                const dims = parts[1].match(/^(\d+)x(\d+)$/);
+                if (dims) {
+                    const width  = parseInt(dims[1], 10);
+                    const height = parseInt(dims[2], 10);
+                    const hex    = parts.slice(2).join(":");
+                    this.simulator.signalEngine.applyOledFramebuffer(hex, width, height);
+                }
+            }
+            return true;
+        }
+
+        if (line.startsWith("OLEDC:")) {
+            // Formato: OLEDC:<contraste 0-255> -- ver QemuBridge.js.
+            const value = parseInt(line.slice("OLEDC:".length), 10);
+            if (!isNaN(value)) {
+                this.simulator.signalEngine.applyOledContrast(value);
+            }
+            return true;
+        }
+
+        if (line.startsWith("LCD:")) {
+            // Formato: LCD:<cols>x<rows>:<backlight>:<display_on>:
+            //          <cursor_on>:<blink_on>:<cursor_col>:<cursor_row>:
+            //          <fila0 hex>:<fila1 hex>... -- ver QemuBridge.js.
+            const parts = line.split(":");
+            if (parts.length >= 9) {
+                const dims = parts[1].match(/^(\d+)x(\d+)$/);
+                if (dims) {
+                    const cols = parseInt(dims[1], 10);
+                    const rows = parseInt(dims[2], 10);
+                    const backlight = parts[2] === "1";
+                    const cursorState = {
+                        displayOn: parts[3] === "1",
+                        cursorOn:  parts[4] === "1",
+                        blinkOn:   parts[5] === "1",
+                        cursorCol: parseInt(parts[6], 10),
+                        cursorRow: parseInt(parts[7], 10),
+                    };
+                    const rowsHex = parts.slice(8);
+                    this.simulator.signalEngine.applyLcdFramebuffer(rowsHex, cols, rows, backlight, cursorState);
+                }
+            }
+            return true;
+        }
+
+        if (line.startsWith("MAX:")) {
+            // Formato: MAX:<ancho>x<alto>:<bitmap hex, 1 bit/pixel> -- ver
+            // QemuBridge.js.
+            const parts = line.split(":");
+            if (parts.length >= 3) {
+                const dims = parts[1].match(/^(\d+)x(\d+)$/);
+                if (dims) {
+                    const width  = parseInt(dims[1], 10);
+                    const height = parseInt(dims[2], 10);
+                    const hex    = parts.slice(2).join(":");
+                    this.simulator.signalEngine.applyMax7219Framebuffer(hex, width, height);
+                }
+            }
+            return true;
+        }
+
+        if (line.startsWith("TM1637:")) {
+            // Formato: TM1637:<8 caracteres hex = 4 bytes> -- ver QemuBridge.js.
+            const hex = line.slice("TM1637:".length);
+            this.simulator.signalEngine.applyTm1637Segments(hex);
+            return true;
+        }
+
+        if (line.startsWith("TFT:")) {
+            // Formato: TFT:<x>:<y>:<ancho>x<alto>:<hex RGB565 o "S<hex4>"
+            // para relleno sólido> -- ver QemuBridge.js.
+            const parts = line.split(":");
+            if (parts.length >= 5) {
+                const x = parseInt(parts[1], 10);
+                const y = parseInt(parts[2], 10);
+                const dims = parts[3].match(/^(\d+)x(\d+)$/);
+                if (dims && !isNaN(x) && !isNaN(y)) {
+                    const width  = parseInt(dims[1], 10);
+                    const height = parseInt(dims[2], 10);
+                    const hex    = parts.slice(4).join(":");
+                    if (hex.startsWith("S")) {
+                        const colorValue = parseInt(hex.slice(1), 16);
+                        if (!isNaN(colorValue)) {
+                            this.simulator.signalEngine.applyTftSolidFill(colorValue, x, y, width, height);
+                        }
+                    } else {
+                        this.simulator.signalEngine.applyTftRegion(hex, x, y, width, height);
+                    }
+                }
+            }
+            return true;
+        }
+
+        if (line.startsWith("NEO:")) {
+            // Formato: NEO:<ancho>x<alto>:<RGB888 por pixel en hex> -- ver
+            // QemuBridge.js (matriz 2D framebuf, a diferencia de "NEOR:").
+            const parts = line.split(":");
+            if (parts.length >= 3) {
+                const dims = parts[1].match(/^(\d+)x(\d+)$/);
+                if (dims) {
+                    const width  = parseInt(dims[1], 10);
+                    const height = parseInt(dims[2], 10);
+                    const hex    = parts.slice(2).join(":");
+                    this.simulator.signalEngine.applyNeopixelFramebuffer(hex, width, height);
+                }
+            }
+            return true;
+        }
+
+        if (line.startsWith("PININFO:")) {
+            // Formato: PININFO:<key>:<pin1>=<gpio>,... -- ver el
+            // comentario grande en QemuBridge.js: valida que el cable
+            // dibujado llegue al mismo pin que declaró el firmware. Sin
+            // esto, cualquier componente con esta validación (lcd/oled/
+            // tm1637/tft/keypad_i2c) nunca se consideraría "bien cableado"
+            // en modo navegador.
+            const rest = line.slice("PININFO:".length);
+            const sepIdx = rest.lastIndexOf(":");
+            if (sepIdx > 0) {
+                const key = rest.slice(0, sepIdx);
+                const pairsStr = rest.slice(sepIdx + 1);
+                const pins = {};
+                pairsStr.split(",").forEach(pair => {
+                    const [name, numStr] = pair.split("=");
+                    const num = parseInt(numStr, 10);
+                    if (name && !Number.isNaN(num)) pins[name] = num;
+                });
+                this.simulator.signalEngine.setDeclaredPins(key, pins);
+            }
+            return true;
+        }
+
         if (line.startsWith("I2CW:")) {
             // Formato: I2CW:<addr>:<byte> -- ver _i2c_bus_wasm.py.
             const parts = line.split(":");

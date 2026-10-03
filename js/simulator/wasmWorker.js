@@ -29,6 +29,7 @@ let baseLoaded = false;
 
 const BASE_WASM_URL      = new URL("../../components_wasm/_base_wasm.py", import.meta.url);
 const I2C_BUS_WASM_URL   = new URL("../../components_wasm/_i2c_bus_wasm.py", import.meta.url);
+const ADC_BUS_WASM_URL   = new URL("../../components_wasm/_adc_bus_wasm.py", import.meta.url);
 const NEOPIXEL_WASM_URL  = new URL("../../components_wasm/_neopixel_wasm.py", import.meta.url);
 
 self.onmessage = async (e) => {
@@ -57,6 +58,9 @@ self.onmessage = async (e) => {
 
             const i2cCode = await (await fetch(I2C_BUS_WASM_URL)).text();
             mp.runPython(i2cCode);
+
+            const adcCode = await (await fetch(ADC_BUS_WASM_URL)).text();
+            mp.runPython(adcCode);
 
             const neopixelCode = await (await fetch(NEOPIXEL_WASM_URL)).text();
             mp.runPython(neopixelCode);
