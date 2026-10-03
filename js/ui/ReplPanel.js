@@ -2305,17 +2305,22 @@ class ReplPanel {
     // Fix: SOLO la "colita" de riesgo (el print de éxito + el exec real
     // -- dos líneas, lo mínimo que puede quedar corrupto en silencio)
     // viaja como su propio base64+checksum, igual que un pedazo de
-    // datos más. Primer intento de este fix envolvía las ~10 líneas de
-    // control COMPLETAS (join + try/except + if/else del checksum de
-    // datos) -- funcionaba, pero casi duplicaba el tamaño del bloque
-    // final (base64 infla +33%, más el propio bootstrap) justo en la
-    // parte de la transmisión que YA es la más propensa a fallar;
-    // confirmado en vivo que esa versión más pesada fallaba sus 3
-    // reintentos consistentemente en una máquina ya cargada. Dejando el
-    // if/else del checksum de datos como texto plano (como siempre fue,
-    // nunca mostró este bug en toda la sesión) y protegiendo solo la
-    // colita, el bloque final crece apenas unos pocos caracteres en vez
-    // de casi el doble.
+    // datos más.
+    //
+    // BUG REAL #2 (encontrado en vivo, reportado: "ni el código más
+    // simple -- un LED -- funciona ya"): la primera versión de este
+    // fix anidaba un SEGUNDO if/else DENTRO del else: de arriba, así
+    // que la línea del exec() terminaba con 8 espacios de indentación
+    // en vez de 4 -- más texto sensible a espacios en blanco en una
+    // transmisión que YA pierde caracteres seguido. Confirmado en vivo:
+    // "IndentationError: unexpected indent" en cascada, un LED de 3
+    // líneas fallando 100% de las veces, peor que antes de este fix.
+    // Fix del fix: en vez de anidar, cada chequeo es su PROPIO "if"
+    // independiente a nivel superior (banderas booleanas _uc_ok/
+    // _uc_tail_ok en vez de else:) -- nunca más de 4 espacios de
+    // indentación en ninguna línea, mismo nivel de riesgo que un pedazo
+    // de datos común (que nunca mostró este problema en toda la
+    // sesión).
     _buildUserCodeFinalBlock(expectedLen, checksum) {
 
         const [corruptPart1, corruptPart2] = ReplPanel._splitMarker(ReplPanel.USER_CODE_CORRUPT_MARKER);
@@ -2328,11 +2333,25 @@ class ReplPanel {
 
         const tailBinaryStr = unescape(encodeURIComponent(tailSrc));
         const tailB64 = btoa(tailBinaryStr);
+        // OJO -- BUG REAL (encontrado al validar este fix contra un
+        // intérprete Python de verdad, antes de volver a probarlo en
+        // vivo): _uc_tail en Python termina siendo el STRING BASE64
+        // reconstruido (post split/join), nunca los bytes decodificados
+        // -- el checksum tiene que calcularse sobre `tailB64` (lo que
+        // Python realmente va a comparar), NO sobre `tailBinaryStr` (el
+        // texto YA decodificado). Confundir las dos capas acá hacía que
+        // esta comparación fallara SIEMPRE, de forma 100% determinista,
+        // sin que hiciera falta ninguna corrupción real de transmisión
+        // -- exactamente el síntoma reportado ("ni el LED más simple
+        // funciona", fallando sus 3 intentos siempre con los mismos
+        // números). Mismo criterio que _buildUserCodeChunkBlock ya usa
+        // para sus propios pedazos (checksum sobre el base64, no sobre
+        // el contenido decodificado).
         let tailChecksum = 0;
-        for (let i = 0; i < tailBinaryStr.length; i++) {
-            tailChecksum = (tailChecksum + tailBinaryStr.charCodeAt(i)) % 65536;
+        for (let i = 0; i < tailB64.length; i++) {
+            tailChecksum = (tailChecksum + tailB64.charCodeAt(i)) % 65536;
         }
-        const tailExpectedLen = tailBinaryStr.length;
+        const tailExpectedLen = tailB64.length;
 
         // La colita es chica (una línea de base64), así que normalmente
         // entra en un solo renglón -- pero se parte igual por las
@@ -2350,10 +2369,12 @@ class ReplPanel {
         // reales frente a los que ve _pasteBlock()/execLineIndex, que
         // trabaja línea a línea sobre el texto ya aplanado). Cada
         // entrada de tailLines se aplana como su propia línea; solo la
-        // primera y la última llevan las comillas triples.
+        // primera y la última llevan las comillas triples. SIN
+        // indentación -- esta asignación vive a nivel superior, no
+        // adentro de ningún if/else (ver el comentario grande arriba).
         const tailContentLines = tailLines.map((l, i) => {
             let s = l;
-            if (i === 0) s = `    _uc_tail_raw = """` + s;
+            if (i === 0) s = `_uc_tail_raw = """` + s;
             if (i === tailLines.length - 1) s = s + `"""`;
             return s;
         });
@@ -2364,15 +2385,16 @@ class ReplPanel {
             `    _uc_bytes = _uc_iso.a2b_base64(_uc_joined)`,
             `except Exception:`,
             `    _uc_bytes = b""`,
-            `if len(_uc_bytes) != ${expectedLen} or sum(_uc_bytes) % 65536 != ${checksum}:`,
+            `_uc_ok = len(_uc_bytes) == ${expectedLen} and sum(_uc_bytes) % 65536 == ${checksum}`,
+            `if not _uc_ok:`,
             `    print("${corruptPart1}" + ("${corruptPart2}len=%d sum=%d esperado_len=${expectedLen} esperado_sum=${checksum}" % (len(_uc_bytes), sum(_uc_bytes) % 65536)))`,
-            `else:`,
             ...tailContentLines,
-            `    _uc_tail = "".join(_uc_tail_raw.split())`,
-            `    if len(_uc_tail) != ${tailExpectedLen} or sum(_uc_tail.encode()) % 65536 != ${tailChecksum}:`,
-            `        print("${corruptPart1}" + ("${corruptPart2}len=%d sum=%d esperado_len=${tailExpectedLen} esperado_sum=${tailChecksum}" % (len(_uc_tail), sum(_uc_tail.encode()) % 65536)))`,
-            `    else:`,
-            `        exec(_uc_iso.a2b_base64(_uc_tail).decode())`,
+            `_uc_tail = "".join(_uc_tail_raw.split())`,
+            `_uc_tail_ok = len(_uc_tail) == ${tailExpectedLen} and sum(_uc_tail.encode()) % 65536 == ${tailChecksum}`,
+            `if _uc_ok and not _uc_tail_ok:`,
+            `    print("${corruptPart1}" + ("${corruptPart2}len=%d sum=%d esperado_len=${tailExpectedLen} esperado_sum=${tailChecksum}" % (len(_uc_tail), sum(_uc_tail.encode()) % 65536)))`,
+            `if _uc_ok and _uc_tail_ok:`,
+            `    exec(_uc_iso.a2b_base64(_uc_tail).decode())`,
         ];
 
         return { block: lines.join("\n") + "\n", execLineIndex: lines.length - 1 };
