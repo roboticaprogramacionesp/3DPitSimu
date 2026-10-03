@@ -2286,10 +2286,77 @@ class ReplPanel {
     // oculta el eco hasta esa línea, así la salida real del programa se
     // ve apenas arranca (sin esperar a que vuelva un prompt que un
     // "while True:" nunca va a dar).
+    //
+    // BUG REAL encontrado en vivo (script corto "semáforo", 3 Pin +
+    // while True): con solo UN pedazo de datos, el checksum del PAYLOAD
+    // pasaba bien (los bytes del código del usuario llegaron intactos)
+    // pero la línea literal "exec(_uc_bytes.decode(), globals())" -- que
+    // viaja como texto plano, SIN ninguna protección, igual que el
+    // resto de este bloque final -- perdió varios caracteres en
+    // tránsito y quedó "exec(_uc_bytes.decodlobals())": sintaxis Python
+    // válida, así que no se vio ningún SyntaxError. El checksum dio OK,
+    // se imprimió USER_CODE_OK (éxito reportado), y recién AHÍ explotó
+    // con un AttributeError -- un "éxito" falso que ocultaba una
+    // corrupción real. A diferencia de los pedazos de datos (protegidos
+    // por su propio checksum desde el principio), esa línea viajaba sin
+    // ninguna protección: el checksum de arriba solo cubre los BYTES
+    // DEL USUARIO, nunca el código Python que los ejecuta.
+    //
+    // Fix: SOLO la "colita" de riesgo (el print de éxito + el exec real
+    // -- dos líneas, lo mínimo que puede quedar corrupto en silencio)
+    // viaja como su propio base64+checksum, igual que un pedazo de
+    // datos más. Primer intento de este fix envolvía las ~10 líneas de
+    // control COMPLETAS (join + try/except + if/else del checksum de
+    // datos) -- funcionaba, pero casi duplicaba el tamaño del bloque
+    // final (base64 infla +33%, más el propio bootstrap) justo en la
+    // parte de la transmisión que YA es la más propensa a fallar;
+    // confirmado en vivo que esa versión más pesada fallaba sus 3
+    // reintentos consistentemente en una máquina ya cargada. Dejando el
+    // if/else del checksum de datos como texto plano (como siempre fue,
+    // nunca mostró este bug en toda la sesión) y protegiendo solo la
+    // colita, el bloque final crece apenas unos pocos caracteres en vez
+    // de casi el doble.
     _buildUserCodeFinalBlock(expectedLen, checksum) {
 
         const [corruptPart1, corruptPart2] = ReplPanel._splitMarker(ReplPanel.USER_CODE_CORRUPT_MARKER);
         const [okPart1, okPart2]           = ReplPanel._splitMarker(ReplPanel.USER_CODE_OK_MARKER);
+
+        const tailSrc = (
+            `print("${okPart1}" + "${okPart2}")\n` +
+            `exec(_uc_bytes.decode(), globals())`
+        );
+
+        const tailBinaryStr = unescape(encodeURIComponent(tailSrc));
+        const tailB64 = btoa(tailBinaryStr);
+        let tailChecksum = 0;
+        for (let i = 0; i < tailBinaryStr.length; i++) {
+            tailChecksum = (tailChecksum + tailBinaryStr.charCodeAt(i)) % 65536;
+        }
+        const tailExpectedLen = tailBinaryStr.length;
+
+        // La colita es chica (una línea de base64), así que normalmente
+        // entra en un solo renglón -- pero se parte igual por las
+        // dudas (mismo mecanismo que cualquier pedazo/HAL) en vez de
+        // asumir que siempre va a entrar en HAL_B64_LINE_WIDTH.
+        const tailBroken = ReplPanel._breakRepeatedPatterns(tailB64);
+        const width = ReplPanel.HAL_B64_LINE_WIDTH;
+        const tailLines = [];
+        for (let i = 0; i < tailBroken.length; i += width) {
+            tailLines.push(tailBroken.slice(i, i + width));
+        }
+        // OJO -- tailLines puede tener varias entradas (cada una una
+        // línea FÍSICA real), así que no se pueden meter todas como UNA
+        // sola entrada de `lines` (eso correría los índices de línea
+        // reales frente a los que ve _pasteBlock()/execLineIndex, que
+        // trabaja línea a línea sobre el texto ya aplanado). Cada
+        // entrada de tailLines se aplana como su propia línea; solo la
+        // primera y la última llevan las comillas triples.
+        const tailContentLines = tailLines.map((l, i) => {
+            let s = l;
+            if (i === 0) s = `    _uc_tail_raw = """` + s;
+            if (i === tailLines.length - 1) s = s + `"""`;
+            return s;
+        });
 
         const lines = [
             `_uc_joined = "".join(_uc_parts)`,
@@ -2300,8 +2367,12 @@ class ReplPanel {
             `if len(_uc_bytes) != ${expectedLen} or sum(_uc_bytes) % 65536 != ${checksum}:`,
             `    print("${corruptPart1}" + ("${corruptPart2}len=%d sum=%d esperado_len=${expectedLen} esperado_sum=${checksum}" % (len(_uc_bytes), sum(_uc_bytes) % 65536)))`,
             `else:`,
-            `    print("${okPart1}" + "${okPart2}")`,
-            `    exec(_uc_bytes.decode(), globals())`,
+            ...tailContentLines,
+            `    _uc_tail = "".join(_uc_tail_raw.split())`,
+            `    if len(_uc_tail) != ${tailExpectedLen} or sum(_uc_tail.encode()) % 65536 != ${tailChecksum}:`,
+            `        print("${corruptPart1}" + ("${corruptPart2}len=%d sum=%d esperado_len=${tailExpectedLen} esperado_sum=${tailChecksum}" % (len(_uc_tail), sum(_uc_tail.encode()) % 65536)))`,
+            `    else:`,
+            `        exec(_uc_iso.a2b_base64(_uc_tail).decode())`,
         ];
 
         return { block: lines.join("\n") + "\n", execLineIndex: lines.length - 1 };
