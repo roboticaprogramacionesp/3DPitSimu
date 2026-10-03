@@ -109,6 +109,32 @@ class I2C:
 
 SoftI2C = I2C
 
+
+def _on_i2c_read_line(parts):
+    # parts = ["I2CR", "<addr>", "<byte>"] -- mismo protocolo que
+    # _i2c_bus.hal.py (ver su _on_i2c_read_line): el simulador manda
+    # esto para decirle al firmware qué va a devolver el PRÓXIMO
+    # readfrom()/readfrom_mem() de esa dirección cuando el
+    # dispositivo no definió su propio on_read/on_read_mem (ej. el
+    # teclado matricial I2C armando la fila leída según qué tecla
+    # está apretada, ver keypad4x4_i2c.behavior.js). SIN esto, estas
+    # líneas llegaban hasta process_line() (_base_wasm.py) y se
+    # perdían en silencio -- ningún prefijo las reclamaba, así que
+    # _i2c_reg_in nunca se actualizaba y cualquier readfrom() quedaba
+    # pegado en el default (0xFF) para siempre. Bug real: el teclado
+    # I2C nunca reportaba ninguna tecla en modo navegador.
+    if len(parts) < 3:
+        return
+    try:
+        addr = int(parts[1])
+        value = int(parts[2])
+    except ValueError:
+        return
+    _i2c_reg_in[addr] = value & 0xFF
+
+
+register_line_handler("I2CR:", _on_i2c_read_line)
+
 # Se agrega al MISMO módulo "machine" falso que ya armó _base_wasm.py
 # (cargado siempre antes que este archivo) -- no se pisa el objeto,
 # solo se le suman estos dos nombres, igual que
