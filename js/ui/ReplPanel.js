@@ -2861,12 +2861,14 @@ class ReplPanel {
         this._halRetryCounts[type] = count;
 
         if (count > ReplPanel.HAL_RETRY_MAX) {
-            this.appendOutput(
-                `\n⚠️ El HAL de "${type}" falló ${ReplPanel.HAL_RETRY_MAX} veces seguidas -- ` +
-                `puede ser algo más que ruido de transmisión. Probá "Ejecutar" de nuevo a mano, ` +
-                `o revisá la consola del servidor.\n`,
-                "repl-error"
-            );
+            const msg = this.simulator.qemuBridge?.isWasmBridge
+                ? `\n⚠️ El componente "${type}" no carga en modo navegador -- probablemente usa algo que este modo ` +
+                  `todavía no soporta (no es un problema pasajero, reintentar no lo va a arreglar). Si este componente ` +
+                  `te hace falta, probá el modo normal (QEMU).\n`
+                : `\n⚠️ El HAL de "${type}" falló ${ReplPanel.HAL_RETRY_MAX} veces seguidas -- ` +
+                  `puede ser algo más que ruido de transmisión. Probá "Ejecutar" de nuevo a mano, ` +
+                  `o revisá la consola del servidor.\n`;
+            this.appendOutput(msg, "repl-error");
             return;
         }
 
@@ -3474,10 +3476,29 @@ class ReplPanel {
             // roto de verdad -- pero _retryHalAfterError() ya lo
             // reintenta solo, en segundo plano, así que esto es solo
             // contexto, no dispara ningún reintento nuevo por sí mismo.
-            this.appendOutput(
-                `\n🔄 Se detectó ruido en la transmisión del HAL de "${type}" -- reintentando solo, no hace falta hacer nada.\n`,
-                "repl-info"
-            );
+            // En modo navegador (WasmBridge) no hay NINGUNA transmisión
+            // serial de por medio -- mp.runPython() recibe el mismo
+            // string de JS tal cual, sin UART ni paste mode. Un
+            // HAL_ERROR ahí NUNCA es "ruido" (no hay nada que corromper):
+            // es un error real (ImportError/AttributeError porque ese
+            // componente usa algo que el intérprete WASM no tiene, o un
+            // bug genuino del propio .hal.py) que reintentar con el
+            // MISMO código jamás va a arreglar. Mostrar el mensaje de
+            // "ruido, reintentando solo" -- pensado para la corrupción
+            // real de QEMU -- sería directamente mentirle al usuario
+            // sobre qué pasó.
+            if (this.simulator.qemuBridge?.isWasmBridge) {
+                this.appendOutput(
+                    `\n⚠️ El componente "${type}" no pudo cargar en modo navegador (no es un problema de transmisión -- ` +
+                    `puede que use algo que este modo todavía no soporta). Mirá el error justo arriba.\n`,
+                    "repl-error"
+                );
+            } else {
+                this.appendOutput(
+                    `\n🔄 Se detectó ruido en la transmisión del HAL de "${type}" -- reintentando solo, no hace falta hacer nada.\n`,
+                    "repl-info"
+                );
+            }
 
             // Si este tipo se había intentado por el camino rápido
             // ("import _pit_hal_<tipo>", ver _frozenHalTypes más
