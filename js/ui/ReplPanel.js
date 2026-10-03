@@ -2308,97 +2308,26 @@ class ReplPanel {
     // ve apenas arranca (sin esperar a que vuelva un prompt que un
     // "while True:" nunca va a dar).
     //
-    // BUG REAL encontrado en vivo (script corto "semáforo", 3 Pin +
-    // while True): con solo UN pedazo de datos, el checksum del PAYLOAD
-    // pasaba bien (los bytes del código del usuario llegaron intactos)
-    // pero la línea literal "exec(_uc_bytes.decode(), globals())" -- que
-    // viaja como texto plano, SIN ninguna protección, igual que el
-    // resto de este bloque final -- perdió varios caracteres en
-    // tránsito y quedó "exec(_uc_bytes.decodlobals())": sintaxis Python
-    // válida, así que no se vio ningún SyntaxError. El checksum dio OK,
-    // se imprimió USER_CODE_OK (éxito reportado), y recién AHÍ explotó
-    // con un AttributeError -- un "éxito" falso que ocultaba una
-    // corrupción real. A diferencia de los pedazos de datos (protegidos
-    // por su propio checksum desde el principio), esa línea viajaba sin
-    // ninguna protección: el checksum de arriba solo cubre los BYTES
-    // DEL USUARIO, nunca el código Python que los ejecuta.
-    //
-    // Fix: SOLO la "colita" de riesgo (el print de éxito + el exec real
-    // -- dos líneas, lo mínimo que puede quedar corrupto en silencio)
-    // viaja como su propio base64+checksum, igual que un pedazo de
-    // datos más.
-    //
-    // BUG REAL #2 (encontrado en vivo, reportado: "ni el código más
-    // simple -- un LED -- funciona ya"): la primera versión de este
-    // fix anidaba un SEGUNDO if/else DENTRO del else: de arriba, así
-    // que la línea del exec() terminaba con 8 espacios de indentación
-    // en vez de 4 -- más texto sensible a espacios en blanco en una
-    // transmisión que YA pierde caracteres seguido. Confirmado en vivo:
-    // "IndentationError: unexpected indent" en cascada, un LED de 3
-    // líneas fallando 100% de las veces, peor que antes de este fix.
-    // Fix del fix: en vez de anidar, cada chequeo es su PROPIO "if"
-    // independiente a nivel superior (banderas booleanas _uc_ok/
-    // _uc_tail_ok en vez de else:) -- nunca más de 4 espacios de
-    // indentación en ninguna línea, mismo nivel de riesgo que un pedazo
-    // de datos común (que nunca mostró este problema en toda la
-    // sesión).
+    // REVERTIDO (2026-10-03) -- esta sesión probó proteger también la
+    // línea literal "exec(_uc_bytes.decode(), globals())" (que puede
+    // corromperse en silencio, viajando sin checksum propio) con una
+    // "colita" en base64. Encontré y corregí 2 bugs reales de esa
+    // protección (checksum calculado sobre la capa equivocada,
+    // indentación anidada de más), pero el usuario reportó en vivo que
+    // el resultado NETO seguía siendo peor que antes: más líneas, más
+    // indentación, más reintentos "en el paso final" de los que había
+    // antes de tocar nada -- en una transmisión ya al límite, CUALQUIER
+    // byte extra importa. El caso que esa protección cubría (un AttributeError
+    // confuso en vez de un reintento limpio) es raro y menos grave que
+    // la regresión real y reproducible de "ahora falla más seguido".
+    // Vuelto al diseño simple de siempre: un solo nivel de indentación,
+    // el mínimo de líneas posible. Si el AttributeError raro vuelve a
+    // aparecer, al menos ahora se sabe exactamente qué lo causa (ver
+    // el historial de este archivo en git, commits e7d4a55/75cb997).
     _buildUserCodeFinalBlock(expectedLen, checksum) {
 
         const [corruptPart1, corruptPart2] = ReplPanel._splitMarker(ReplPanel.USER_CODE_CORRUPT_MARKER);
         const [okPart1, okPart2]           = ReplPanel._splitMarker(ReplPanel.USER_CODE_OK_MARKER);
-
-        const tailSrc = (
-            `print("${okPart1}" + "${okPart2}")\n` +
-            `exec(_uc_bytes.decode(), globals())`
-        );
-
-        const tailBinaryStr = unescape(encodeURIComponent(tailSrc));
-        const tailB64 = btoa(tailBinaryStr);
-        // OJO -- BUG REAL (encontrado al validar este fix contra un
-        // intérprete Python de verdad, antes de volver a probarlo en
-        // vivo): _uc_tail en Python termina siendo el STRING BASE64
-        // reconstruido (post split/join), nunca los bytes decodificados
-        // -- el checksum tiene que calcularse sobre `tailB64` (lo que
-        // Python realmente va a comparar), NO sobre `tailBinaryStr` (el
-        // texto YA decodificado). Confundir las dos capas acá hacía que
-        // esta comparación fallara SIEMPRE, de forma 100% determinista,
-        // sin que hiciera falta ninguna corrupción real de transmisión
-        // -- exactamente el síntoma reportado ("ni el LED más simple
-        // funciona", fallando sus 3 intentos siempre con los mismos
-        // números). Mismo criterio que _buildUserCodeChunkBlock ya usa
-        // para sus propios pedazos (checksum sobre el base64, no sobre
-        // el contenido decodificado).
-        let tailChecksum = 0;
-        for (let i = 0; i < tailB64.length; i++) {
-            tailChecksum = (tailChecksum + tailB64.charCodeAt(i)) % 65536;
-        }
-        const tailExpectedLen = tailB64.length;
-
-        // La colita es chica (una línea de base64), así que normalmente
-        // entra en un solo renglón -- pero se parte igual por las
-        // dudas (mismo mecanismo que cualquier pedazo/HAL) en vez de
-        // asumir que siempre va a entrar en HAL_B64_LINE_WIDTH.
-        const tailBroken = ReplPanel._breakRepeatedPatterns(tailB64);
-        const width = ReplPanel.HAL_B64_LINE_WIDTH;
-        const tailLines = [];
-        for (let i = 0; i < tailBroken.length; i += width) {
-            tailLines.push(tailBroken.slice(i, i + width));
-        }
-        // OJO -- tailLines puede tener varias entradas (cada una una
-        // línea FÍSICA real), así que no se pueden meter todas como UNA
-        // sola entrada de `lines` (eso correría los índices de línea
-        // reales frente a los que ve _pasteBlock()/execLineIndex, que
-        // trabaja línea a línea sobre el texto ya aplanado). Cada
-        // entrada de tailLines se aplana como su propia línea; solo la
-        // primera y la última llevan las comillas triples. SIN
-        // indentación -- esta asignación vive a nivel superior, no
-        // adentro de ningún if/else (ver el comentario grande arriba).
-        const tailContentLines = tailLines.map((l, i) => {
-            let s = l;
-            if (i === 0) s = `_uc_tail_raw = """` + s;
-            if (i === tailLines.length - 1) s = s + `"""`;
-            return s;
-        });
 
         const lines = [
             `_uc_joined = "".join(_uc_parts)`,
@@ -2406,16 +2335,11 @@ class ReplPanel {
             `    _uc_bytes = _uc_iso.a2b_base64(_uc_joined)`,
             `except Exception:`,
             `    _uc_bytes = b""`,
-            `_uc_ok = len(_uc_bytes) == ${expectedLen} and sum(_uc_bytes) % 65536 == ${checksum}`,
-            `if not _uc_ok:`,
+            `if len(_uc_bytes) != ${expectedLen} or sum(_uc_bytes) % 65536 != ${checksum}:`,
             `    print("${corruptPart1}" + ("${corruptPart2}len=%d sum=%d esperado_len=${expectedLen} esperado_sum=${checksum}" % (len(_uc_bytes), sum(_uc_bytes) % 65536)))`,
-            ...tailContentLines,
-            `_uc_tail = "".join(_uc_tail_raw.split())`,
-            `_uc_tail_ok = len(_uc_tail) == ${tailExpectedLen} and sum(_uc_tail.encode()) % 65536 == ${tailChecksum}`,
-            `if _uc_ok and not _uc_tail_ok:`,
-            `    print("${corruptPart1}" + ("${corruptPart2}len=%d sum=%d esperado_len=${tailExpectedLen} esperado_sum=${tailChecksum}" % (len(_uc_tail), sum(_uc_tail.encode()) % 65536)))`,
-            `if _uc_ok and _uc_tail_ok:`,
-            `    exec(_uc_iso.a2b_base64(_uc_tail).decode())`,
+            `else:`,
+            `    print("${okPart1}" + "${okPart2}")`,
+            `    exec(_uc_bytes.decode(), globals())`,
         ];
 
         return { block: lines.join("\n") + "\n", execLineIndex: lines.length - 1 };

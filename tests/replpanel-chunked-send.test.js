@@ -163,54 +163,17 @@ test('_buildUserCodeFinalBlock nunca envuelve el exec() real en un try/except (u
 
 });
 
-// BUG REAL (reportado en vivo: "ni el LED más simple funciona ya",
-// fallando sus 3 intentos siempre con los MISMOS números): el checksum
-// de la "colita" protegida (_uc_tail) se calculaba sobre el texto YA
-// DECODIFICADO (_uc_tail_raw = """<base64>"""; texto fuente de 63
-// caracteres) en vez de sobre el STRING BASE64 que Python realmente
-// compara (_uc_tail, reconstruido por "".join(_uc_tail_raw.split()),
-// que SIEMPRE tiene el largo del base64, no el del texto decodificado
-// -- ver _buildUserCodeChunkBlock, que sí calcula sobre chunkB64).
-// Mezclar las dos capas hacía que esta comparación fallara SIEMPRE, de
-// forma 100% determinista, sin que hiciera falta ninguna corrupción de
-// transmisión real -- ningún script, por chico que fuera, podía
-// ejecutarse jamás. Este test reconstruye lo que Python haría de
-// verdad con el string embebido (split+join, igual que ''.join(s.split()))
-// y verifica que el len/checksum incrustados en el bloque coincidan con
-// ESE string -- no con ningún otro.
-test('_buildUserCodeFinalBlock: el checksum de la colita protegida coincide con el string base64 reconstruido (no con el texto decodificado)', () => {
-
-    const ReplPanel = loadReplPanel();
-    const ctx = Object.create(ReplPanel.prototype);
-
-    const { block } = ctx._buildUserCodeFinalBlock(999, 1234);
-
-    const rawMatch = block.match(/_uc_tail_raw = """([\s\S]*?)"""/);
-    assert.ok(rawMatch, 'debería tener un bloque _uc_tail_raw');
-    // Simula "".join(_uc_tail_raw.split()) -- Python .split() sin
-    // argumentos corta por CUALQUIER corrida de espacios en blanco.
-    const reconstructedTail = rawMatch[1].split(/\s+/).join('');
-
-    const okMatch = block.match(/_uc_tail_ok = len\(_uc_tail\) == (\d+) and sum\(_uc_tail\.encode\(\)\) % 65536 == (\d+)/);
-    assert.ok(okMatch, 'debería tener una línea _uc_tail_ok con los números embebidos');
-    const [, embeddedLen, embeddedChecksum] = okMatch;
-
-    let realChecksum = 0;
-    for (let i = 0; i < reconstructedTail.length; i++) {
-        realChecksum = (realChecksum + reconstructedTail.charCodeAt(i)) % 65536;
-    }
-
-    assert.equal(Number(embeddedLen), reconstructedTail.length, 'el largo embebido debe ser el del STRING BASE64, no el del texto decodificado');
-    assert.equal(Number(embeddedChecksum), realChecksum, 'el checksum embebido debe calcularse sobre el STRING BASE64, no el texto decodificado');
-
-});
-
-// BUG REAL relacionado (versión anterior de este mismo fix, revertida):
-// anidar un segundo if/else DENTRO del else: de arriba producía líneas
-// con 8 espacios de indentación -- más superficie sensible a espacios
-// en blanco en una transmisión que ya pierde caracteres seguido.
-// Confirmado en vivo: "IndentationError: unexpected indent" en
-// cascada. Ninguna línea de este bloque debería pasar de 4 espacios.
+// Esta sesión probó envolver también la línea del exec() real en su
+// propia protección base64+checksum (ver el comentario grande junto a
+// _buildUserCodeFinalBlock) -- revertido: el usuario reportó en vivo
+// que el resultado neto era PEOR (más reintentos, más bytes en una
+// transmisión ya al límite) que el AttributeError raro que esa
+// protección evitaba. Este test documenta el invariante que hay que
+// seguir respetando si se vuelve a intentar algo parecido: ninguna
+// línea de este bloque debería pasar de 4 espacios de indentación
+// (confirmado en vivo: anidar un segundo if/else acá produjo
+// "IndentationError: unexpected indent" en cascada, un LED de 3
+// líneas fallando el 100% de las veces).
 test('_buildUserCodeFinalBlock nunca indenta más de un nivel (sin ifs anidados, para no sumar más riesgo de IndentationError)', () => {
 
     const ReplPanel = loadReplPanel();
