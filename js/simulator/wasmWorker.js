@@ -31,8 +31,7 @@ const BASE_WASM_URL      = new URL("../../components_wasm/_base_wasm.py", import
 const I2C_BUS_WASM_URL   = new URL("../../components_wasm/_i2c_bus_wasm.py", import.meta.url);
 const ADC_BUS_WASM_URL   = new URL("../../components_wasm/_adc_bus_wasm.py", import.meta.url);
 const NEOPIXEL_WASM_URL  = new URL("../../components_wasm/_neopixel_wasm.py", import.meta.url);
-const LIBS_MANIFEST_URL  = new URL("../../components_wasm/libs/manifest.json", import.meta.url);
-const LIBS_BASE_URL      = new URL("../../components_wasm/libs/", import.meta.url);
+const LIBS_BUNDLE_URL    = new URL("../../components_wasm/libs/bundle.json", import.meta.url);
 
 // =============================================================
 // Librerías de usuario (components_wasm/libs/, copia normalizada de
@@ -68,36 +67,37 @@ const LIBS_BASE_URL      = new URL("../../components_wasm/libs/", import.meta.ur
 // agregando esa carpeta a sys.path, el import NATIVO de MicroPython
 // resuelve TODO el árbol de dependencias solo, exactamente como lo
 // haría con un filesystem real -- sin reinventar nada de eso a mano.
+//
+// BUG REAL encontrado en vivo (reportado: "clic en Simular se demora
+// mucho"): la primera versión de esto pedía manifest.json y DESPUÉS
+// las 62 librerías, UNA POR UNA (62 fetch() separados) -- en cada
+// click de "Simular" (WasmBridge._spawnWorker() arranca un Worker
+// NUEVO cada vez, nunca reusa el anterior), no solo la primera vez.
+// 62 ida-y-vuelta HTTP, aunque sean a localhost, se notan. Fix:
+// empaquetar las 62 en UN SOLO bundle.json ({nombre: contenido}),
+// generado una vez al copiar la carpeta (ver el script que lo generó)
+// -- un solo fetch() en vez de 62, mismo resultado final (los mismos
+// archivos terminan escritos en /libs).
 async function _loadUserLibraries(mp) {
 
-    let manifest;
+    let bundle;
     try {
-        manifest = await (await fetch(LIBS_MANIFEST_URL)).json();
+        bundle = await (await fetch(LIBS_BUNDLE_URL)).json();
     } catch (err) {
-        console.warn("[wasmWorker] No se pudo cargar el manifest de librerías:", err);
+        console.warn("[wasmWorker] No se pudo cargar el paquete de librerías:", err);
         return;
     }
 
     mp.FS.mkdir("/libs");
 
-    // Cada archivo se escribe por separado -- si UNO falla (404, texto
-    // corrupto, lo que sea), no debería tirar abajo a los demás: mejor
-    // que falte una librería puntual (el ImportError de esa, nada más,
-    // recién si el alumno la usa) que perder TODAS por un solo 404.
-    const results = await Promise.allSettled(
-        manifest.libraries.map(async (name) => {
-            const res = await fetch(new URL(name + ".py", LIBS_BASE_URL));
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const text = await res.text();
+    for (const [name, text] of Object.entries(bundle)) {
+        try {
             mp.FS.writeFile(`/libs/${name}.py`, text);
-        })
-    );
-
-    const failed = results
-        .map((r, i) => (r.status === "rejected" ? manifest.libraries[i] : null))
-        .filter(Boolean);
-    if (failed.length > 0) {
-        console.warn("[wasmWorker] No se pudieron cargar estas librerías:", failed);
+        } catch (err) {
+            // Que falte UNA no debería tirar abajo a las demás -- peor
+            // es nada que perder las otras 61 por una sola rota.
+            console.warn(`[wasmWorker] No se pudo escribir la librería "${name}":`, err);
+        }
     }
 
     // sys.path ya trae algunas entradas por default (ver el propio
