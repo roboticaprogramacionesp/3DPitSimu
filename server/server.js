@@ -243,6 +243,16 @@ function startQemu(wss) {
 
     proc.stdout.on("data", (chunk) => {
         process.stdout.write(chunk);            // se sigue viendo en la terminal
+        // Ver el comentario grande junto a "let rawPasteCapture" --
+        // mientras un raw-paste está en curso, estos bytes son
+        // protocolo (flow control/ACKs), no texto para el navegador:
+        // se desvían ENTERO hacia rawPasteCapture en vez de hacia el
+        // broadcast normal, para no confundir al parser de líneas del
+        // navegador con bytes de control sueltos.
+        if (rawPasteCapture) {
+            rawPasteCapture(chunk);
+            return;
+        }
         broadcastRaw(wss, chunk.toString());     // y ahora también en el navegador
         appendOutputHistory(chunk.toString());   // y se guarda para el próximo que se conecte -- ver OUTPUT_HISTORY_MAX_BYTES
     });
@@ -488,6 +498,249 @@ function rawStdinWrite(buf) {
         qemuProc.stdin.write(buf, () => resolve());
     }));
     return rawWriteChain;
+}
+
+// ============================================
+// Raw REPL + "raw-paste" -- control de flujo REAL de MicroPython.
+//
+// BUG DE FONDO que esto reemplaza (ver ReplPanel._sendUserCodeChunked,
+// historial completo 2026-10): todo lo de arriba (writeToQemuThrottled,
+// SEND_CHUNK_SIZE/DELAY_MS) es una APUESTA -- mandamos a un ritmo fijo,
+// calculado a mano, confiando en que para cuando llegue el próximo
+// trozo, MicroPython ya drenó el anterior. En una máquina rápida casi
+// siempre alcanza; en una lenta (confirmado en vivo, muchas veces esta
+// sesión) no hay ritmo fijo que alcance siempre, porque el retraso real
+// no es constante. "paste mode" (Ctrl+E) tampoco tiene ninguna
+// confirmación de recepción -- por eso ReplPanel.js tuvo que inventar
+// su propio checksum/reintento por pedazos para COMPENSAR la falta de
+// control de flujo real.
+//
+// MicroPython ya trae resuelto exactamente este problema: en "raw
+// REPL" (Ctrl+A), el modo "raw-paste" (iniciado con "\x05A\x01") hace
+// que el DISPOSITIVO le diga al host cuántos bytes puede aceptar (un
+// "window"), y le mande un byte "\x01" cada vez que drena lo suficiente
+// como para aceptar otro "window" más -- el host tiene que ESPERAR esa
+// señal real antes de mandar más, nunca adivinar un tiempo. Mismo
+// firmware de siempre, ninguna librería nueva -- esto es protocolo del
+// REPL, no algo que haya que agregar al firmware.
+//
+// Vive ENTERO en este archivo (nunca cruza bytes de protocolo crudos
+// por el WebSocket): el navegador manda UN mensaje ("\x00RAWPASTE:" +
+// JSON con el código completo), este archivo hace toda la negociación
+// con QEMU directo contra qemuProc.stdin/stdout, y contesta un solo
+// resultado ("\x00RAWPASTE_RESULT:" + JSON). Más simple Y más
+// confiable que hacer esa negociación byte a byte a través de la red/WS.
+// ============================================
+
+// Mientras no sea null, proc.stdout.on("data") de arriba desvía CADA
+// chunk crudo hacia esta función en vez de hacia broadcastRaw() -- ver
+// el comentario de ahí. Esto es lo que le da a runRawPasteExec()
+// acceso directo y exclusivo al byte stream real durante la
+// negociación/envío (nunca se mezcla con el broadcast normal).
+let rawPasteCapture = null;
+
+const RAW_REPL_STEP_TIMEOUT_MS = 8000;
+
+// Espera a que el buffer acumulado (desde que se llama esto) CONTENGA
+// el patrón dado -- para los pasos de la negociación que imprimen
+// texto humano ("raw REPL; CTRL-B to exit").
+function waitForRawPattern(patternStr, timeoutMs) {
+    const pattern = Buffer.from(patternStr, "utf8");
+    return new Promise((resolve) => {
+        let buf = Buffer.alloc(0);
+        let done = false;
+        const timer = setTimeout(() => {
+            if (done) return;
+            done = true;
+            rawPasteCapture = null;
+            resolve(false);
+        }, timeoutMs);
+        rawPasteCapture = (chunk) => {
+            if (done) return;
+            buf = Buffer.concat([buf, chunk]);
+            if (buf.includes(pattern)) {
+                done = true;
+                clearTimeout(timer);
+                rawPasteCapture = null;
+                resolve(true);
+            }
+        };
+    });
+}
+
+// Espera a que lleguen AL MENOS n bytes crudos y devuelve los
+// primeros n -- para los pasos de la negociación con formato binario
+// fijo ("R\x01" + 2 bytes de window, el "\x04" de confirmación final).
+// Los puntos donde se usa esto siempre esperan EXACTAMENTE n bytes de
+// protocolo en ese momento (nada más puede estar llegando a la vez,
+// ver beginPasteLock/endPasteLock del lado del navegador), así que no
+// hace falta devolver "sobrante".
+function waitForRawBytes(n, timeoutMs) {
+    return new Promise((resolve) => {
+        let buf = Buffer.alloc(0);
+        let done = false;
+        const timer = setTimeout(() => {
+            if (done) return;
+            done = true;
+            rawPasteCapture = null;
+            resolve(null);
+        }, timeoutMs);
+        rawPasteCapture = (chunk) => {
+            if (done) return;
+            buf = Buffer.concat([buf, chunk]);
+            if (buf.length >= n) {
+                done = true;
+                clearTimeout(timer);
+                rawPasteCapture = null;
+                resolve(buf.subarray(0, n));
+            }
+        };
+    });
+}
+
+// La parte que de verdad importa: manda dataBuf respetando el window
+// real que el dispositivo va abriendo con cada "\x01" -- nunca manda
+// más de lo que el dispositivo dijo que podía aceptar, y espera una
+// señal real (no un timer) cuando el window llega a 0. Devuelve false
+// si el dispositivo mandó "\x04" (abortó) a mitad de camino.
+function rawPasteSendWithFlowControl(dataBuf, initialWindow, timeoutMs) {
+    return new Promise((resolve) => {
+
+        let windowRemain = initialWindow;
+        let aborted = false;
+        let offset = 0;
+        let waitTimer = null;
+
+        const cleanup = () => {
+            rawPasteCapture = null;
+            if (waitTimer) clearTimeout(waitTimer);
+        };
+
+        rawPasteCapture = (chunk) => {
+            for (let i = 0; i < chunk.length; i++) {
+                const b = chunk[i];
+                if (b === 0x01) {
+                    windowRemain += initialWindow;
+                } else if (b === 0x04) {
+                    aborted = true;
+                }
+                // Cualquier otro byte durante esta fase no debería
+                // llegar según el protocolo -- se ignora (MicroPython
+                // real no manda nada más mientras recibe raw-paste).
+            }
+            if (waitTimer) {
+                clearTimeout(waitTimer);
+                waitTimer = null;
+                pump();
+            }
+        };
+
+        function pump() {
+
+            if (aborted) {
+                cleanup();
+                resolve(false);
+                return;
+            }
+
+            if (offset >= dataBuf.length) {
+                cleanup();
+                resolve(true);
+                return;
+            }
+
+            if (windowRemain <= 0) {
+                // Esperar la próxima señal real del dispositivo (el
+                // "\x01" de arriba) -- timeout como red de seguridad,
+                // no como ritmo normal.
+                waitTimer = setTimeout(() => {
+                    waitTimer = null;
+                    cleanup();
+                    resolve(false);
+                }, timeoutMs);
+                return;
+            }
+
+            const n = Math.min(windowRemain, dataBuf.length - offset);
+            const piece = dataBuf.subarray(offset, offset + n);
+            windowRemain -= n;
+            offset += n;
+            rawStdinWrite(piece).then(pump);
+
+        }
+
+        pump();
+
+    });
+}
+
+// Orquesta la negociación completa: interrumpe lo que hubiera,
+// entra a raw REPL, intenta raw-paste, manda el código respetando el
+// window real, y confirma el fin de datos -- a partir de ahí el
+// código YA está corriendo (la salida real vuelve a verse por el
+// broadcast normal, ver "rawPasteCapture" en proc.stdout.on("data")).
+async function runRawPasteExec(code) {
+
+    if (!qemuProc || !qemuProc.stdin.writable) {
+        return { ok: false, reason: "no_process" };
+    }
+
+    // Ctrl-C primero -- mismo criterio que _pasteBlock() del lado del
+    // navegador, para arrancar desde un prompt limpio sin importar en
+    // qué quedó la sesión anterior.
+    await rawStdinWrite(Buffer.from([0x03]));
+    await new Promise((r) => setTimeout(r, 150));
+
+    // Ctrl-A: entrar a raw REPL.
+    await rawStdinWrite(Buffer.from([0x01]));
+    const enteredRaw = await waitForRawPattern("raw REPL", RAW_REPL_STEP_TIMEOUT_MS);
+    if (!enteredRaw) {
+        return { ok: false, reason: "no_raw_repl" };
+    }
+
+    // "\x05A\x01": intento de raw-paste.
+    await rawStdinWrite(Buffer.from([0x05, 0x41, 0x01]));
+    const header = await waitForRawBytes(2, RAW_REPL_STEP_TIMEOUT_MS);
+    if (!header) {
+        return { ok: false, reason: "no_response" };
+    }
+    if (header[0] === 0x52 && header[1] === 0x00) { // "R\x00"
+        return { ok: false, reason: "raw_paste_unsupported" };
+    }
+    if (!(header[0] === 0x52 && header[1] === 0x01)) { // no es "R\x01"
+        return { ok: false, reason: "unexpected_header" };
+    }
+
+    const windowBytes = await waitForRawBytes(2, RAW_REPL_STEP_TIMEOUT_MS);
+    if (!windowBytes) {
+        return { ok: false, reason: "no_window" };
+    }
+    const windowSize = windowBytes.readUInt16LE(0);
+    if (windowSize <= 0) {
+        return { ok: false, reason: "bad_window" };
+    }
+
+    const codeBuf = Buffer.from(code, "utf8");
+    const sentOk = await rawPasteSendWithFlowControl(codeBuf, windowSize, RAW_REPL_STEP_TIMEOUT_MS);
+
+    if (!sentOk) {
+        await rawStdinWrite(Buffer.from([0x04])); // confirmar el abort, por las dudas
+        return { ok: false, reason: "device_aborted_or_timeout" };
+    }
+
+    // Fin de datos -- esperar la confirmación real del dispositivo.
+    await rawStdinWrite(Buffer.from([0x04]));
+    const eotAck = await waitForRawBytes(1, RAW_REPL_STEP_TIMEOUT_MS);
+    if (!eotAck || eotAck[0] !== 0x04) {
+        return { ok: false, reason: "no_eot_ack" };
+    }
+
+    // A partir de acá el código ya está corriendo -- rawPasteCapture
+    // ya quedó en null (lo limpiaron los helpers de arriba), así que
+    // proc.stdout.on("data") vuelve a mandar todo por el broadcast
+    // normal, incluida la salida real del programa.
+    return { ok: true };
+
 }
 
 // Cola global (no por-conexión): si dos pegados llegaran casi
@@ -768,6 +1021,28 @@ function startWebSocketServer() {
             const asBuf = Buffer.isBuffer(data) ? data : Buffer.from(data);
             if (asBuf.length === 1 && (asBuf[0] === 0x03 || asBuf[0] === 0x04)) {
                 rawStdinWrite(asBuf);
+                return;
+            }
+
+            // Ver el comentario grande junto a "let rawPasteCapture"
+            // -- pedido de ReplPanel.js para correr el código del
+            // usuario por raw-paste (control de flujo real). Un solo
+            // mensaje de ida, un solo resultado de vuelta -- toda la
+            // negociación byte a byte queda ENTERA en este archivo,
+            // nunca cruza la red.
+            if (asBuf.length > 10 && asBuf.toString("utf8", 0, 10) === "\x00RAWPASTE:") {
+                (async () => {
+                    let result;
+                    try {
+                        const { code } = JSON.parse(asBuf.toString("utf8", 10));
+                        result = await runRawPasteExec(code);
+                    } catch (e) {
+                        result = { ok: false, reason: "exception", message: String(e && e.message || e) };
+                    }
+                    try {
+                        ws.send("\x00RAWPASTE_RESULT:" + JSON.stringify(result));
+                    } catch (e) {}
+                })();
                 return;
             }
 

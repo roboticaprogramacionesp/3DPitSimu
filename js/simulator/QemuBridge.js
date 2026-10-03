@@ -254,6 +254,20 @@ class QemuBridge {
 
     softReset()  { if (this.connected) this.ws.send("\x04"); }
 
+    // Ver el comentario grande junto a "let rawPasteCapture" en
+    // server.js -- un solo mensaje de ida (nunca por send()/_sendImmediate,
+    // que le agregarían "\r\n" y lo harían pasar por el paste lock
+    // normal como si fuera texto de UART) con el código completo;
+    // server.js hace TODA la negociación byte a byte directo contra
+    // QEMU y contesta un solo resultado ("qemu:rawpaste-result", ver
+    // onMessage()). Devuelve false sin mandar nada si no hay conexión
+    // -- ReplPanel ya sabe tratar eso igual que cualquier otro fallo.
+    sendRawPasteRequest(code) {
+        if (!this.connected || !this.ws) return false;
+        this.ws.send("\x00RAWPASTE:" + JSON.stringify({ code }));
+        return true;
+    }
+
     // Ver la nota grande en send() -- llamado por
     // ReplPanel._pasteBlock() antes/después de cada paste Ctrl+E...
     // Ctrl+D para que ningún otro emisor (RTC/TEMP/DIST/ADC/IN/etc.)
@@ -491,6 +505,20 @@ class QemuBridge {
                     this.updateStatus("disconnected");
                     this.simulator.renderer.stopAllBuzzers?.();
                 }
+            } catch (e) {}
+            return;
+        }
+
+        // Resultado de un envío por raw-paste (prefijo
+        // \x00RAWPASTE_RESULT:, ver server.js/runRawPasteExec()) --
+        // ReplPanel._sendRawPasteExec() queda esperando esto con un
+        // listener propio ("qemu:rawpaste-result"), un solo mensaje
+        // de ida y uno de vuelta, nunca bytes de protocolo sueltos
+        // por acá.
+        if (text.startsWith("\x00RAWPASTE_RESULT:")) {
+            try {
+                const result = JSON.parse(text.slice(17));
+                this.simulator.eventBus.emit("qemu:rawpaste-result", result);
             } catch (e) {}
             return;
         }

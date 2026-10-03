@@ -98,6 +98,16 @@ class ReplPanel {
         // para abortar de inmediato en vez de seguir reintentando igual.
         this._stopRequested = false;
 
+        // Se pone en true la primera vez que el firmware conectado
+        // contesta "R\x00" (raw-paste NO soportado, ver
+        // _sendUserCodeViaRawPaste()/server.js runRawPasteExec()) --
+        // así el resto de ESTA conexión salta directo al envío por
+        // pedazos de siempre, sin perder tiempo repitiendo una
+        // negociación que ya sabemos que va a fallar. Se resetea en
+        // cada conexión nueva (ver "qemu:connected" en bindBusEvents)
+        // -- un firmware distinto (tras reflashear) podría soportarlo.
+        this._rawPasteUnsupported = false;
+
         // Actividad de pines (📌 GPIOxx → LOW/HIGH): con un teclado
         // matricial (o cualquier cosa que escanee GPIOs seguido) esto
         // puede inundar el panel con MUCHO ruido -- get_key() revisa
@@ -1917,6 +1927,216 @@ class ReplPanel {
     // de camino.
     static USER_CODE_SEND_TIME_BUDGET_MS = 180000;
 
+    // ====================================================
+    // Camino PRINCIPAL para mandar el código del usuario: "raw-paste",
+    // el control de flujo REAL que MicroPython ya trae para links
+    // lentos/no confiables (ver el comentario grande en
+    // server.js/runRawPasteExec() para el protocolo completo). El
+    // envío por pedazos chicos de más abajo (_sendUserCodeChunked)
+    // queda como RESPALDO -- se usa solo si este firmware puntual no
+    // soporta raw-paste (algunos builds viejos/recortados de
+    // MicroPython no lo traen), nunca se borra.
+    //
+    // Por qué esto reemplaza al pacing calculado a mano
+    // (SEND_CHUNK_SIZE/SEND_CHUNK_DELAY_MS en server.js): ese pacing
+    // es una ESTIMACIÓN de cuánto va a tardar MicroPython en drenar
+    // cada trozo -- confirmado en vivo, muchas veces esta sesión, que
+    // en una máquina lenta/bajo carga ninguna estimación fija alcanza
+    // siempre (el mismo pedazo de 200 bytes llegó a fallar 5 de 5
+    // veces, con pacing hasta 3x más lento). Raw-paste no estima nada:
+    // el DISPOSITIVO le dice al host cuánto espacio tiene ("window") y
+    // manda una señal real ("\x01") recién cuando drena lo suficiente
+    // como para aceptar más -- el host espera esa señal, nunca un
+    // timer. Nunca hace falta pastear por partes ni reintentar un
+    // pedazo puntual: raw-paste manda el PAYLOAD COMPLETO en una sola
+    // operación, con control de flujo real de punta a punta.
+    //
+    // Ya NO hace falta correr el chequeo de "¿arrancó paste mode?" (ver
+    // _waitForPasteModeStart() en _pasteBlock()) -- raw REPL no tiene
+    // eco interactivo como el paste mode normal, así que no hay texto
+    // humano que confundir. El checksum (USER_CODE_OK_MARKER/
+    // USER_CODE_CORRUPT_MARKER, mismo mecanismo de siempre) se
+    // mantiene igual como red de seguridad final -- raw-paste
+    // garantiza que los BYTES llegaron, pero vale la pena seguir
+    // verificando el CONTENIDO antes de ejecutarlo a ciegas.
+    static USER_CODE_RAWPASTE_ATTEMPTS = 3;
+
+    // Tope de espera para la respuesta de server.js a UN pedido de
+    // raw-paste (ver QemuBridge.sendRawPasteRequest()/"qemu:rawpaste-result")
+    // -- bien por encima de lo que tarda la negociación + envío real
+    // (server.js ya tiene sus propios topes internos, más chicos, por
+    // paso -- ver RAW_REPL_STEP_TIMEOUT_MS ahí), como red de
+    // seguridad si el mensaje de resultado se perdiera por completo.
+    static RAW_PASTE_RESULT_TIMEOUT_MS = 30000;
+
+    // Arma el payload COMPLETO (base64 + checksum, mismo mecanismo que
+    // ya protege al HAL) para mandar de una sola vez por raw-paste --
+    // a diferencia de _buildUserCodeChunkBlock(), no hace falta
+    // partirlo: raw-paste no tiene el problema de "mandar un bloque
+    // gigante a ciegas" que motivó partirlo en primer lugar, porque
+    // el control de flujo real evita que QEMU se sature sea cual sea
+    // el tamaño.
+    _buildRawPasteUserBlock(userCode) {
+
+        const binaryStr = unescape(encodeURIComponent(userCode));
+        const b64 = btoa(binaryStr);
+
+        let checksum = 0;
+        for (let i = 0; i < binaryStr.length; i++) {
+            checksum = (checksum + binaryStr.charCodeAt(i)) % 65536;
+        }
+        const expectedLen = binaryStr.length;
+
+        const [corruptPart1, corruptPart2] = ReplPanel._splitMarker(ReplPanel.USER_CODE_CORRUPT_MARKER);
+        const [okPart1, okPart2]           = ReplPanel._splitMarker(ReplPanel.USER_CODE_OK_MARKER);
+
+        return (
+            `import ubinascii as _uc_iso\n` +
+            `_uc_raw = """${b64}"""\n` +
+            `_uc_joined = "".join(_uc_raw.split())\n` +
+            `try:\n` +
+            `    _uc_bytes = _uc_iso.a2b_base64(_uc_joined)\n` +
+            `except Exception:\n` +
+            `    _uc_bytes = b""\n` +
+            `if len(_uc_bytes) != ${expectedLen} or sum(_uc_bytes) % 65536 != ${checksum}:\n` +
+            `    print("${corruptPart1}" + ("${corruptPart2}len=%d sum=%d esperado_len=${expectedLen} esperado_sum=${checksum}" % (len(_uc_bytes), sum(_uc_bytes) % 65536)))\n` +
+            `else:\n` +
+            `    print("${okPart1}" + "${okPart2}")\n` +
+            `    exec(_uc_bytes.decode(), globals())\n`
+        );
+
+    }
+
+    // Manda UN pedido de raw-paste a server.js y espera SU resultado
+    // (ver QemuBridge.sendRawPasteRequest()/"qemu:rawpaste-result") --
+    // toda la negociación byte a byte vive en server.js (ver el
+    // comentario grande junto a runRawPasteExec() ahí), acá solo se
+    // espera la respuesta. Devuelve { ok, reason? } tal cual lo manda
+    // el servidor, o { ok:false, reason:"no_result"/"not_connected" }
+    // si nunca llegó nada.
+    _sendRawPasteExec(code) {
+
+        return new Promise((resolve) => {
+
+            let settled = false;
+
+            const onResult = (result) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                this.simulator.eventBus.off("qemu:rawpaste-result", onResult);
+                resolve(result);
+            };
+
+            const timer = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                this.simulator.eventBus.off("qemu:rawpaste-result", onResult);
+                resolve({ ok: false, reason: "no_result" });
+            }, ReplPanel.RAW_PASTE_RESULT_TIMEOUT_MS);
+
+            this.simulator.eventBus.on("qemu:rawpaste-result", onResult);
+
+            const sent = this.simulator.qemuBridge?.sendRawPasteRequest(code);
+            if (!sent) onResult({ ok: false, reason: "not_connected" });
+
+        });
+
+    }
+
+    // Manda el código del usuario por raw-paste -- si ESTE firmware
+    // puntual no lo soporta (señal explícita "R\x00", ver
+    // runRawPasteExec() en server.js), cae una sola vez al envío por
+    // pedazos de siempre y se acuerda para el resto de esta conexión
+    // (this._rawPasteUnsupported, ver el constructor) para no perder
+    // tiempo reintentando una negociación que ya sabemos que va a
+    // fallar. Cualquier OTRO fallo (timeout puntual, el dispositivo
+    // abortó a mitad de camino) reintenta el envío COMPLETO -- sigue
+    // siendo barato porque raw-paste nunca tuvo que partirlo en
+    // pedazos.
+    async _sendUserCodeViaRawPaste(userCode) {
+
+        if (this._rawPasteUnsupported) {
+            await this._sendUserCodeChunked(userCode);
+            return;
+        }
+
+        const block = this._buildRawPasteUserBlock(userCode);
+        let fellBackUnsupported = false;
+
+        this.simulator.qemuBridge?.beginPasteLock();
+
+        try {
+
+            for (let attempt = 1; attempt <= ReplPanel.USER_CODE_RAWPASTE_ATTEMPTS; attempt++) {
+
+                if (this._stopRequested) return;
+
+                if (attempt > 1) {
+                    this.appendOutput(
+                        `\n⚠️ Posible error de transmisión -- reintentando (${attempt}/${ReplPanel.USER_CODE_RAWPASTE_ATTEMPTS})...\n`,
+                        "repl-info"
+                    );
+                }
+
+                let okSeen = false;
+                let badSeen = false;
+                let markerSeenEarly = () => {};
+                const markerSeenPromise = new Promise((resolve) => { markerSeenEarly = resolve; });
+
+                const check = (text) => {
+                    if (!text) return;
+                    if (text.includes(ReplPanel.USER_CODE_OK_MARKER))      { okSeen  = true; markerSeenEarly(); }
+                    if (text.includes(ReplPanel.USER_CODE_CORRUPT_MARKER)) { badSeen = true; markerSeenEarly(); }
+                };
+                this.simulator.eventBus.on("qemu:output", check);
+                this.simulator.eventBus.on("qemu:history", check);
+
+                let result;
+                try {
+                    result = await this._sendRawPasteExec(block);
+                    if (result.ok) {
+                        // Los bytes YA llegaron (raw-paste lo
+                        // confirma) -- esto solo espera el veredicto
+                        // del checksum (la red de seguridad final),
+                        // no la entrega en sí.
+                        await Promise.race([
+                            this._waitForNextPrompt(ReplPanel.USER_CODE_STEP_SETTLE_MS),
+                            markerSeenPromise,
+                        ]);
+                    }
+                } finally {
+                    this.simulator.eventBus.off("qemu:output", check);
+                    this.simulator.eventBus.off("qemu:history", check);
+                }
+
+                if (result.reason === "raw_paste_unsupported") {
+                    fellBackUnsupported = true;
+                    this._rawPasteUnsupported = true;
+                    break;
+                }
+
+                if (result.ok && okSeen && !badSeen) return; // éxito confirmado de punta a punta
+
+            }
+
+        } finally {
+            this.simulator.qemuBridge?.endPasteLock();
+        }
+
+        if (this._stopRequested) return;
+
+        this.appendOutput(
+            fellBackUnsupported
+                ? "\n⏳ Este firmware no soporta el envío rápido y confiable (raw-paste) -- usando el envío por pedazos de siempre.\n"
+                : `\n⚠️ El envío rápido falló ${ReplPanel.USER_CODE_RAWPASTE_ATTEMPTS} veces seguidas -- probando el envío por pedazos como respaldo.\n`,
+            "repl-info"
+        );
+
+        await this._sendUserCodeChunked(userCode);
+
+    }
+
     // BUG REAL encontrado probando esto contra el .exe real: un pedazo
     // de ~200 caracteres puede corromperse VARIAS VECES SEGUIDAS al
     // mismo ritmo (confirmado con un log real: el mismo pedazo falló 4
@@ -2651,7 +2871,7 @@ class ReplPanel {
             // que cada uno espera su turno en orden, sin que se pisen
             // los Ctrl+E entre sí.
             await this.preloadHal();
-            await this._enqueuePaste(() => this._sendUserCodeChunked(userCode));
+            await this._enqueuePaste(() => this._sendUserCodeViaRawPaste(userCode));
         }
 
         this._running = false;
@@ -2969,6 +3189,13 @@ class ReplPanel {
         this.simulator.eventBus.on("qemu:connected", async () => {
 
             this._lastGpioLogged = {};
+
+            // Ver el comentario grande en el constructor -- una
+            // conexión nueva (reflasheo, reinicio del bridge) podría
+            // tener un firmware distinto, así que vale la pena volver
+            // a intentar raw-paste en vez de asumir que sigue sin
+            // soportarlo para siempre.
+            this._rawPasteUnsupported = false;
 
             // Modo navegador (WasmBridge, ver plan "PitSimulator en
             // GitHub Pages"): nada de lo de abajo aplica -- no hay
