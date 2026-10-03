@@ -1935,7 +1935,26 @@ class ReplPanel {
     // _wrapHalForIsolation() para el contenido (base64 +
     // _breakRepeatedPatterns + ancho fijo dentro de un string
     // triple-comillado).
-    _buildUserCodeChunkBlock(chunkB64, index, isFirst) {
+    //
+    // BUG REAL, grave, encontrado en vivo (reportado: un script CORTO
+    // -- 5 pedazos -- fallaba con el checksum final mostrando SIEMPRE
+    // ~150 bytes MÁS de los esperados, justo el tamaño de UN pedazo):
+    // `_uc_parts.append(_uc_c)` no es idempotente. Si la confirmación
+    // real de un pedazo (el "UC_CHUNK_OK:N" que imprime MicroPython)
+    // llega justo DESPUÉS de que _sendStepAndConfirm() ya se haya
+    // rendido por el tope de espera (ver USER_CODE_STEP_SETTLE_MS) --
+    // perfectamente posible en una máquina lenta -- el código concluye
+    // (mal) "hay que reintentar este pedazo" aunque YA se había
+    // appendeado del otro lado. El reintento vuelve a mandar el MISMO
+    // pedazo, que YA pasa su propio checksum (el contenido nunca
+    // estuvo corrompido, solo la CONFIRMACIÓN llegó tarde) -- `.append()`
+    // lo agrega una SEGUNDA vez, duplicando ese pedazo en el payload
+    // final. Fix: en vez de `.append()` (nunca seguro de reintentar),
+    // cada pedazo escribe su PROPIO índice fijo en una lista ya armada
+    // del tamaño total (`_uc_parts[N] = _uc_c`) -- reintentar el mismo
+    // índice las veces que haga falta siempre pisa el mismo lugar,
+    // nunca duplica nada.
+    _buildUserCodeChunkBlock(chunkB64, index, isFirst, totalChunks) {
 
         const chunkBroken = ReplPanel._breakRepeatedPatterns(chunkB64);
         const width = ReplPanel.HAL_B64_LINE_WIDTH;
@@ -1954,13 +1973,13 @@ class ReplPanel {
         const [okPart1, okPart2]   = ReplPanel._splitMarker(ReplPanel.USER_CODE_CHUNK_OK_MARKER);
 
         return (
-            (isFirst ? `import ubinascii as _uc_iso\n_uc_parts = []\n` : ``) +
+            (isFirst ? `import ubinascii as _uc_iso\n_uc_parts = [""] * ${totalChunks}\n` : ``) +
             `_uc_c_raw = """` + chunkBlock + `"""\n` +
             `_uc_c = "".join(_uc_c_raw.split())\n` +
             `if len(_uc_c) != ${chunkB64.length} or sum(_uc_c.encode()) % 65536 != ${chunkChecksum}:\n` +
             `    print("${badPart1}" + ("${badPart2}%d" % ${index}))\n` +
             `else:\n` +
-            `    _uc_parts.append(_uc_c)\n` +
+            `    _uc_parts[${index}] = _uc_c\n` +
             `    print("${okPart1}" + ("${okPart2}%d" % ${index}))\n`
         );
 
@@ -2100,7 +2119,7 @@ class ReplPanel {
                     );
                 }
 
-                const block = this._sanitizeForSerial(this._buildUserCodeChunkBlock(chunks[chunkIndex], chunkIndex, isFirst));
+                const block = this._sanitizeForSerial(this._buildUserCodeChunkBlock(chunks[chunkIndex], chunkIndex, isFirst, chunks.length));
 
                 // Ver USER_CODE_CHUNK_MARGIN_STEP/_MAX -- más margen en
                 // cada reintento sucesivo de ESTE pedazo puntual.

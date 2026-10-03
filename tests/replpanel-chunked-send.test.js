@@ -101,7 +101,7 @@ test('_buildUserCodeChunkBlock no contiene ninguno de los dos marcadores de peda
     const ReplPanel = loadReplPanel();
     const ctx = Object.create(ReplPanel.prototype);
 
-    const block = ctx._buildUserCodeChunkBlock('QUJDREVGR0hJSktMTU5PUA==', 0, true);
+    const block = ctx._buildUserCodeChunkBlock('QUJDREVGR0hJSktMTU5PUA==', 0, true, 1);
 
     assert.ok(!block.includes(ReplPanel.USER_CODE_CHUNK_OK_MARKER), 'no debería contener el marcador de éxito del pedazo completo');
     assert.ok(!block.includes(ReplPanel.USER_CODE_CHUNK_BAD_MARKER), 'no debería contener el marcador de pedazo malo completo');
@@ -113,12 +113,12 @@ test('_buildUserCodeChunkBlock agrega el preámbulo (import + lista vacía) solo
     const ReplPanel = loadReplPanel();
     const ctx = Object.create(ReplPanel.prototype);
 
-    const first = ctx._buildUserCodeChunkBlock('QUJDRA==', 0, true);
-    const rest  = ctx._buildUserCodeChunkBlock('RUZHSA==', 1, false);
+    const first = ctx._buildUserCodeChunkBlock('QUJDRA==', 0, true, 2);
+    const rest  = ctx._buildUserCodeChunkBlock('RUZHSA==', 1, false, 2);
 
-    assert.ok(first.includes('_uc_parts = []'), 'el primer pedazo debería inicializar _uc_parts');
+    assert.ok(first.includes('_uc_parts = [""] * 2'), 'el primer pedazo debería inicializar _uc_parts con un lugar fijo por pedazo');
     assert.ok(first.includes('import ubinascii'), 'el primer pedazo debería importar ubinascii');
-    assert.ok(!rest.includes('_uc_parts = []'), 'un pedazo que no es el primero NO debería reinicializar _uc_parts (perdería los anteriores)');
+    assert.ok(!rest.includes('_uc_parts ='), 'un pedazo que no es el primero NO debería reinicializar _uc_parts (perdería los anteriores)');
     assert.ok(!rest.includes('import ubinascii'), 'un pedazo que no es el primero no necesita volver a importar');
 
 });
@@ -129,7 +129,7 @@ test('_buildUserCodeChunkBlock recupera el pedazo original byte a byte (round-tr
     const ctx = Object.create(ReplPanel.prototype);
 
     const chunkB64 = 'QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo=';
-    const block = ctx._buildUserCodeChunkBlock(chunkB64, 2, false);
+    const block = ctx._buildUserCodeChunkBlock(chunkB64, 2, false, 5);
 
     const match = block.match(/_uc_c_raw = """([\s\S]*?)"""/);
     assert.ok(match, 'debería tener un bloque _uc_c_raw');
@@ -234,6 +234,31 @@ test('_sendStepAndConfirm también ve el marcador si llega por "qemu:history" (r
     });
 
     assert.equal(ok, true);
+
+});
+
+test('_buildUserCodeChunkBlock escribe en un ÍNDICE fijo de _uc_parts, nunca con .append() -- reintentar el mismo pedazo no debe poder duplicarlo', () => {
+
+    // BUG REAL, grave, encontrado en vivo (reportado: un script CORTO
+    // de 5 pedazos fallaba SIEMPRE con el checksum final mostrando
+    // ~150 bytes de MÁS -- justo el tamaño de un pedazo): si la
+    // confirmación real de un pedazo llega DESPUÉS de que
+    // _sendStepAndConfirm() ya se rindió por el tope de espera, el
+    // código reintentaba ese pedazo creyendo que había fallado --
+    // pero ya se había appendeado del otro lado. Con `.append()`, el
+    // reintento lo agregaba una SEGUNDA vez. Con un índice fijo
+    // (`_uc_parts[N] = _uc_c`), reintentar las veces que haga falta
+    // siempre pisa el mismo lugar -- nunca duplica nada, sin importar
+    // cuántas veces se mande el mismo pedazo.
+    const ReplPanel = loadReplPanel();
+    const ctx = Object.create(ReplPanel.prototype);
+
+    const attempt1 = ctx._buildUserCodeChunkBlock('QUJDRA==', 2, false, 5);
+    const attempt2 = ctx._buildUserCodeChunkBlock('QUJDRA==', 2, false, 5); // mismo pedazo, "reintentado"
+
+    assert.ok(!attempt1.includes('.append('), 'no debería usar .append() -- no es seguro de reintentar');
+    assert.ok(attempt1.includes('_uc_parts[2] = _uc_c'), 'debería escribir en el índice fijo de este pedazo');
+    assert.equal(attempt1, attempt2, 'mandar el mismo pedazo dos veces debe generar EXACTAMENTE el mismo bloque (idempotente)');
 
 });
 
