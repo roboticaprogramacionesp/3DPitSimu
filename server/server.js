@@ -29,8 +29,26 @@
 
 const { spawn } = require("child_process");
 const fs = require("fs");
+const os = require("os");
 const WebSocket = require("ws");
 const GdbMiClient = require("./gdbMiClient");
+
+// Subir la prioridad del proceso de Node (este mismo server.js) por
+// encima de "normal" -- reportado en vivo (máquina con poca RAM libre,
+// muchas apps abiertas): bajo carga del sistema, el scheduler de
+// Windows puede dejar en pausa este proceso justo en medio del
+// pacing byte a byte de writeToQemuThrottled() (ver más abajo), y esa
+// pausa ES exactamente el tipo de jitter que causa pérdida de
+// caracteres en la UART emulada -- no hace falta que el sistema esté
+// "mal", alcanza con que esté ocupado. No hace nada mágico (no hay
+// control de flujo real acá), pero reduce la frecuencia de esas
+// pausas largas. Puede fallar sin privilegios suficientes en algunos
+// entornos -- no es crítico, seguimos igual si falla.
+try {
+    os.setPriority(0, os.constants.priority.PRIORITY_HIGH);
+} catch (err) {
+    console.warn("[server] No se pudo subir la prioridad del proceso de Node:", err.message);
+}
 
 // ============================================
 // Configuración
@@ -240,6 +258,16 @@ function startQemu(wss) {
     });
 
     qemuProc = proc;
+
+    // Mismo motivo que la prioridad de Node (ver el comentario grande
+    // junto al require("os") de arriba) -- QEMU es el que de verdad
+    // emula la UART byte a byte; si el scheduler lo pausa justo cuando
+    // tiene bytes en tránsito, eso también se ve como "corrupción".
+    try {
+        os.setPriority(proc.pid, os.constants.priority.PRIORITY_HIGH);
+    } catch (err) {
+        console.warn("[server] No se pudo subir la prioridad de QEMU:", err.message);
+    }
 
     proc.stdout.on("data", (chunk) => {
         process.stdout.write(chunk);            // se sigue viendo en la terminal
