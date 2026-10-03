@@ -490,6 +490,27 @@ class WasmBridge {
     // heredar esta ambigüedad del modelo de stream único de QEMU).
     static PROTOCOL_LINE_RE = /^[A-Z][A-Z0-9_]*:[\d.]/;
 
+    // BUG REAL encontrado en vivo probando rc522 (RFID:): a diferencia
+    // de TODOS los demás protocolos simulador→firmware (que siempre
+    // tienen un NÚMERO pegado al primer ":" -- dirección I2C, número
+    // de GPIO, etc.), "RFID:<uid_hex8>"/"RFID:NONE" tiene el PAYLOAD
+    // mismo ahí (un UID hexadecimal que la mitad de las veces arranca
+    // con una letra A-F, o literalmente "NONE") -- PROTOCOL_LINE_RE
+    // nunca matcheaba esos casos, así que la línea se mandaba entera a
+    // mp.runPython() como si fuera código del alumno (y revienta con
+    // NameError/SyntaxError, silenciado en el Worker). Resultado real:
+    // tapear una tarjeta en el canvas en modo navegador no hacía NADA
+    // la mayoría de las veces (solo "funcionaba" por casualidad cuando
+    // el UID generado arrancaba con un dígito 0-9). Se agrega como
+    // caso aparte en vez de intentar generalizar la regex (es el único
+    // protocolo con esta forma, ver el resto de SignalEngine.js).
+    static PROTOCOL_LINE_PREFIXES = ["RFID:"];
+
+    static _isProtocolLine(data) {
+        if (WasmBridge.PROTOCOL_LINE_RE.test(data)) return true;
+        return WasmBridge.PROTOCOL_LINE_PREFIXES.some(prefix => data.startsWith(prefix));
+    }
+
     // Para código real (rama "run"): devuelve una Promise que se
     // resuelve cuando el Worker confirma que mp.runPython() TERMINÓ
     // de verdad (mensaje "runDone", ver wasmWorker.js) -- no cuando
@@ -504,7 +525,7 @@ class WasmBridge {
 
         if (!this.worker || !this._connected) return Promise.resolve();
 
-        if (WasmBridge.PROTOCOL_LINE_RE.test(data)) {
+        if (WasmBridge._isProtocolLine(data)) {
             this.worker.postMessage({ type: "processLine", line: data.trim() });
             return Promise.resolve();
         }
