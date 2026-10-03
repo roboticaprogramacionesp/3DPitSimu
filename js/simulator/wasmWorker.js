@@ -86,7 +86,20 @@ self.onmessage = async (e) => {
         }
 
         try {
-            mp.runPython(msg.code);
+            if (msg.replEcho) {
+                // Ver _pit_repl_eval en _base_wasm.py -- SOLO para la
+                // línea suelta del input de abajo (nunca "▶ Ejecutar"):
+                // muestra el repr si "code" es una expresión (como
+                // tipear "a" en un REPL real), igual que mp.globals.set
+                // + runPython("process_line(...)") ya hace para las
+                // líneas de protocolo más abajo -- evita tener que
+                // escapar comillas/backslashes a mano interpolando el
+                // string directo en el source.
+                mp.globals.set("_pit_repl_src", msg.code);
+                mp.runPython("_pit_repl_eval(_pit_repl_src)");
+            } else {
+                mp.runPython(msg.code);
+            }
         } catch (err) {
             self.postMessage({ type: "stdout", data: "\n" + String(err) + "\n" });
         }

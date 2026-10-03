@@ -90,7 +90,23 @@ class WasmBridge {
             // hace -- pero entonces no queda ninguna confirmación
             // visible de que se ejecutó).
             this.simulator.eventBus.emit("qemu:output", `>>> ${text}\n`);
-            this.sendData(text);
+
+            // BUG REAL reportado: escribir una línea sola con el
+            // NOMBRE de una variable (ej. "a" después de "a = 'Hola'")
+            // no mostraba nada -- a diferencia de un REPL real, donde
+            // escribir una expresión suelta la muestra sola (sin
+            // necesidad de print()). mp.runPython(code) (lo que usa
+            // sendData() normalmente) corre el código como un script
+            // (exec), que siempre DESCARTA el valor de una expresión
+            // suelta -- nunca iba a mostrar nada, con o sin corrupción
+            // de por medio. replEcho:true (solo para esta línea
+            // suelta del input de abajo, nunca para "▶ Ejecutar") le
+            // pide al Worker que la corra con semántica de REPL real
+            // (ver _pit_repl_eval en _base_wasm.py): si es una
+            // expresión, muestra su repr -- igual que tipear "a" en
+            // una terminal Python de verdad. print() ya funcionaba
+            // antes de este fix y sigue igual (no depende de esto).
+            this.sendData(text, { replEcho: true });
         });
 
     }
@@ -521,7 +537,7 @@ class WasmBridge {
     // única forma de que esta Promise SI o SI se resuelva es que el
     // script termine solo o que se llame a interrupt(), que resuelve
     // todo lo pendiente al matar el Worker viejo).
-    sendData(data) {
+    sendData(data, { replEcho = false } = {}) {
 
         if (!this.worker || !this._connected) return Promise.resolve();
 
@@ -532,7 +548,7 @@ class WasmBridge {
 
         const runId = ++this._runIdCounter;
         const promise = new Promise(resolve => this._pendingRunResolvers.set(runId, resolve));
-        this.worker.postMessage({ type: "run", code: data, runId });
+        this.worker.postMessage({ type: "run", code: data, runId, replEcho });
         return promise;
 
     }

@@ -67,6 +67,36 @@ def process_line(line):
             return
 
 
+# BUG REAL (reportado en vivo): tipear una línea suelta con el NOMBRE
+# de una variable (ej. "a" después de "a = 'Hola'") en el input de una
+# línea del panel REPL no mostraba nada -- a diferencia de un REPL de
+# verdad (CPython, o el propio REPL interactivo de MicroPython en
+# hardware), donde escribir una expresión suelta la muestra sola, sin
+# necesitar print(). mp.runPython(code) (lo que usa sendData() siempre
+# que no sea "▶ Ejecutar") corre el código como si fuera un script
+# (equivalente a exec()) -- SIEMPRE descarta el valor de una expresión
+# suelta, nunca iba a mostrar nada, sea cual sea el motivo.
+#
+# Mismo truco de siempre para imitar el REPL real sin tener que tocar
+# el intérprete: probar primero si la línea es una EXPRESIÓN (eval);
+# si lo es, mostrar su repr (como hace sys.displayhook en cualquier
+# REPL de Python) salvo que sea None (igual que el REPL real no
+# imprime nada para una línea que no devuelve nada). Si eval() tira
+# SyntaxError (porque es una ASIGNACIÓN u otra sentencia, no una
+# expresión -- eval() nunca acepta sentencias), cae a exec() normal.
+# WasmBridge.js SOLO manda replEcho=True para esta línea suelta del
+# input de abajo -- nunca para "▶ Ejecutar" (ahí sí se quiere la
+# semántica de script normal, sin imprimir de más).
+def _pit_repl_eval(_pit_src):
+    try:
+        _pit_val = eval(_pit_src, globals())
+    except SyntaxError:
+        exec(_pit_src, globals())
+        return
+    if _pit_val is not None:
+        print(repr(_pit_val))
+
+
 def poll_input():
     # Ver LIMITACIÓN CONOCIDA arriba -- por ahora es un no-op real
     # (no hay ningún canal síncrono para leer del lado JS mid-ejecución
