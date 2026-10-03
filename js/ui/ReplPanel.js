@@ -2956,34 +2956,16 @@ class ReplPanel {
             // script siguiera corriendo/colgado adentro del Worker
             // (reportado por el usuario).
             //
-            // Aviso de "esto puede tardar/colgarse" -- ver la
-            // LIMITACIÓN CONOCIDA del plan: un while True: con
-            // time.sleep() nunca termina solo acá (no hay Ctrl+C
-            // real), así que sin este aviso "▶ Ejecutando..." se ve
-            // igual que un cuelgue real. Con timeout para no
-            // spamear scripts cortos que ya terminan solos.
-            //
-            // BUG REAL de redacción (reportado: un script con un FOR
-            // de pocas vueltas + sleep(), sin ningún "while" en todo
-            // el código, mostraba "si tu código tiene un bucle (while
-            // True:)..." -- el timer de acá es puramente POR TIEMPO
-            // transcurrido (2.5s), nunca mira el código fuente para
-            // ver si de verdad hay un "while" -- cualquier script que
-            // tarde más que eso lo dispara igual, aunque sea un FOR
-            // finito que SÍ va a terminar solo. El mensaje anterior
-            // afirmaba algo que no estaba verificando, confundiendo al
-            // usuario sobre si su script estaba realmente colgado.
-            // Generalizado para no mentir sobre la causa.
-            const hintTimer = setTimeout(() => {
-                this.appendOutput(
-                    "\n⏳ Tu código está tardando más de un par de segundos -- si tiene un bucle largo o un \"while True:\", " +
-                    "esto puede no terminar solo. Si necesitás cortarlo, hacé clic en ■ Interrumpir (se pierden las variables).\n",
-                    "repl-info"
-                );
-            }, 2500);
-
+            // ANTES: un aviso por timeout (2.5s) sugería "puede tener
+            // un bucle (while True:)" -- pedido explícito del usuario:
+            // quitarlo. Era puramente por TIEMPO transcurrido, nunca
+            // miraba el código fuente, y terminó confundiendo a
+            // usuarios con scripts que tardan unos segundos pero SÍ
+            // terminan solos (ej. un FOR con sleep()). El código sigue
+            // visible arriba (_assembleCode, "fullCode + \n") y el
+            // botón ▶ Ejecutar sigue deshabilitado hasta que termine
+            // -- esa señal alcanza sin necesidad de un mensaje aparte.
             await this.simulator.qemuBridge.sendData(fullCode);
-            clearTimeout(hintTimer);
 
         } else {
             // DOS llamadas separadas a propósito, no una sola anidada
