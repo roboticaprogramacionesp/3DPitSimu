@@ -31,6 +31,80 @@ const BASE_WASM_URL      = new URL("../../components_wasm/_base_wasm.py", import
 const I2C_BUS_WASM_URL   = new URL("../../components_wasm/_i2c_bus_wasm.py", import.meta.url);
 const ADC_BUS_WASM_URL   = new URL("../../components_wasm/_adc_bus_wasm.py", import.meta.url);
 const NEOPIXEL_WASM_URL  = new URL("../../components_wasm/_neopixel_wasm.py", import.meta.url);
+const LIBS_MANIFEST_URL  = new URL("../../components_wasm/libs/manifest.json", import.meta.url);
+const LIBS_BASE_URL      = new URL("../../components_wasm/libs/", import.meta.url);
+
+// =============================================================
+// Librerías de usuario (components_wasm/libs/, copia normalizada de
+// C:\Users\p_garcia.ra\OneDrive\Desktop\Micropython\Librerias) -- las
+// mismas que ya venían FROZEN en el firmware real de QEMU, pero acá
+// el puerto WASM no tiene ningún equivalente: ningún "import X" de
+// esta carpeta existía antes de esto, así que cualquier script que
+// las usara (np.py, ezFBmarquee, dht, sensores I2C con su propia
+// clase, etc.) tiraba "ImportError: no module named 'X'" siempre,
+// sin excepción -- confirmado en vivo con un script real de matriz
+// NeoPixel + texto con ezFBmarquee.
+//
+// BUG REAL evitado a propósito (ver components_wasm/libs/np.py.
+// original en la carpeta fuente): algunos de estos archivos vienen
+// con fin de línea CR SOLO (estilo Mac clásico) en vez de LF -- un
+// archivo de 80+ líneas se leía como UNA sola línea gigante. Si
+// MicroPython no trata un \r suelto como salto de línea válido (no
+// se confirmó, pero tampoco hace falta arriesgarse), esos archivos
+// fallarían al compilar. Normalizados a LF una sola vez al copiarlos
+// a este repo (ver el script que los generó) -- no en runtime.
+//
+// Por qué un sistema de archivos virtual en vez del mismo truco de
+// fetch+runPython que usan _base_wasm.py/etc: a diferencia de esos
+// (un puñado fijo, siempre necesarios), estas son decenas de
+// librerías de uso OPCIONAL, cualquier subconjunto de las cuales
+// puede hacer falta según lo que el alumno importe -- y varias se
+// importan ENTRE SÍ (np.py importa ezFBmarquee Y ezFBfont_4x6_latin_06
+// con un "from X import Y" normal, no algo que yo controle). Escribir
+// cada una a mano con fetch+exec() requeriría resolver ese árbol de
+// dependencias transitivas acá en JS. En cambio, loadMicroPython()
+// expone el sistema de archivos real de Emscripten como mp.FS (ver
+// ports/webassembly/api.js) -- escribiendo estos archivos ahí y
+// agregando esa carpeta a sys.path, el import NATIVO de MicroPython
+// resuelve TODO el árbol de dependencias solo, exactamente como lo
+// haría con un filesystem real -- sin reinventar nada de eso a mano.
+async function _loadUserLibraries(mp) {
+
+    let manifest;
+    try {
+        manifest = await (await fetch(LIBS_MANIFEST_URL)).json();
+    } catch (err) {
+        console.warn("[wasmWorker] No se pudo cargar el manifest de librerías:", err);
+        return;
+    }
+
+    mp.FS.mkdir("/libs");
+
+    // Cada archivo se escribe por separado -- si UNO falla (404, texto
+    // corrupto, lo que sea), no debería tirar abajo a los demás: mejor
+    // que falte una librería puntual (el ImportError de esa, nada más,
+    // recién si el alumno la usa) que perder TODAS por un solo 404.
+    const results = await Promise.allSettled(
+        manifest.libraries.map(async (name) => {
+            const res = await fetch(new URL(name + ".py", LIBS_BASE_URL));
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const text = await res.text();
+            mp.FS.writeFile(`/libs/${name}.py`, text);
+        })
+    );
+
+    const failed = results
+        .map((r, i) => (r.status === "rejected" ? manifest.libraries[i] : null))
+        .filter(Boolean);
+    if (failed.length > 0) {
+        console.warn("[wasmWorker] No se pudieron cargar estas librerías:", failed);
+    }
+
+    // sys.path ya trae algunas entradas por default (ver el propio
+    // puerto) -- se agrega /libs al final, nunca se reemplaza nada.
+    mp.runPython("import sys\nif '/libs' not in sys.path:\n    sys.path.append('/libs')\n");
+
+}
 
 self.onmessage = async (e) => {
 
@@ -64,6 +138,8 @@ self.onmessage = async (e) => {
 
             const neopixelCode = await (await fetch(NEOPIXEL_WASM_URL)).text();
             mp.runPython(neopixelCode);
+
+            await _loadUserLibraries(mp);
 
             baseLoaded = true;
 
