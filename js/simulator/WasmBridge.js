@@ -515,12 +515,15 @@ class WasmBridge {
     // protocolo simulador→firmware (ej. "IN:<gpio>:<valor>\n" que
     // manda SignalEngine._notifyButtonToFirmware() al apretar un
     // botón). En QEMU ambos caminos son "escribir al mismo stdin".
-    // Acá NO -- ver la LIMITACIÓN CONOCIDA arriba: mientras un script
-    // corre, nada puede inyectarse. "IN:" solo puede actualizar el
-    // estado para la PRÓXIMA vez que el script llame a Pin.value()
-    // (si el script ya está en un while True: leyendo ese pin, este
-    // cambio no lo va a ver hasta la próxima corrida) -- limitación
-    // real, documentada, no un bug.
+    // Acá NO son el mismo camino (uno va por "run", el otro por
+    // "processLine", ver wasmWorker.js) -- pero ACTUALIZADO: "IN:" SÍ
+    // puede llegar a aplicarse EN VIVO mientras un script ya está
+    // corriendo, siempre que ese script esté en un yield de Asyncify
+    // (adentro de un time.sleep()) en el momento en que llega -- ver
+    // mp_hal_delay_ms() en mphalport.c del build de micropython.mjs.
+    // Si el script no tiene ningún sleep() en su bucle (nunca cede el
+    // control), sigue aplicando solo para la PRÓXIMA corrida, como
+    // antes.
     // Heurística para distinguir protocolo ("IN:18:1", "BH1750:35:500.0")
     // de código real del alumno -- todo lo que manda SignalEngine.js
     // por sendData() tiene esta forma (PREFIJO:número:...). No es

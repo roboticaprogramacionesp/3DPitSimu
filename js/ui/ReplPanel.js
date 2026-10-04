@@ -3289,8 +3289,8 @@ class ReplPanel {
                 "y ponelo en \"Permitir\", después recargá la página.\n" +
                 "\n" +
                 "Mientras tanto podés usar el 🌐 modo navegador (sin instalar nada,\n" +
-                "aunque no actualiza los controles del panel en vivo mientras corre\n" +
-                "un bucle).\n",
+                "incluida la actualización en vivo de sensores/teclado mientras\n" +
+                "corre un bucle, siempre que tenga algún sleep() adentro).\n",
                 "repl-error"
             );
         });
@@ -3531,17 +3531,20 @@ class ReplPanel {
         // ("no puedo hacer clic en botón y luego soltar y dar clic en
         // Ejecutar"): en modo navegador (WasmBridge), un clic en un
         // componente interactivo (tecla de teclado, ADKEY, botón,
-        // TAP de RC522) NO se ve reflejado en Python hasta la
-        // PRÓXIMA corrida -- esa es la limitación real de WASM ya
-        // documentada (ver _base_wasm.py y el comentario grande en
-        // WasmBridge.sendData()/wasmWorker.js: nada puede inyectarse
-        // mientras un script ya está corriendo). En vez de obligar a
-        // un segundo clic manual en "▶ Ejecutar" después de cada
-        // interacción, acá se dispara esa misma corrida SOLA: el
-        // alumno aprieta la tecla/botón UNA sola vez y ve el
-        // resultado directo, siempre que ya haya código cargado, el
-        // REPL esté listo, y no haya otra corrida en curso (si la
-        // hay, se ignora -- iniciar una segunda tanda en paralelo es
+        // TAP de RC522) mientras NO hay ningún script corriendo no
+        // dispara nada por sí solo -- sigue haciendo falta una corrida
+        // para verlo reflejado en Python. (Si YA hay un script
+        // corriendo con algún sleep() en su bucle, ESE clic sí se
+        // aplica en vivo sin esto -- ver el comentario grande en
+        // WasmBridge.sendData()/wasmWorker.js -- pero antes de la
+        // PRIMERA corrida no hay ningún bucle corriendo todavía que
+        // pueda recibirlo.) En vez de obligar a un clic manual en
+        // "▶ Ejecutar" después de cada interacción para ese caso
+        // inicial, acá se dispara esa misma corrida SOLA: el alumno
+        // aprieta la tecla/botón UNA sola vez y ve el resultado
+        // directo, siempre que ya haya código cargado, el REPL esté
+        // listo, y no haya otra corrida en curso (si la hay, se
+        // ignora -- iniciar una segunda tanda en paralelo es
         // justo el bug que _running ya previene en runEditorCode()).
         // Ver Renderer.js (bindPressButton/bindAdKey/bindKeypadMatrix)
         // y SignalEngine.tapRc522() para los emisores de este evento.
