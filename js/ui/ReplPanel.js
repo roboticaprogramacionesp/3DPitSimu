@@ -3326,7 +3326,20 @@ class ReplPanel {
             // Worker ya cargó _base_wasm.py/_i2c_bus_wasm.py antes de
             // mandar "ready", así que queda listo de una.
             if (this.simulator.qemuBridge?.isWasmBridge) {
-                this.appendOutput("\n🌐 Listo (modo navegador).\n", "repl-info");
+                // Pedido explícito del usuario: que se vea como el banner
+                // real que imprime MicroPython al arrancar (QEMU), en vez
+                // de un mensaje genérico -- usa la versión REAL de este
+                // puerto (v1.28.0, confirmada en assets/wasm/micropython.wasm,
+                // "MicroPython v1.28.0-dirty on 2026-08-01") en vez de
+                // inventar "v1.29.0"/"Generic ESP32 module" como el banner
+                // de QEMU: ESO sí corre sobre hardware ESP32 emulado de
+                // verdad, esto es el intérprete solo, sin esa capa --
+                // decir "ESP32" acá sería mentirle al alumno sobre qué
+                // está corriendo en realidad.
+                this.appendOutput(
+                    "\nMicroPython v1.28.0 (puerto WebAssembly); 3DPit-Blockly (modo navegador)\n\nType \"help()\" for more information.\n",
+                    "repl-info"
+                );
 
                 // Los módulos "siempre presentes" (_base/_i2c_bus/etc.)
                 // NUNCA se fetchean/mandan acá -- wasmWorker.js ya cargó

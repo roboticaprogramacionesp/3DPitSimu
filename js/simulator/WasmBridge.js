@@ -160,8 +160,33 @@ class WasmBridge {
         if (msg.type === "ready") {
             this._connected = true;
             this.updateStatus("connected");
-            this.simulator.eventBus.emit("qemu:connected");
+
+            // BUG REAL (reportado: "doy clic en Simular y tarda un monton
+            // mostrando Conectando, pero el boton Ejecutar ya esta
+            // habilitado" -- la UI quedaba inconsistente, aunque no
+            // rompia nada funcionalmente): el orden de estas dos lineas
+            // estaba invertido. startSimulation() dispara
+            // "simulation:started" -> Toolbar.updateUI(true), que deja
+            // el botón ▶Simular/⏹Detener en "⏳ Conectando..."
+            // deshabilitado (correcto como estado INICIAL, pensado para
+            // QEMU, donde el WebSocket abre mucho antes de que el
+            // intérprete esté listo). Pero en modo WASM, "qemu:connected"
+            // YA deja todo listo de una (ver el comentario grande en
+            // ReplPanel.js sobre esto) -- dispara _onReplReady()
+            // SINCRÓNICAMENTE, que habilita "▶ Ejecutar" Y emite
+            // "repl:ready" (que pone el botón en "⏹ Detener" habilitado).
+            // Si "qemu:connected" se emite ANTES de startSimulation()
+            // (como estaba), ese startSimulation() de ACÁ ABAJO corre
+            // DESPUÉS y pisa el "⏹ Detener" que "repl:ready" recién puso,
+            // dejando el botón trabado en "Conectando..." para siempre
+            // aunque el REPL ya esté 100% listo. Invertido: ahora
+            // startSimulation() (y su "Conectando..." inicial) corre
+            // PRIMERO, y "qemu:connected" (que deja todo listo de una)
+            // corre último -- el mismo orden que ya tenía sentido para
+            // QEMU, solo que acá ambos pasos ocurren casi en el mismo
+            // instante en vez de estar separados por varios segundos.
             this.simulator.startSimulation();
+            this.simulator.eventBus.emit("qemu:connected");
 
             const esp32 = this.simulator.componentManager
                 .getAll()
