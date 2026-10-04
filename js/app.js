@@ -36,6 +36,10 @@
     //    ReplPanel se suscribe al EventBus para recibir output del bridge
     const replPanel = new ReplPanel(sim);
 
+    // 2b. Teléfono virtual BLE (ver plan ESP-NOW→WiFi→BLE, última fase)
+    //     -- panel aparte, no depende de ReplPanel, solo del eventBus.
+    const blePanel = new BlePanel(sim);
+
     // 3. WasmBridge (modo 100% navegador, sin QEMU/servidor -- ver plan
     //    "PitSimulator en GitHub Pages") -- AHORA EL DEFAULT. Desde que
     //    el modo navegador llegó a cubrir prácticamente todo el
@@ -57,8 +61,23 @@
     //    práctica que el dev server (`serve`) redirige /index.html a
     //    /index y en el camino pierde el query string; un hash nunca
     //    se manda al servidor, así que ningún redirect lo puede tocar.
+    //
+    //    Multi-ESP32 (ver plan ESP-NOW): en modo navegador ya no se crea
+    //    UN WasmBridge fijo acá -- Simulator.spawnBridgesForAllEsp32()
+    //    crea uno POR CADA ESP32 presente en el lienzo recién al recibir
+    //    "simulation:start" (▶ Simular), porque antes de eso no se sabe
+    //    cuántos va a haber (el usuario puede agregar/cargar componentes
+    //    después de este punto). QemuBridge sigue siendo la única
+    //    instancia global de siempre (multi-instancia de QEMU queda
+    //    fuera de alcance del plan) -- se sigue creando acá mismo, sin
+    //    pasar por el Simulator.
     const qemuMode = location.hash === "#modo=qemu";
-    sim.qemuBridge = qemuMode ? new QemuBridge(sim) : new WasmBridge(sim);
+    if (qemuMode) {
+        sim.qemuBridge = new QemuBridge(sim);
+    } else {
+        sim.eventBus.on("simulation:start", () => sim.spawnBridgesForAllEsp32());
+        sim.eventBus.on("simulation:stop",  () => sim.teardownAllBridges());
+    }
 
     // 4. Toolbar (botones superiores: eliminar, zoom)
     const toolbar = new Toolbar(sim);
@@ -90,6 +109,7 @@
     // 10. Exponer globalmente para debug en consola del navegador
     window.sim             = sim;
     window.replPanel       = replPanel;
+    window.blePanel        = blePanel;
     window.tutorialManager = tutorialManager;
     window.toolbar         = toolbar;
     window.reportGenerator = reportGenerator;

@@ -584,11 +584,20 @@ class Toolbar {
 
             }
 
-            // 2+ ESP32 no bloquea (QemuBridge.getEsp32() igual arranca
-            // con la primera que encuentra) pero avisa, porque el
-            // circuito casi seguro no es el que el usuario tenía pensado.
+            // 2+ ESP32 no bloquea. En modo QEMU (#modo=qemu) sigue
+            // siendo cierto que solo se usa la primera (QemuBridge.
+            // getEsp32() -- multi-instancia de QEMU queda fuera de
+            // alcance del plan ESP-NOW), así que ahí el aviso sigue
+            // siendo útil. En modo navegador (WASM, el default) ESTO
+            // YA NO ES CIERTO desde el plan multi-ESP32/ESP-NOW --
+            // Simulator.spawnBridgesForAllEsp32() arranca un bridge
+            // real por cada ESP32, todos funcionan a la vez (ver el
+            // selector de dispositivo en el panel REPL) -- mostrar
+            // este aviso ahí sería directamente mentirle al usuario
+            // sobre un circuito que SÍ anda completo.
             if (warningEl) {
-                if (esp32s.length > 1) {
+                const qemuMode = location.hash === "#modo=qemu";
+                if (esp32s.length > 1 && qemuMode) {
                     warningEl.textContent = `⚠ Hay ${esp32s.length} ESP32 en el lienzo -- se va a usar la primera.`;
                     warningEl.classList.remove("hidden");
                 } else {

@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/simulator.css">
     <link rel="stylesheet" href="css/grid.css">
     <link rel="stylesheet" href="css/repl-panel.css">
+    <link rel="stylesheet" href="css/ble-panel.css">
     <link rel="stylesheet" href="css/led-colors.css">
     <link rel="stylesheet" href="css/simulation-lock.css">
     <link rel="stylesheet" href="css/project-drawer.css">
@@ -83,6 +84,7 @@
             -->
 
             <button id="btnSimToggle" class="btn-sim-toggle">▶ Simular</button>
+            <button id="btnBlePanelToggle" class="btn-project-toggle" title="Teléfono virtual BLE (simula Serial Bluetooth Terminal)">📱</button>
         </div>
 
     </header>
@@ -203,6 +205,7 @@
     <script src="js/simulator/FrozenHalTypes.js"></script>
     <script src="js/simulator/QemuBridge.js"></script>
     <script src="js/simulator/WasmBridge.js"></script>
+    <script src="js/simulator/EspNowBus.js"></script>
     <script src="js/simulator/Renderer.js"></script>
     <script src="js/simulator/HistoryManager.js"></script>
     <script src="js/simulator/AnnotationManager.js"></script>
@@ -245,6 +248,7 @@
     <script src="js/ui/Toolbox.js"></script>
     <script src="js/ui/PropertyPanel.js"></script>
     <script src="js/ui/ReplPanel.js"></script>
+    <script src="js/ui/BlePanel.js"></script>
     <script src="js/ui/ContextMenu.js"></script>
     <script src="js/ui/TutorialManager.js"></script>
     <script src="js/ui/ReportGenerator.js"></script>

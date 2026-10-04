@@ -168,10 +168,28 @@ class ReplPanel {
         this._copyToClipboard = () => false;
         this._pasteFromClipboard = null;
 
+        // Multi-ESP32 (ver plan ESP-NOW, Fase 2) -- selector de
+        // dispositivo. _activeEsp32Id es el id del ESP32 que este panel
+        // está mostrando AHORA (null hasta el primer uso real del
+        // selector -- con 0 o 1 ESP32 en el proyecto nunca hace falta,
+        // sim.qemuBridge ya apunta solo al único bridge que existe, ver
+        // Simulator.spawnBridgesForAllEsp32()). _deviceSessions guarda,
+        // por esp32Id, el estado que es propio de CADA dispositivo (su
+        // propio Worker/intérprete) -- código del editor, historial del
+        // REPL, y el tracking de HAL ya cargado/reintentado. Ver
+        // _switchActiveDevice() para el detalle completo de qué se
+        // guarda/restaura y por qué.
+        this._activeEsp32Id = null;
+        this._deviceSessions = new Map();
+
         this.buildDOM();
         this.bindEvents();
         this.bindBusEvents();
         this._bindNativeClipboard();
+
+        this._refreshDeviceSelector();
+        this.simulator.eventBus.on("component:added",   () => this._refreshDeviceSelector());
+        this.simulator.eventBus.on("component:removed", () => this._refreshDeviceSelector());
 
     }
 
@@ -193,6 +211,7 @@ class ReplPanel {
                 <span class="repl-icon">⚡</span>
                 <span class="repl-title">MicroPython</span>
                 <span id="qemuStatus" class="repl-status">🔴 Desconectado</span>
+                <select id="replDeviceSelect" class="repl-device-select" title="Dispositivo ESP32 que muestra este panel" style="display:none;"></select>
             </div>
             <div class="repl-header-right">
                 <div class="repl-font-size-group" title="Tamaño de fuente">
@@ -367,6 +386,257 @@ class ReplPanel {
         workspace.appendChild(this.panel);
 
         this._initTerminal();
+
+        this.deviceSelect = this.header.querySelector("#replDeviceSelect");
+        this.deviceSelect.addEventListener("change", () => {
+            this._switchActiveDevice(this.deviceSelect.value);
+        });
+
+    }
+
+    // ====================================================
+    // Multi-ESP32 (ver plan ESP-NOW) -- selector de dispositivo.
+    //
+    // Este panel (editor + terminal) es UNO solo, pero con 2+ ESP32 en
+    // el lienzo hay 2+ Workers/intérpretes corriendo en paralelo (ver
+    // Simulator.spawnBridgesForAllEsp32()) -- el selector decide cuál
+    // de ellos se está mirando/editando ahora mismo. El mecanismo:
+    // simulator.qemuBridge (el alias de siempre, usado por TODO el
+    // resto del código sin cambios) pasa a apuntar al bridge elegido
+    // -- WasmBridge.js filtra sus propios eventos "qemu:*" por
+    // "this === simulator.qemuBridge" (ver su constructor/
+    // _onWorkerMessage/_teardown), así que el dispositivo no elegido
+    // sigue corriendo de verdad (su hardware simulado, GPIO/PWM/etc.,
+    // nunca se pausa) pero no interfiere con lo que se ve en este panel.
+    // ====================================================
+
+    _refreshDeviceSelector() {
+
+        // QEMU (#modo=qemu) es una única instancia global de siempre
+        // (ver app.js) -- multi-instancia de QEMU queda fuera de
+        // alcance del plan, el selector no aplica ahí.
+        if (location.hash === "#modo=qemu") {
+            this.deviceSelect.style.display = "none";
+            return;
+        }
+
+        const esp32s = this.simulator.componentManager.getAll().filter(c => c.type.startsWith("esp32"));
+
+        // Con 0 o 1 ESP32 en el proyecto (el caso de siempre, hasta
+        // ahora el único soportado), ocultar el selector -- cero
+        // cambio visual para el 99% de los proyectos existentes.
+        if (esp32s.length <= 1) {
+            this.deviceSelect.style.display = "none";
+            return;
+        }
+
+        const previousValue = this.deviceSelect.value;
+
+        this.deviceSelect.innerHTML = "";
+        esp32s.forEach(esp32 => {
+            const opt = document.createElement("option");
+            opt.value = esp32.id;
+            opt.textContent = esp32.properties?.macAddress ? `${esp32.id} (${esp32.properties.macAddress})` : esp32.id;
+            this.deviceSelect.appendChild(opt);
+        });
+
+        // Preferir seguir mostrando el mismo dispositivo que ya se
+        // estaba mostrando (si sigue existiendo) -- agregar/quitar
+        // OTRO ESP32 no debería cambiar lo que el usuario está mirando.
+        const currentId = this._activeEsp32Id || this.simulator.qemuBridge?.esp32?.id;
+        if (currentId && esp32s.some(e => e.id === currentId)) {
+            this.deviceSelect.value = currentId;
+        } else if (previousValue && esp32s.some(e => e.id === previousValue)) {
+            this.deviceSelect.value = previousValue;
+        }
+
+        this.deviceSelect.style.display = "";
+
+    }
+
+    // Cambiar qué ESP32 muestra este panel -- guarda el estado del que
+    // se deja de mirar (código, historial, tracking de HAL) en
+    // _deviceSessions, y restaura (o crea de cero) el del que se pasa
+    // a mirar. Ver el comentario grande de arriba para el porqué del
+    // mecanismo completo.
+    _switchActiveDevice(esp32Id) {
+
+        if (!esp32Id || esp32Id === this._activeEsp32Id) return;
+
+        // Id "saliente": si todavía no se tocó el selector ni una vez
+        // en esta sesión del panel, es el que simulator.qemuBridge ya
+        // apunta por default (el primer ESP32 encontrado, ver
+        // Simulator.spawnBridgesForAllEsp32()).
+        const outgoingId = this._activeEsp32Id || this.simulator.qemuBridge?.esp32?.id;
+
+        if (outgoingId) {
+
+            this._deviceSessions.set(outgoingId, {
+                code:              this.codeMirror.getValue(),
+                history:           this.history,
+                historyIndex:      this.historyIndex,
+                halSentToFirmware: this._halSentToFirmware,
+                frozenHalTypes:    this._frozenHalTypes,
+                halRetryCounts:    this._halRetryCounts,
+                outputBuffer:      this._outputBuffer,
+                replReady:         this._replReady,
+                // BUG REAL encontrado al probar esto con 2 ESP32 (uno
+                // corriendo un while True: largo, el otro recién
+                // elegido en el selector): sin guardar/restaurar esto
+                // por dispositivo, this._running quedaba en true (del
+                // dispositivo saliente) y runEditorCode() del dispositivo
+                // ENTRANTE se negaba a correr ("if (this._running)
+                // return;") aunque su propio Worker estuviera libre --
+                // una corrida larga en un ESP32 bloqueaba "▶ Ejecutar"
+                // en TODOS los demás.
+                running:           this._running,
+            });
+
+            // Código del dispositivo que se deja de mirar, persistido
+            // en el proyecto -- ProjectManager.serialize() ya hace
+            // spread genérico de "properties" (confirmado leyendo su
+            // código), así que no hace falta tocarlo para que esto se
+            // guarde/cargue junto con el resto del proyecto.
+            const outgoingComponent = this.simulator.componentManager.get(outgoingId);
+            if (outgoingComponent) {
+                outgoingComponent.properties = outgoingComponent.properties || {};
+                outgoingComponent.properties.espnowCode = this.codeMirror.getValue();
+            }
+
+        }
+
+        this._activeEsp32Id = esp32Id;
+
+        // Repuntar el alias de siempre -- TODO el resto del código
+        // (preloadHal/runEditorCode/sendInput/interrupt/softReset/etc.)
+        // sigue hablando con "simulator.qemuBridge" sin saber que ahora
+        // puede ser cualquiera de varios bridges. null si este ESP32
+        // todavía no tiene bridge (se agregó al lienzo después del
+        // último "▶ Simular") -- nunca se deja el bridge VIEJO puesto,
+        // eso enviaría comandos de este dispositivo al que no es.
+        const bridge = this.simulator.bridges.get(esp32Id) || null;
+        this.simulator.qemuBridge = bridge;
+
+        const session   = this._deviceSessions.get(esp32Id);
+        const component = this.simulator.componentManager.get(esp32Id);
+
+        if (session) {
+            this.codeMirror.setValue(session.code || "");
+            this.history             = session.history;
+            this.historyIndex        = session.historyIndex;
+            this._halSentToFirmware  = session.halSentToFirmware;
+            this._frozenHalTypes     = session.frozenHalTypes;
+            this._halRetryCounts     = session.halRetryCounts;
+            this._outputBuffer       = session.outputBuffer;
+            this._replReady          = session.replReady;
+            this._running            = session.running;
+        } else {
+            // Primera vez que se mira este dispositivo -- mismos
+            // defaults que el constructor, más el código persistido en
+            // el proyecto si lo hay (ej. tras cargar un proyecto
+            // guardado con 2+ ESP32).
+            this.codeMirror.setValue(component?.properties?.espnowCode || "");
+            this.history             = [];
+            this.historyIndex        = -1;
+            this._halSentToFirmware  = new Set();
+            this._frozenHalTypes     = new Set();
+            this._halRetryCounts     = {};
+            this._outputBuffer       = "";
+            this._replReady          = false;
+            this._running            = false;
+        }
+
+        this.input.value = "";
+        this.terminal.clear();
+        this.appendOutput(`── ${esp32Id} ──\n`, "repl-info");
+
+        // Lo que este dispositivo haya impreso MIENTRAS no era el
+        // activo (ej. el print() de un irq() de ESP-NOW al llegar un
+        // mensaje en segundo plano) -- ver el comentario grande en
+        // WasmBridge._handleStdout(). Sin esto, ese texto se perdía
+        // para siempre -- no había forma de confirmar que algo había
+        // pasado en un dispositivo que no se estaba mirando.
+        if (bridge?._pendingVisibleOutput) {
+            this.appendOutput(bridge._pendingVisibleOutput);
+            bridge._pendingVisibleOutput = "";
+        }
+
+        const runBtn = document.getElementById("replBtnRun");
+
+        if (bridge?.connected && this._replReady) {
+            // Ya había terminado de arrancar la última vez que se miró
+            // -- solo re-habilitar la UI, sin repetir el banner/
+            // preloadHal (que ya corrieron de verdad en su momento).
+            this._onReplReady();
+        } else if (bridge?.connected) {
+            // El Worker de este dispositivo ya conectó mientras no era
+            // el activo (ver gating en WasmBridge._onWorkerMessage) --
+            // recién acá se arma su banner/HAL inicial, la primera vez
+            // que alguien lo mira.
+            this._activateWasmDeviceReady();
+        } else {
+            this._replReady = false;
+            this.input.disabled   = true;
+            this.sendBtn.disabled = true;
+            if (runBtn) runBtn.disabled = true;
+            this.prompt.style.color = "#666";
+        }
+
+        // Si este dispositivo tiene una corrida en curso (ej. un
+        // while True: largo, arrancado antes de dejar de ser el
+        // activo), "▶ Ejecutar" tiene que seguir deshabilitado --
+        // ninguna de las ramas de arriba lo sabe por sí sola (_onReplReady()/
+        // _activateWasmDeviceReady() siempre lo HABILITAN, asumiendo el
+        // caso normal "recién conectado, nada corriendo todavía").
+        if (this._running && runBtn) runBtn.disabled = true;
+
+        this.deviceSelect.value = esp32Id;
+
+    }
+
+    // Extraído del listener de "qemu:connected" (ver bindBusEvents) --
+    // banner + HAL "siempre presente" + habilitar REPL + precargar HAL
+    // de los componentes ya en el lienzo + resync. Se llama desde ahí
+    // para el dispositivo activo en el momento en que conecta, Y desde
+    // _switchActiveDevice() para un dispositivo que conectó en segundo
+    // plano (su propio "qemu:connected" nunca llegó acá mientras no
+    // era el activo).
+    async _activateWasmDeviceReady() {
+
+        // Pedido explícito del usuario: literalmente el MISMO banner
+        // que imprime el firmware real al arrancar bajo QEMU (mismo
+        // texto exacto, sin aclarar "WebAssembly"/"modo navegador" en
+        // ningún lado) -- el alumno/docente no tiene por qué saber ni
+        // que le importe qué motor corre atrás. Hardcodeado literal a
+        // propósito (no la versión real de este puerto, v1.28.0) para
+        // que coincida con lo que ya ve en QEMU.
+        this.appendOutput(
+            "\nMicroPython v1.29.0-dirty on 2026-09-13; Generic ESP32 module with ESP32; 3DPit-Blockly v2.0\n\nType \"help()\" for more information.\n",
+            "repl-info"
+        );
+
+        // Los módulos "siempre presentes" (_base/_i2c_bus/etc.) NUNCA
+        // se fetchean/mandan acá -- wasmWorker.js ya cargó sus
+        // equivalentes _*_wasm.py (components_wasm/) al conectar. Si se
+        // mandaran los .hal.py REALES de QEMU encima, chocan: esos
+        // esperan un machine.Pin real (ej. Pin.IRQ_RISING), y acá
+        // machine.Pin es el fake de _base_wasm.py -- confirmado en la
+        // práctica (AttributeError). Marcarlos "sent" de entrada evita
+        // que _buildPendingHal() los toque.
+        this._halRetryCounts = {};
+        this._halSentToFirmware = new Set(ReplPanel.ALWAYS_HAL_TYPES);
+
+        this._onReplReady();
+
+        // Mismo motivo que preloadHal() en QEMU (ver
+        // _resyncHalAfterBoot): un componente que YA está en el lienzo
+        // al conectar necesita su .hal.py cargado DE UNA, no recién en
+        // el primer "Ejecutar" -- si no, cualquier valor empujado
+        // desde el panel antes de eso (slider de temperatura, lux,
+        // etc.) se pierde en silencio.
+        await this.preloadHal();
+
+        this.simulator.signalEngine.resyncAllComponents();
 
     }
 
@@ -577,7 +847,10 @@ class ReplPanel {
         // Toggle
         document.getElementById("replBtnToggle").addEventListener("click", () => this.toggle());
         this.header.addEventListener("click", (e) => {
-            if (e.target.closest(".repl-btn, .repl-tabbar")) return;
+            // BUG REAL reportado (clic en el selector de dispositivo
+            // -- Fase 2 -- minimizaba el panel entero): faltaba acá,
+            // mismo criterio que .repl-btn/.repl-tabbar de siempre.
+            if (e.target.closest(".repl-btn, .repl-tabbar, .repl-device-select")) return;
             this.toggle();
         });
 
@@ -3326,44 +3599,15 @@ class ReplPanel {
             // Worker ya cargó _base_wasm.py/_i2c_bus_wasm.py antes de
             // mandar "ready", así que queda listo de una.
             if (this.simulator.qemuBridge?.isWasmBridge) {
-                // Pedido explícito del usuario: literalmente el MISMO
-                // banner que imprime el firmware real al arrancar bajo
-                // QEMU (mismo texto exacto, sin aclarar "WebAssembly"/
-                // "modo navegador" en ningún lado) -- el alumno/docente
-                // no tiene por qué saber ni que le importe qué motor
-                // corre atrás, la experiencia tiene que ser idéntica sin
-                // importar el modo. Hardcodeado literal a propósito (no
-                // la versión real de este puerto, v1.28.0) para que
-                // coincida con lo que ya ve en QEMU.
-                this.appendOutput(
-                    "\nMicroPython v1.29.0-dirty on 2026-09-13; Generic ESP32 module with ESP32; 3DPit-Blockly v2.0\n\nType \"help()\" for more information.\n",
-                    "repl-info"
-                );
-
-                // Los módulos "siempre presentes" (_base/_i2c_bus/etc.)
-                // NUNCA se fetchean/mandan acá -- wasmWorker.js ya cargó
-                // sus equivalentes _*_wasm.py (components_wasm/) al
-                // conectar. Si se mandaran los .hal.py REALES de QEMU
-                // encima, chocan: esos esperan un machine.Pin real (ej.
-                // Pin.IRQ_RISING), y acá machine.Pin es el fake de
-                // _base_wasm.py -- confirmado en la práctica
-                // (AttributeError). Marcarlos "sent" de entrada evita
-                // que _buildPendingHal() los toque.
-                this._halRetryCounts = {};
-                this._halSentToFirmware = new Set(ReplPanel.ALWAYS_HAL_TYPES);
-
-                this._onReplReady();
-
-                // Mismo motivo que preloadHal() en QEMU (ver
-                // _resyncHalAfterBoot): un componente que YA está en
-                // el lienzo al conectar necesita su .hal.py cargado
-                // DE UNA, no recién en el primer "Ejecutar" -- si no,
-                // cualquier valor empujado desde el panel antes de
-                // eso (slider de temperatura, lux, etc.) se pierde en
-                // silencio.
-                await this.preloadHal();
-
-                this.simulator.signalEngine.resyncAllComponents();
+                // Multi-ESP32 (Fase 2): extraído a _activateWasmDeviceReady()
+                // -- este mismo camino (banner + marcar HAL "siempre
+                // presente" + _onReplReady + preloadHal + resync) se
+                // necesita de nuevo desde _switchActiveDevice() para un
+                // dispositivo que conectó en segundo plano (ver el
+                // gating en WasmBridge._onWorkerMessage: su propio
+                // "qemu:connected" no llega hasta acá si no era el
+                // activo en ese momento).
+                await this._activateWasmDeviceReady();
                 return;
             }
 

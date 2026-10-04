@@ -239,3 +239,56 @@ test("[hallazgo] dos drivers en conflicto sobre la misma net: hoy no se detecta 
   // Comportamiento actual: se reporta HIGH igual, sin ninguna señal de conflicto.
   assert.equal(eng.isKeyConnectedToHighDriver("led1:anodo"), true);
 });
+
+// ============================================================
+// resolveEsp32 — base para multi-ESP32 (ver plan ESP-NOW): a
+// diferencia de los call-sites viejos (.find() del primer ESP32 del
+// proyecto, sin mirar si está cableado), resolveEsp32() camina la
+// net desde startKey y solo cuenta un ESP32 que esté REALMENTE
+// conectado en ella.
+// ============================================================
+
+test("resolveEsp32: devuelve null si la net no incluye ningún ESP32", () => {
+  const led = makeLed("led1");
+  const sim = makeSimulator([led], []);
+  const eng = new SignalEngineCore(sim);
+
+  assert.equal(eng.resolveEsp32("led1:anodo"), null);
+});
+
+test("resolveEsp32: devuelve el ESP32 y el número de GPIO cuando la net llega a un pin io<N>", () => {
+  const led = makeLed("led1");
+  const drv = makeDriver("esp1", "io14");
+  const sim = makeSimulator([led, drv], [wire("led1", "anodo", "esp1", "io14")]);
+  const eng = new SignalEngineCore(sim);
+
+  const resolved = eng.resolveEsp32("led1:anodo");
+  assert.ok(resolved);
+  assert.equal(resolved.esp32.id, "esp1");
+  assert.equal(resolved.gpioNumber, 14);
+});
+
+test("resolveEsp32: con dos ESP32 en el proyecto, devuelve el que esté cableado en ESA net (no 'el primero')", () => {
+  const led = makeLed("led1");
+  const drvA = makeDriver("espA", "io2");
+  const drvB = makeDriver("espB", "io4");
+  const sim = makeSimulator(
+    [led, drvA, drvB],
+    [wire("led1", "anodo", "espB", "io4")] // led SOLO está cableado a espB, no a espA
+  );
+  const eng = new SignalEngineCore(sim);
+
+  const resolved = eng.resolveEsp32("led1:anodo");
+  assert.ok(resolved);
+  assert.equal(resolved.esp32.id, "espB");
+  assert.equal(resolved.gpioNumber, 4);
+});
+
+test("resolveEsp32: null si la net llega a un ESP32 pero por un pin que no matchea io<N> (ej. gnd_0)", () => {
+  const led = makeLed("led1");
+  const drv = makeDriver("esp1", "io2");
+  const sim = makeSimulator([led, drv], [wire("led1", "anodo", "esp1", "gnd_0")]);
+  const eng = new SignalEngineCore(sim);
+
+  assert.equal(eng.resolveEsp32("led1:anodo"), null);
+});

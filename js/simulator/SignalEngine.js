@@ -168,29 +168,56 @@ class SignalEngine {
     this.evaluateAll();
   }
 
+  // ====================================================
+  // resolveEsp32(startKey) -- generaliza el patrón repetido en
+  // _notifyButtonToFirmware/_notifyDigitalToFirmware y otros
+  // call-sites (hoy todos asumen "el primer ESP32 encontrado" vía
+  // .find()): camina la red eléctrica desde startKey con getNet() y
+  // devuelve el ESP32 que esté REALMENTE cableado en esa red,
+  // identificado por GPIO, sin asumir que hay uno solo en el
+  // proyecto. Base para soporte multi-ESP32 (ver plan ESP-NOW).
+  //
+  // Devuelve { esp32, gpioNumber } o null si la red no llega a
+  // ningún pin "ioN" de ningún ESP32.
+  // ====================================================
+  resolveEsp32(startKey) {
+    const net = this.getNet(startKey);
+
+    for (const key of net) {
+      const [cId, pId] = key.split(":");
+      const component = this.simulator.componentManager.get(cId);
+      if (!component?.type?.startsWith("esp32")) continue;
+      const match = pId.match(/^io(\d+)$/);
+      if (!match) continue;
+      return { esp32: component, gpioNumber: parseInt(match[1], 10) };
+    }
+
+    return null;
+  }
+
+  // Bridge real a usar para un ESP32 YA resuelto por resolveEsp32():
+  // en modo navegador, sim.bridges tiene un WasmBridge por cada ESP32
+  // (ver Simulator.spawnBridgesForAllEsp32()); en modo QEMU, sim.bridges
+  // está vacío siempre (QemuBridge es una única instancia global que
+  // nunca pasa por ahí) así que cae al alias de siempre, sim.qemuBridge.
+  _bridgeFor(esp32) {
+    return this.simulator.bridges?.get(esp32.id) || this.simulator.qemuBridge;
+  }
+
   _notifyButtonToFirmware(component, value) {
     if (!this.isComponentPowered(component)) return;
 
-    const esp32 = this.simulator.componentManager
-      .getAll()
-      .find((c) => c.type.startsWith("esp32"));
-    if (!esp32) return;
-
     for (const pinId of component.pressPins) {
-      const net = this.getNet(`${component.id}:${pinId}`);
+      const resolved = this.resolveEsp32(`${component.id}:${pinId}`);
+      if (!resolved) continue;
 
-      for (const key of net) {
-        const [cId, pId] = key.split(":");
-        if (cId !== esp32.id) continue;
-        const match = pId.match(/^io(\d+)$/);
-        if (!match) continue;
-        const gpioNumber = parseInt(match[1], 10);
-        //console.log(`[SignalEngine] Botón → GPIO${gpioNumber} = ${value}`);
-        if (this.simulator.qemuBridge?.connected) {
-          this.simulator.qemuBridge.sendData(`IN:${gpioNumber}:${value}`);
-        }
-        return;
+      const { esp32, gpioNumber } = resolved;
+      //console.log(`[SignalEngine] Botón → GPIO${gpioNumber} = ${value}`);
+      const bridge = this._bridgeFor(esp32);
+      if (bridge?.connected) {
+        bridge.sendData(`IN:${gpioNumber}:${value}`);
       }
+      return;
     }
   }
 
@@ -1876,23 +1903,13 @@ class SignalEngine {
   _notifyDigitalToFirmware(component, pinId, value) {
     if (!this.isComponentPowered(component)) return;
 
-    const esp32 = this.simulator.componentManager
-      .getAll()
-      .find((c) => c.type.startsWith("esp32"));
-    if (!esp32) return;
+    const resolved = this.resolveEsp32(`${component.id}:${pinId}`);
+    if (!resolved) return;
 
-    const net = this.getNet(`${component.id}:${pinId}`);
-
-    for (const key of net) {
-      const [cId, pId] = key.split(":");
-      if (cId !== esp32.id) continue;
-      const match = pId.match(/^io(\d+)$/);
-      if (!match) continue;
-      const gpioNumber = parseInt(match[1], 10);
-      if (this.simulator.qemuBridge?.connected) {
-        this.simulator.qemuBridge.sendData(`IN:${gpioNumber}:${value}`);
-      }
-      return;
+    const { esp32, gpioNumber } = resolved;
+    const bridge = this._bridgeFor(esp32);
+    if (bridge?.connected) {
+      bridge.sendData(`IN:${gpioNumber}:${value}`);
     }
   }
 

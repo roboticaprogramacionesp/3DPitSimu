@@ -54,6 +54,19 @@
     transition: color 0.3s;
 }
 
+/* Multi-ESP32 (ver plan ESP-NOW) -- selector de dispositivo, oculto
+   por default (ver ReplPanel._refreshDeviceSelector(), solo aparece
+   con 2+ ESP32 en el lienzo). */
+.repl-device-select {
+    font-size: 11px;
+    color: #a9b1d6;
+    padding: 1px 6px;
+    background: #0d0d1a;
+    border-radius: 10px;
+    border: 1px solid #2d2d4e;
+    max-width: 140px;
+}
+
 /* ---- Tabs ---- */
 
 .repl-tabbar {

@@ -40,11 +40,30 @@ let mp = null;
 let baseLoaded = false;
 let processLineBusy = false;
 
+// BUG REAL reportado (texto con tildes/ñ llegando corrupto -- "DÃ³nde"
+// en vez de "Dónde"): el stdout del puerto llega BYTE A BYTE (ver el
+// comentario de "stdout" más abajo), y un carácter no-ASCII en UTF-8
+// ocupa 2+ bytes -- decodificar cada byte por separado con
+// String.fromCharCode() (como hacía esto antes) solo da el resultado
+// correcto para ASCII puro; para cualquier otra cosa, cada byte de la
+// secuencia multi-byte se interpreta como SU PROPIO carácter Latin-1,
+// produciendo la mojibake de arriba. Un TextDecoder("utf-8") en modo
+// streaming (decode(chunk, {stream:true})) es el mecanismo estándar
+// para esto exacto: junta bytes de una secuencia multi-byte que
+// lleguen en llamadas separadas y recién devuelve texto cuando la
+// secuencia está completa -- tiene que ser UNA sola instancia
+// persistente (no una nueva por byte) para que ese buffering interno
+// funcione entre llamadas.
+const _stdoutDecoder = new TextDecoder("utf-8");
+
 const BASE_WASM_URL      = new URL("../../components_wasm/_base_wasm.py", import.meta.url);
 const I2C_BUS_WASM_URL   = new URL("../../components_wasm/_i2c_bus_wasm.py", import.meta.url);
 const KEYPAD_I2C_WASM_URL = new URL("../../components_wasm/_keypad_i2c_wasm.py", import.meta.url);
 const ADC_BUS_WASM_URL   = new URL("../../components_wasm/_adc_bus_wasm.py", import.meta.url);
 const NEOPIXEL_WASM_URL  = new URL("../../components_wasm/_neopixel_wasm.py", import.meta.url);
+const ESPNOW_WASM_URL    = new URL("../../components_wasm/_espnow_wasm.py", import.meta.url);
+const REQUESTS_WASM_URL  = new URL("../../components_wasm/_requests_wasm.py", import.meta.url);
+const BLUETOOTH_WASM_URL = new URL("../../components_wasm/_bluetooth_wasm.py", import.meta.url);
 const LIBS_BUNDLE_URL    = new URL("../../components_wasm/libs/bundle.json", import.meta.url);
 
 // =============================================================
@@ -96,7 +115,7 @@ async function _loadUserLibraries(mp) {
 
     let bundle;
     try {
-        bundle = await (await fetch(LIBS_BUNDLE_URL)).json();
+        bundle = await (await fetch(LIBS_BUNDLE_URL, { cache: "no-store" })).json();
     } catch (err) {
         console.warn("[wasmWorker] No se pudo cargar el paquete de librerías:", err);
         return;
@@ -136,25 +155,73 @@ self.onmessage = async (e) => {
                 // hay que decodificarlo a texto acá antes de mandarlo:
                 // WasmBridge.js espera el stream crudo como STRING (mismo
                 // criterio que QemuBridge.js con el WebSocket) para poder
-                // acumular+split("\n") y parsear el protocolo.
-                stdout: (data) => self.postMessage({ type: "stdout", data: String.fromCharCode(data[0]) }),
+                // acumular+split("\n") y parsear el protocolo. Ver
+                // _stdoutDecoder arriba -- stream:true devuelve "" (nada
+                // que mandar) mientras un carácter multi-byte está a
+                // medio llegar.
+                stdout: (data) => {
+                    const text = _stdoutDecoder.decode(data, { stream: true });
+                    if (text) self.postMessage({ type: "stdout", data: text });
+                },
                 linebuffer: false,
             });
 
-            const baseCode = await (await fetch(BASE_WASM_URL)).text();
+            // BUG REAL encontrado en vivo (reportado: ImportError sobre
+            // un archivo que SÍ estaba en el servidor -- el navegador
+            // tenía en caché una versión vieja de uno de estos fetch()
+            // de una corrida anterior, de ANTES de que ese archivo
+            // existiera/cambiara). Python's http.server no manda
+            // Cache-Control, así que el navegador queda libre de
+            // cachear estos .py con su propia heurística -- cada vez
+            // que se edita alguno de estos archivos (pasó varias veces
+            // hoy mismo: ESPNOW/requests/bluetooth), una pestaña ya
+            // abierta podía seguir sirviendo la versión vieja de ESTE
+            // fetch puntual aunque los demás sí se actualizaran, un
+            // estado mezclado difícil de diagnosticar desde afuera.
+            // cache:"no-store" fuerza a pedir siempre la red -- ya se
+            // vuelve a fetchear TODO esto en cada "▶ Simular" de
+            // cualquier forma (Worker nuevo), así que no hay ningún
+            // costo real en dejar de cachear.
+            const NO_CACHE = { cache: "no-store" };
+
+            const baseCode = await (await fetch(BASE_WASM_URL, NO_CACHE)).text();
             await mp.runPython(baseCode);
 
-            const i2cCode = await (await fetch(I2C_BUS_WASM_URL)).text();
+            const i2cCode = await (await fetch(I2C_BUS_WASM_URL, NO_CACHE)).text();
             await mp.runPython(i2cCode);
 
-            const keypadI2cCode = await (await fetch(KEYPAD_I2C_WASM_URL)).text();
+            const keypadI2cCode = await (await fetch(KEYPAD_I2C_WASM_URL, NO_CACHE)).text();
             await mp.runPython(keypadI2cCode);
 
-            const adcCode = await (await fetch(ADC_BUS_WASM_URL)).text();
+            const adcCode = await (await fetch(ADC_BUS_WASM_URL, NO_CACHE)).text();
             await mp.runPython(adcCode);
 
-            const neopixelCode = await (await fetch(NEOPIXEL_WASM_URL)).text();
+            const neopixelCode = await (await fetch(NEOPIXEL_WASM_URL, NO_CACHE)).text();
             await mp.runPython(neopixelCode);
+
+            // MAC de ESTE ESP32 (ver plan ESP-NOW/Simulator multi-
+            // dispositivo) -- inyectada ANTES de correr _espnow_wasm.py
+            // para que pueda leerla como global al definir su propia
+            // network.WLAN.config('mac'). Viene en el mensaje "init"
+            // (ver WasmBridge._spawnWorker()) como hex SIN ":", o
+            // "000000000000" si no hay ningún ESP32 (modo "sin placa",
+            // ver Simulator.spawnBridgesForAllEsp32()).
+            mp.globals.set("_pit_esp32_mac_hex", msg.macHex || "000000000000");
+            const espnowCode = await (await fetch(ESPNOW_WASM_URL, NO_CACHE)).text();
+            await mp.runPython(espnowCode);
+
+            // "requests"/"urequests" (ver plan ESP-NOW→WiFi→BLE, Fase
+            // WiFi) -- depende de register_line_handler() de
+            // _base_wasm.py, sin requisito de orden respecto a
+            // _espnow_wasm.py más allá de eso.
+            const requestsCode = await (await fetch(REQUESTS_WASM_URL, NO_CACHE)).text();
+            await mp.runPython(requestsCode);
+
+            // BLE (ver plan ESP-NOW→WiFi→BLE, última fase) -- depende
+            // de register_line_handler() de _base_wasm.py y de la MAC
+            // ya inyectada arriba, sin más orden que eso.
+            const bluetoothCode = await (await fetch(BLUETOOTH_WASM_URL, NO_CACHE)).text();
+            await mp.runPython(bluetoothCode);
 
             await _loadUserLibraries(mp);
 
@@ -265,6 +332,37 @@ self.onmessage = async (e) => {
                 self.postMessage({ type: "stdout", data: "\n" + String(err) + "\n" });
             } finally {
                 processLineBusy = false;
+            }
+        }
+
+        return;
+
+    }
+
+    if (msg.type === "setGlobal") {
+
+        // BUG REAL encontrado en vivo probando WiFi/HTTP (ver
+        // _requests_wasm.py/request()): a diferencia de "processLine"
+        // de arriba, esto NO llama a mp.runPython() -- mp.globals.set()
+        // por sí solo no inicia ningún ccall asyncify-wrapped nuevo
+        // (no ejecuta bytecode, solo escribe un valor), así que es
+        // seguro llamarlo en CUALQUIER momento, incluso mientras OTRA
+        // llamada a mp.runPython() sigue "en vuelo" (suspendida en un
+        // time.sleep() propio) -- a diferencia de un SEGUNDO
+        // mp.runPython() concurrente, que sí puede chocar con el
+        // primero ("RuntimeError: ... We cannot start an async
+        // operation when one is already in flight", confirmado en vivo
+        // con un bucle de requests.get() -- cada respuesta HTTP llegaba
+        // por "processLine" mientras el MISMO script que la esperaba
+        // seguía suspendido en su propio sondeo). request() del lado
+        // Python directamente consulta este valor en su propio sondeo
+        // (ya está despierto cada poll_ms de cualquier forma), así que
+        // no hace falta "despertarlo" desde acá con una ejecución nueva.
+        if (mp && baseLoaded) {
+            try {
+                mp.globals.set(msg.key, msg.value);
+            } catch (err) {
+                self.postMessage({ type: "stdout", data: "\n" + String(err) + "\n" });
             }
         }
 

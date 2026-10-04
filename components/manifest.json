@@ -3,7 +3,8 @@
         {
             "type": "esp32_wroom",
             "name": "ESP32 WeMos D1",
-            "category": "Microcontroladores"
+            "category": "Microcontroladores",
+            "hasBehavior": true
         },
         {
             "type": "led",

@@ -72,6 +72,28 @@ class Simulator {
         this.signalEngine = null;
 
         // ==========================
+        // Multi-ESP32 (ver plan ESP-NOW/WiFi/BLE) -- "qemuBridge" sigue
+        // existiendo (cero cambio para todo lo que ya le habla directo:
+        // preloadHal/runEditorCode/interrupt/etc.), pero ya NO es
+        // simplemente "el primer ESP32" -- ReplPanel._switchActiveDevice()
+        // lo repunta al bridge que el selector de dispositivo tenga
+        // elegido ahora mismo (ver Fase 2 del plan). Cualquier código
+        // nuevo que necesite hablarle a un ESP32 EN PARTICULAR (no "el
+        // que esté activo en el REPL ahora") debe resolver primero cuál
+        // es y buscar su bridge acá por id, no usar qemuBridge. Se llena
+        // en spawnBridgesForAllEsp32() (abajo), llamado al recibir
+        // "simulation:start".
+        // ==========================
+
+        this.bridges = new Map(); // esp32ComponentId -> WasmBridge
+
+        // Bus de ESP-NOW simulado (ver plan, Fase 3) -- instanciado en
+        // initializeManagers() junto con el resto, independiente del
+        // ciclo de vida de los bridges (sobrevive a Simular/Detener,
+        // igual que componentManager).
+        this.espNowBus = null;
+
+        // ==========================
         // Zoom
         // ==========================
 
@@ -397,6 +419,10 @@ class Simulator {
         this.wireManager = new WireManager(this);
 
         this.signalEngine = new SignalEngine(this);
+
+        // Ver plan ESP-NOW, Fase 3 -- sobrevive a Simular/Detener,
+        // igual que componentManager (ver comentario del constructor).
+        this.espNowBus = new EspNowBus(this);
 
         this.history = new HistoryManager(this);
 
@@ -798,6 +824,60 @@ class Simulator {
     toggleSimulation() {
         if (this.isRunning) this.stopSimulation();
         else this.startSimulation();
+    }
+
+    /*
+    ======================================================
+    Multi-ESP32 (modo navegador) -- ver plan ESP-NOW/WiFi/BLE, Fase 1.
+
+    Quién llama a esto: app.js, UNA sola vez al arrancar, registra
+    estos dos métodos como listeners de "simulation:start"/
+    "simulation:stop" -- pero SOLO en modo navegador (WasmBridge). En
+    modo QEMU (#modo=qemu), QemuBridge sigue siendo una única
+    instancia global que se auto-suscribe a esos mismos eventos en su
+    propio constructor, sin pasar por acá (multi-instancia de QEMU
+    queda fuera de alcance del plan).
+    ======================================================
+    */
+
+    spawnBridgesForAllEsp32() {
+
+        const esp32s = this.componentManager.getAll().filter(c => c.type.startsWith("esp32"));
+
+        // Sin ningún ESP32 en el lienzo: se arranca igual UN bridge
+        // "sin placa" (esp32=null) -- mismo comportamiento que existía
+        // antes de esto (WasmBridge se creaba siempre en app.js, hubiera
+        // o no un ESP32 ya puesto), para no romper el caso de correr
+        // Python puro sin hardware simulado.
+        const targets = esp32s.length > 0 ? esp32s : [null];
+
+        targets.forEach(esp32 => {
+
+            const key = esp32 ? esp32.id : "__no_esp32__";
+            let bridge = this.bridges.get(key);
+
+            if (!bridge) {
+                bridge = new WasmBridge(this, esp32);
+                this.bridges.set(key, bridge);
+            }
+
+            // connect() también cubre el caso "ya existía, estaba
+            // desconectado" (ej. tras un ⏹ Detener previo) -- mismo
+            // ciclo reconectar/reusar que ya tenía el bridge único.
+            bridge.connect();
+
+        });
+
+        // "qemuBridge" queda de alias del PRIMER bridge (primer ESP32
+        // encontrado, o el bridge "sin placa" si no hay ninguno) --
+        // cero cambio para los call-sites de SignalEngine.js que todavía
+        // no se migraron a resolveEsp32()+sim.bridges.get().
+        this.qemuBridge = this.bridges.values().next().value || null;
+
+    }
+
+    teardownAllBridges() {
+        this.bridges.forEach(bridge => bridge.disconnect());
     }
 
 }

@@ -4417,7 +4417,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
   Disabled:3,
   },
   state:0,
-  StackSize:4096,
+  StackSize:1048576,
   currData:null,
   handleSleepReturnValue:0,
   exportCallStack:[],
@@ -5945,9 +5945,14 @@ export async function loadMicroPython(options) {
     Module = await _createMicroPythonModule(Module);
     globalThis.Module = Module;
     proxy_js_init();
-    // PitSimulator: mismo motivo que runPython() mas abajo -- importar un
-    // módulo corre su código de nivel superior, que puede disparar
-    // mp_js_hook() igual que cualquier otro bytecode.
+    // PitSimulator: este Emscripten (con "standard" variant,
+    // MICROPY_VARIANT_ENABLE_JS_HOOK=1) llama a mp_js_hook() durante
+    // CUALQUIER ejecución de bytecode -- mp_js_hook está envuelto por
+    // Asyncify (todo el binario está instrumentado, -s ASYNCIFY sin
+    // lista angosta), así que CUALQUIER ccall que pueda atravesar un
+    // import asyncify-wrapped tiene que usar { async: true }, sea que
+    // ese ccall en particular suspenda algo de verdad o no -- el
+    // runtime lo valida igual y aborta si falta.
     const pyimport = async (name) => {
         const value = Module._malloc(3 * 4);
         await Module.ccall(
@@ -5994,18 +5999,6 @@ export async function loadMicroPython(options) {
             Module._free(value);
         },
         pyimport: pyimport,
-        // PitSimulator: con el Emscripten mas nuevo con el que se recompilo
-        // este puerto, el ccall() de acá abajo SIN { async: true } aborta
-        // ("Assertion failed: The call to mp_js_do_exec is running
-        // asynchronously...") en CUALQUIER ejecución, incluso un for-loop
-        // sin sleep ni nada async -- porque el variant "standard" tiene
-        // MICROPY_VARIANT_ENABLE_JS_HOOK=1 (mpconfigvariant.h), así que la
-        // VM llama a mp_js_hook() periódicamente durante el bytecode, y
-        // mp_js_hook está envuelto por el wrapper de Asyncify (todo el
-        // binario está instrumentado, -s ASYNCIFY sin lista angosta) --
-        // este Emscripten valida en runtime que CUALQUIER ccall que pueda
-        // atravesar un import asyncify-wrapped use { async: true }, sin
-        // importar si ese import realmente suspende algo o no.
         async runPython(code) {
             const len = Module.lengthBytesUTF8(code);
             const buf = Module._malloc(len + 1);

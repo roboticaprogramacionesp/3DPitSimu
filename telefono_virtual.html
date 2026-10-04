@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Teléfono virtual — PitSimulator</title>
+<style>
+    :root {
+        --bg: #0d0d1a;
+        --panel: #15152a;
+        --border: #2d2d4e;
+        --accent: #0a84ff;
+        --text: #e8e8f0;
+        --muted: #8888a0;
+        --ok: #00ff88;
+        --err: #ff5252;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, system-ui, "Segoe UI", sans-serif;
+        min-height: 100vh;
+    }
+
+    h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+    }
+
+    .subtitle {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 0 0 20px;
+    }
+
+    label {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 6px;
+    }
+
+    input, textarea {
+        width: 100%;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 16px;
+        padding: 10px 12px;
+        font-family: inherit;
+    }
+
+    input:focus, textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    .field {
+        margin-bottom: 16px;
+    }
+
+    textarea {
+        resize: vertical;
+        min-height: 70px;
+    }
+
+    button {
+        width: 100%;
+        background: var(--accent);
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        padding: 14px;
+        cursor: pointer;
+    }
+
+    button:active {
+        opacity: 0.8;
+    }
+
+    button:disabled {
+        background: #444;
+        cursor: default;
+    }
+
+    #status {
+        margin-top: 10px;
+        font-size: 13px;
+        min-height: 18px;
+    }
+
+    #status.ok { color: var(--ok); }
+    #status.err { color: var(--err); }
+
+    .log-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 28px 0 10px;
+    }
+
+    .log-header h2 {
+        font-size: 14px;
+        margin: 0;
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .log-header button {
+        width: auto;
+        padding: 6px 12px;
+        font-size: 12px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+    }
+
+    #log {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        min-height: 120px;
+        max-height: 40vh;
+        overflow-y: auto;
+    }
+
+    .msg {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+        word-break: break-word;
+    }
+
+    .msg:last-child { border-bottom: none; }
+
+    .msg-meta {
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 3px;
+    }
+
+    .msg-empty {
+        padding: 16px 12px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+
+    <h1>📱 Teléfono virtual</h1>
+    <p class="subtitle">
+        Mandá mensajes a tu ESP32 simulado en PitSimulator (y mirá lo que
+        él te mande de vuelta). Ambos lados hablan a través del mismo
+        canal público en <a href="https://ntfy.sh" target="_blank" style="color:var(--accent);">ntfy.sh</a>.
+    </p>
+
+    <div class="field">
+        <label for="topic">Canal (poné algo único que nadie más vaya a adivinar)</label>
+        <input id="topic" type="text" placeholder="ej. pitsim-juan-8234" autocapitalize="off" autocorrect="off" spellcheck="false">
+    </div>
+
+    <div class="field">
+        <label for="message">Mensaje</label>
+        <textarea id="message" placeholder="Escribí algo para mandarle al ESP32..."></textarea>
+    </div>
+
+    <button id="sendBtn">Enviar</button>
+    <div id="status"></div>
+
+    <div class="log-header">
+        <h2>Mensajes del canal</h2>
+        <button id="refreshBtn">↻ Actualizar</button>
+    </div>
+    <div id="log"><div class="msg-empty">Poné un canal arriba para ver sus mensajes.</div></div>
+
+<script>
+    // ====================================================
+    // Página standalone, sin build ni dependencias -- pensada para
+    // abrirse DIRECTO desde el navegador del teléfono (por la red
+    // local de la compu que corre PitSimulator, o publicada). Habla
+    // con el mismo servicio (ntfy.sh, gratis, sin cuenta) que el
+    // código MicroPython del lado del ESP32 simulado (ver
+    // _requests_wasm.py / requests.get()/post()) -- ninguno de los
+    // dos lados necesita saber nada del otro más que el nombre del
+    // canal, que es simplemente texto compartido de antemano (no hay
+    // "emparejamiento" real, es un canal público por nombre).
+    // ====================================================
+
+    const topicInput   = document.getElementById('topic');
+    const messageInput = document.getElementById('message');
+    const sendBtn       = document.getElementById('sendBtn');
+    const statusEl       = document.getElementById('status');
+    const logEl           = document.getElementById('log');
+    const refreshBtn     = document.getElementById('refreshBtn');
+
+    // Recordar el último canal usado (por canal, no por mensaje) --
+    // típico que el alumno vuelva a abrir esta página varias veces
+    // seguidas probando el mismo ESP32.
+    topicInput.value = localStorage.getItem('pit_telefono_topic') || '';
+
+    let pollTimer = null;
+    const seen = new Set();
+
+    function setStatus(text, cls) {
+        statusEl.textContent = text;
+        statusEl.className = cls || '';
+    }
+
+    function currentTopic() {
+        return topicInput.value.trim();
+    }
+
+    function renderMessages(messages) {
+        if (messages.length === 0) {
+            logEl.innerHTML = '<div class="msg-empty">Todavía no hay mensajes en este canal.</div>';
+            return;
+        }
+        logEl.innerHTML = '';
+        // Más nuevo primero -- más útil en un chat que scrollear.
+        messages.slice().reverse().forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'msg';
+            const date = new Date(m.time * 1000);
+            const meta = document.createElement('div');
+            meta.className = 'msg-meta';
+            meta.textContent = date.toLocaleTimeString();
+            const body = document.createElement('div');
+            body.textContent = m.message;
+            div.appendChild(meta);
+            div.appendChild(body);
+            logEl.appendChild(div);
+        });
+    }
+
+    async function fetchMessages() {
+        const topic = currentTopic();
+        if (!topic) return;
+        try {
+            const res = await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}/json?poll=1`);
+            const text = await res.text();
+            const messages = text
+                .trim()
+                .split('\n')
+                .filter(Boolean)
+                .map(line => { try { return JSON.parse(line); } catch (e) { return null; } })
+                .filter(m => m && m.event === 'message');
+            messages.forEach(m => seen.add(m.id));
+            renderMessages(messages);
+        } catch (err) {
+            // Silencioso -- un fallo de polling en segundo plano no
+            // debería tapar el status del último envío manual.
+        }
+    }
+
+    topicInput.addEventListener('change', () => {
+        localStorage.setItem('pit_telefono_topic', topicInput.value.trim());
+        fetchMessages();
+    });
+
+    refreshBtn.addEventListener('click', fetchMessages);
+
+    sendBtn.addEventListener('click', async () => {
+        const topic = currentTopic();
+        const message = messageInput.value.trim();
+
+        if (!topic) {
+            setStatus('Poné un nombre de canal primero.', 'err');
+            return;
+        }
+        if (!message) {
+            setStatus('Escribí algo para mandar.', 'err');
+            return;
+        }
+
+        localStorage.setItem('pit_telefono_topic', topic);
+
+        sendBtn.disabled = true;
+        setStatus('Enviando...', '');
+
+        try {
+            const res = await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
+                method: 'POST',
+                body: message,
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            setStatus('✓ Enviado', 'ok');
+            messageInput.value = '';
+            fetchMessages();
+        } catch (err) {
+            setStatus('No se pudo enviar (¿sin internet?): ' + err.message, 'err');
+        } finally {
+            sendBtn.disabled = false;
+        }
+    });
+
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendBtn.click();
+        }
+    });
+
+    // Auto-actualizar cada 4s mientras la página está abierta -- así
+    // se ve en vivo lo que el ESP32 mande de vuelta (requests.post()
+    // del lado MicroPython), sin tener que tocar "Actualizar" a mano.
+    function restartPolling() {
+        if (pollTimer) clearInterval(pollTimer);
+        fetchMessages();
+        pollTimer = setInterval(fetchMessages, 4000);
+    }
+
+    restartPolling();
+</script>
+
+</body>
+</html>

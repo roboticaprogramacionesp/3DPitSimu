@@ -1,0 +1,197 @@
+/* ==========================================================
+   PitSimulator — ble-panel.css
+   "Teléfono virtual" BLE -- panel flotante, esquina superior
+   derecha del workspace (no compite por espacio con el panel REPL,
+   que vive anclado abajo -- ver repl-panel.css).
+   ========================================================== */
+
+#blePanel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 300px;
+    z-index: 220;
+    display: flex;
+    flex-direction: column;
+    background: #1a1a2e;
+    border: 1px solid #2d2d4e;
+    border-radius: 10px;
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+    transition: height 0.2s ease;
+}
+
+#blePanel.ble-closed .ble-body { display: none; }
+
+/* ---- Cabecera ---- */
+
+.ble-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    height: 32px;
+    min-height: 32px;
+    background: #16213e;
+    cursor: pointer;
+    user-select: none;
+}
+
+#blePanel.ble-closed .ble-header { border-bottom: none; }
+#blePanel:not(.ble-closed) .ble-header { border-bottom: 1px solid #2d2d4e; }
+
+.ble-header-left  { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ble-header-right { display: flex; align-items: center; gap: 4px; }
+
+.ble-icon  { font-size: 14px; }
+.ble-title {
+    color: #a9b1d6;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ble-status {
+    font-size: 10px;
+    color: #666;
+    padding: 1px 6px;
+    background: #0d0d1a;
+    border-radius: 10px;
+    border: 1px solid #2d2d4e;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ---- Botones ---- */
+
+.ble-btn {
+    background: #242442;
+    border: 1px solid #2d2d4e;
+    border-radius: 6px;
+    color: #ccc;
+    font-size: 12px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.ble-btn:hover { background: #2e2e52; }
+.ble-btn:disabled { opacity: 0.5; cursor: default; }
+
+.ble-btn-toggle { padding: 2px 8px; }
+
+.ble-btn-connect {
+    background: #0a84ff;
+    border-color: #0a84ff;
+    color: #fff;
+    white-space: nowrap;
+}
+.ble-btn-connect:hover { background: #0a74e0; }
+
+.ble-btn-send {
+    background: #0a84ff;
+    border-color: #0a84ff;
+    color: #fff;
+}
+.ble-btn-send:hover { background: #0a74e0; }
+
+/* ---- Cuerpo ---- */
+
+.ble-body {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    gap: 8px;
+}
+
+.ble-connect-row {
+    display: flex;
+    gap: 6px;
+}
+
+.ble-device-select {
+    flex: 1;
+    min-width: 0;
+    background: #0d0d1a;
+    border: 1px solid #2d2d4e;
+    border-radius: 6px;
+    color: #ccc;
+    font-size: 12px;
+    padding: 4px 6px;
+}
+
+.ble-log {
+    height: 240px;
+    overflow-y: auto;
+    background: #0d0d1a;
+    border: 1px solid #2d2d4e;
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ble-log-empty {
+    color: #666;
+    font-size: 12px;
+    text-align: center;
+    margin: auto 0;
+}
+
+.ble-log-system {
+    color: #888;
+    font-size: 11px;
+    text-align: center;
+    font-style: italic;
+}
+
+.ble-log-row { display: flex; }
+.ble-log-rx  { justify-content: flex-start; }
+.ble-log-tx  { justify-content: flex-end; }
+
+.ble-log-bubble {
+    max-width: 80%;
+    padding: 6px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+/* RX = lo que el ESP32 mandó (gatts_notify) -- mismo lado/color que
+   un mensaje "recibido" en cualquier app de chat. */
+.ble-log-rx .ble-log-bubble {
+    background: #242442;
+    color: #e8e8f0;
+    border-bottom-left-radius: 2px;
+}
+
+/* TX = lo que el alumno mandó desde este panel -- lado "enviado". */
+.ble-log-tx .ble-log-bubble {
+    background: #0a84ff;
+    color: #fff;
+    border-bottom-right-radius: 2px;
+}
+
+.ble-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+.ble-input {
+    flex: 1;
+    min-width: 0;
+    background: #0d0d1a;
+    border: 1px solid #2d2d4e;
+    border-radius: 6px;
+    color: #e8e8f0;
+    font-size: 13px;
+    padding: 6px 8px;
+}
+
+.ble-input:focus { outline: none; border-color: #0a84ff; }
+.ble-input:disabled { opacity: 0.5; }

@@ -76,6 +76,8 @@ class ComponentManager {
 
         console.log("Componente agregado:", component.id);
 
+        this.simulator.eventBus.emit("component:added", { componentId: component.id, type: component.type });
+
         return component;
 
     }
@@ -115,7 +117,13 @@ class ComponentManager {
 
     remove(id) {
 
+        const component = this.get(id);
+
         this.components = this.components.filter(c => c.id !== id);
+
+        if (component) {
+            this.simulator.eventBus.emit("component:removed", { componentId: id, type: component.type });
+        }
 
     }
 

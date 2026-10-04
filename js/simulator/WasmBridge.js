@@ -44,9 +44,26 @@ class WasmBridge {
     // paste mode) que no aplican acá.
     isWasmBridge = true;
 
-    constructor(simulator) {
+    // esp32Component: el componente ESP32 (del componentManager) que
+    // ESTE bridge representa -- null para el caso "sin ninguna placa
+    // en el lienzo" (se sigue permitiendo correr Python puro sin
+    // hardware, mismo comportamiento que existía antes de soportar
+    // multi-ESP32). A diferencia de QemuBridge (siempre 1 sola
+    // instancia global), puede haber VARIOS WasmBridge vivos a la vez
+    // -- ver Simulator.spawnBridgesForAllEsp32()/sim.bridges, que es
+    // quien decide cuántos crear y con qué ESP32 cada uno.
+    //
+    // Ya NO se auto-suscribe a "simulation:start"/"simulation:stop"
+    // (como sí hacía cuando solo existía UN bridge posible): con
+    // varios bridges, cada uno reaccionando por su cuenta al mismo
+    // evento global no deja ningún lugar central para decidir "cuáles
+    // ESP32 hay ahora" -- esa decisión vive en
+    // Simulator.spawnBridgesForAllEsp32()/teardownAllBridges(), que
+    // llama a connect()/disconnect() de cada bridge a mano.
+    constructor(simulator, esp32Component = null) {
 
         this.simulator = simulator;
+        this.esp32 = esp32Component;
 
         this.worker = null;
         this._connected = false;
@@ -56,16 +73,19 @@ class WasmBridge {
         // saltos de línea.
         this._lineBuf = "";
 
-        // Mismo patrón que QemuBridge.js: el botón ▶ Simular de
-        // Toolbar.js no conoce ni le importa qué bridge está activo,
-        // solo emite "simulation:start" -- cada bridge se suscribe
-        // por su cuenta. Como solo UNO de los dos bridges existe por
-        // carga de página (ver js/app.js, decidido por
-        // ?modo=wasm en la URL, nunca en runtime), nunca hay dos
-        // instancias escuchando el mismo evento a la vez.
-        this.simulator.eventBus.on("simulation:start", () => this.connect());
-        this.simulator.eventBus.on("simulation:stop",  () => this.disconnect());
-
+        // Multi-ESP32 (ver plan ESP-NOW, Fase 2 -- selector de
+        // dispositivo en ReplPanel.js): este listener sigue en
+        // simulator.eventBus (compartido por TODOS los bridges, nunca
+        // uno privado por instancia), pero se ignora de una si este
+        // bridge no es "el activo" en este momento (this !==
+        // simulator.qemuBridge) -- ReplPanel._switchActiveDevice()
+        // repunta simulator.qemuBridge al bridge seleccionado en el
+        // dropdown, así que una línea tipeada en el input de abajo del
+        // REPL solo le llega al Worker que se está mirando, nunca a
+        // los demás. Con un solo ESP32 (caso de siempre, selector
+        // oculto), simulator.qemuBridge === this siempre, cero cambio
+        // de comportamiento.
+        //
         // ReplPanel.sendInput() (el input de una línea + botón
         // "Enviar" del REPL, abajo del todo -- distinto de ▶ Ejecutar,
         // que ya usa sendData() directo, ver runEditorCode()) NO llama
@@ -80,6 +100,8 @@ class WasmBridge {
         // mandarlos para este bridge, así que en la práctica solo
         // llegan líneas sueltas de código real.
         this.simulator.eventBus.on("qemu:send", (text) => {
+            if (this.simulator.qemuBridge !== this) return;
+
             if (text === "\x03") { this.interrupt(); return; }
             if (text === "\x04" || text === "\x05") return; // paste mode, no aplica acá
 
@@ -151,7 +173,13 @@ class WasmBridge {
             console.error("[WasmBridge] error en el Worker:", e.message);
         };
 
-        this.worker.postMessage({ type: "init" });
+        // macHex: MAC de este ESP32 sin ":" (ver _espnow_wasm.py) --
+        // this.esp32 es null en el bridge "sin placa" (ver
+        // Simulator.spawnBridgesForAllEsp32()), de ahí el fallback.
+        const macHex = this.esp32?.properties?.macAddress
+            ? this.esp32.properties.macAddress.replace(/:/g, "").toLowerCase()
+            : "000000000000";
+        this.worker.postMessage({ type: "init", macHex });
 
     }
 
@@ -159,7 +187,20 @@ class WasmBridge {
 
         if (msg.type === "ready") {
             this._connected = true;
-            this.updateStatus("connected");
+
+            // Multi-ESP32 (Fase 2): updateStatus()/"qemu:connected" son
+            // UI del dispositivo que se está mirando en el REPL (badge
+            // de arriba, banner de bienvenida) -- si ESTE bridge no es
+            // el activo (ver gating en "qemu:send" más arriba), no se
+            // tocan: el usuario los ve recién al elegir este
+            // dispositivo en el selector (ver ReplPanel._switchActiveDevice(),
+            // que llama a _activateWasmDeviceReady() a mano para ese
+            // caso). startSimulation()/setEsp32PowerLed() SÍ corren
+            // siempre -- son estado real de la simulación/del propio
+            // ESP32, no de qué pestaña del REPL está abierta.
+            if (this.simulator.qemuBridge === this) {
+                this.updateStatus("connected");
+            }
 
             // BUG REAL (reportado: "doy clic en Simular y tarda un monton
             // mostrando Conectando, pero el boton Ejecutar ya esta
@@ -186,12 +227,11 @@ class WasmBridge {
             // QEMU, solo que acá ambos pasos ocurren casi en el mismo
             // instante en vez de estar separados por varios segundos.
             this.simulator.startSimulation();
-            this.simulator.eventBus.emit("qemu:connected");
+            if (this.simulator.qemuBridge === this) {
+                this.simulator.eventBus.emit("qemu:connected");
+            }
 
-            const esp32 = this.simulator.componentManager
-                .getAll()
-                .find(c => c.type.startsWith("esp32"));
-            if (esp32) this.simulator.renderer.setEsp32PowerLed(esp32, true);
+            if (this.esp32) this.simulator.renderer.setEsp32PowerLed(this.esp32, true);
 
             return;
         }
@@ -202,7 +242,14 @@ class WasmBridge {
         }
 
         if (msg.type === "error") {
-            this.simulator.eventBus.emit("qemu:output", msg.data);
+            // Mismo criterio que _handleStdout() -- no descartar si
+            // este bridge no es el activo ahora mismo (ver su comentario
+            // grande), se acumula para mostrarlo al volver a mirarlo.
+            if (this.simulator.qemuBridge === this) {
+                this.simulator.eventBus.emit("qemu:output", msg.data);
+            } else {
+                this._pendingVisibleOutput = (this._pendingVisibleOutput || "") + msg.data;
+            }
             return;
         }
 
@@ -239,8 +286,33 @@ class WasmBridge {
 
         });
 
+        // Multi-ESP32 (Fase 2/3): el parseo de protocolo de arriba
+        // (_tryParseProtocolLine, GPIO/PWM/OLED/etc.) corre SIEMPRE,
+        // para todos los bridges, porque es el estado real del
+        // hardware simulado de CADA uno, no de qué pestaña del REPL
+        // está abierta. El TEXTO visible (prints del alumno) sí
+        // depende de eso -- pero en vez de descartarlo cuando este
+        // bridge no es el activo, se acumula en _pendingVisibleOutput
+        // y ReplPanel._switchActiveDevice() lo vuelca al terminal
+        // apenas se vuelve a mirar este dispositivo.
+        //
+        // BUG REAL reportado al probar ESP-NOW con 2 ESP32 (el caso de
+        // uso central de esta fase): un script típico registra
+        // irq(on_recv) y después print() lo que llegó -- con el
+        // comportamiento ANTERIOR (descartar sin más), ese print()
+        // desaparecía para siempre si el mensaje llegaba mientras el
+        // usuario miraba el OTRO dispositivo (el caso normal: A manda,
+        // B recibe, pero B no está seleccionado en ese momento) -- no
+        // había NINGUNA forma de confirmar que el mensaje había
+        // llegado sin adivinar o escribir código extra a propósito
+        // solo para consultar una variable.
         if (visibleLines.length > 0) {
-            this.simulator.eventBus.emit("qemu:output", visibleLines.join("\n") + "\n");
+            const text = visibleLines.join("\n") + "\n";
+            if (this.simulator.qemuBridge === this) {
+                this.simulator.eventBus.emit("qemu:output", text);
+            } else {
+                this._pendingVisibleOutput = (this._pendingVisibleOutput || "") + text;
+            }
         }
 
     }
@@ -462,9 +534,77 @@ class WasmBridge {
             return true;
         }
 
+        if (line.startsWith("ESPNOW_TX:")) {
+            // Formato: ESPNOW_TX:<mac hex SIN ":">:<payload hex> --
+            // ver _espnow_wasm.py (ESPNow.send()). A diferencia de
+            // GPIO/I2C/etc., esto NO llama a signalEngine -- EspNowBus
+            // decide a qué otro(s) ESP32 del lienzo les llega, según
+            // su MAC (comparación por propiedades, no por cableado:
+            // ESP-NOW es inalámbrico, no hay "net" de SignalEngine que
+            // caminar acá).
+            const parts = line.split(":");
+            if (parts.length >= 3 && this.esp32) {
+                this.simulator.espNowBus.send(this.esp32.id, parts[1], parts[2]);
+            }
+            return true;
+        }
+
+        if (line.startsWith("HTTP_REQ:")) {
+            // Formato: HTTP_REQ:<id>:<method hex>:<url hex>:<headers
+            // JSON, hex>:<body hex> -- ver _requests_wasm.py
+            // (request()). A diferencia de ESPNOW_TX, esto no es
+            // instantáneo (fetch() real a internet) -- _handleHttpRequest()
+            // es async y contesta por su cuenta cuando termine, no
+            // bloquea el resto del parseo de esta línea.
+            const parts = line.split(":");
+            if (parts.length >= 6) {
+                this._handleHttpRequest(parts[1], parts[2], parts[3], parts[4], parts[5]);
+            }
+            return true;
+        }
+
+        if (line.startsWith("BLE_ADV:")) {
+            // Formato: BLE_ADV:<nombre hex> -- ver _bluetooth_wasm.py
+            // (BLE.gap_advertise(), solo cuando reconoce el Nordic
+            // UART Service). Avisa que ESTE ESP32 ahora es "visible"
+            // para el teléfono virtual -- ver BlePanel.js.
+            const name = WasmBridge._hexToUtf8(line.slice("BLE_ADV:".length));
+            if (this.esp32) {
+                this.simulator.eventBus.emit("ble:advertising", { esp32Id: this.esp32.id, name });
+            }
+            return true;
+        }
+
+        if (line.startsWith("BLE_NOTIFY:")) {
+            // Formato: BLE_NOTIFY:<hex> -- ver _bluetooth_wasm.py
+            // (BLE.gatts_notify() sobre el characteristic TX de NUS).
+            const data = WasmBridge._hexToUtf8(line.slice("BLE_NOTIFY:".length));
+            if (this.esp32) {
+                this.simulator.eventBus.emit("ble:notify", { esp32Id: this.esp32.id, data });
+            }
+            return true;
+        }
+
         const halErrorMatch = line.match(/^HAL_ERROR:([^:]+):/);
         if (halErrorMatch) {
-            this.simulator.eventBus.emit("qemu:hal-error", halErrorMatch[1]);
+            // Multi-ESP32 (Fase 2): mismo criterio que "qemu:output".
+            // OJO -- a diferencia de ese caso, acá SÍ hay un efecto de
+            // comportamiento, no solo visual: el listener de
+            // ReplPanel dispara _retryHalAfterError(), que lee/escribe
+            // this._halSentToFirmware/_halRetryCounts -- campos POR
+            // DISPOSITIVO (ver _switchActiveDevice()). Si esto no se
+            // filtrara, un HAL roto en un dispositivo en SEGUNDO PLANO
+            // terminaría reintentando contra el estado del dispositivo
+            // ACTIVO, mezclando los dos. Se acepta como límite conocido:
+            // un componente roto en un dispositivo no mirado no
+            // reintenta hasta que se lo selecciona (en la práctica no
+            // cambia el resultado final -- en modo navegador un
+            // HAL_ERROR nunca es ruido pasajero, reintentar con el
+            // mismo código nunca lo arregla, ver el comentario grande
+            // en bindBusEvents() de ReplPanel.js).
+            if (this.simulator.qemuBridge === this) {
+                this.simulator.eventBus.emit("qemu:hal-error", halErrorMatch[1]);
+            }
             return true;
         }
 
@@ -472,19 +612,134 @@ class WasmBridge {
 
     }
 
+    // ====================================================
+    // WiFi (fetch() real) -- ver plan ESP-NOW→WiFi→BLE, Fase WiFi, y
+    // _requests_wasm.py para el protocolo completo. El request en sí
+    // (método/url/headers/body) viaja hex-codificado DENTRO de la
+    // línea de protocolo -- helpers acá en vez de en _requests_wasm.py
+    // porque acá se necesita ida (decodificar el pedido) Y vuelta
+    // (codificar la respuesta), y porque TextEncoder/TextDecoder son
+    // nativos de JS (no hace falta reimplementar UTF-8 a mano como sí
+    // hace falta del lado Python).
+    // ====================================================
+
+    static _hexToUtf8(hex) {
+        if (!hex) return "";
+        const bytes = new Uint8Array(hex.length / 2);
+        for (let i = 0; i < bytes.length; i++) {
+            bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+        }
+        return new TextDecoder().decode(bytes);
+    }
+
+    static _utf8ToHex(str) {
+        const bytes = new TextEncoder().encode(str);
+        return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async _handleHttpRequest(rid, methodHex, urlHex, headersHex, bodyHex) {
+
+        const method = WasmBridge._hexToUtf8(methodHex);
+        const url = WasmBridge._hexToUtf8(urlHex);
+        const bodyText = WasmBridge._hexToUtf8(bodyHex);
+
+        let headers = {};
+        try {
+            headers = JSON.parse(WasmBridge._hexToUtf8(headersHex) || "{}");
+        } catch (err) {
+            // Headers mal formados de origen (no debería pasar, los
+            // arma json.dumps() del lado Python) -- mandar sin ellos
+            // antes que no mandar nada.
+        }
+
+        try {
+
+            const fetchOpts = { method, headers };
+            // fetch() tira TypeError si GET/HEAD trae body -- mismo
+            // caso raro que requests.py real ignora en la práctica.
+            if (bodyText && method !== "GET" && method !== "HEAD") {
+                fetchOpts.body = bodyText;
+            }
+
+            const response = await fetch(url, fetchOpts);
+            const respBodyText = await response.text();
+
+            const respHeaders = {};
+            response.headers.forEach((value, key) => { respHeaders[key] = value; });
+
+            const reasonHex  = WasmBridge._utf8ToHex(response.statusText || "");
+            const headersOutHex = WasmBridge._utf8ToHex(JSON.stringify(respHeaders));
+            const bodyOutHex = WasmBridge._utf8ToHex(respBodyText);
+
+            this._deliverHttpResponse(rid, `${response.status}|${reasonHex}|${headersOutHex}|${bodyOutHex}`);
+
+        } catch (err) {
+
+            // Causa más común con mucha ventaja: CORS -- el navegador
+            // bloquea la respuesta de un servidor que no mandó
+            // Access-Control-Allow-Origin, y fetch() lo reporta como
+            // un TypeError genérico ("Failed to fetch") sin más
+            // detalle (restricción del propio navegador, no hay forma
+            // de distinguirlo de "sin internet"/"URL no existe" desde
+            // JS) -- el mensaje avisa de las 3 causas más probables en
+            // vez de repetir el texto críptico del navegador tal cual.
+            const msgHex = WasmBridge._utf8ToHex(
+                `No se pudo completar la solicitud a "${url}" -- ` +
+                `puede ser que no haya internet, que la URL esté mal, o que ese ` +
+                `servidor no permita pedidos desde el navegador (CORS). Detalle: ${err.message || err}`
+            );
+            this._deliverHttpResponse(rid, `ERROR|${msgHex}`);
+
+        }
+
+    }
+
+    // BUG REAL encontrado en vivo (ver el comentario grande de
+    // "setGlobal" en wasmWorker.js): la respuesta HTTP NO se manda por
+    // sendData()/processLine (eso dispara un mp.runPython() nuevo),
+    // porque el script que la está esperando casi siempre sigue
+    // "en vuelo" (suspendido en SU PROPIO time.sleep() de sondeo,
+    // dentro de request()) -- dos mp.runPython() superpuestos en el
+    // mismo módulo Asyncify revientan con "We cannot start an async
+    // operation when one is already in flight". mp.globals.set() en
+    // cambio no ejecuta nada, así que es seguro en cualquier momento;
+    // request() del lado Python ya está despierto cada poll_ms
+    // revisando este mismo valor, no hace falta "empujarlo" con una
+    // ejecución nueva.
+    _deliverHttpResponse(rid, packedValue) {
+        if (!this.worker) return;
+        this.worker.postMessage({ type: "setGlobal", key: `_pit_http_res_${rid}`, value: packedValue });
+    }
+
+    // ====================================================
+    // BLE -- acciones del teléfono virtual (ver BlePanel.js) hacia
+    // ESTE ESP32. Bajo volumen (clics puntuales del usuario, no un
+    // sondeo en loop), así que van por el mecanismo processLine de
+    // siempre -- mismo patrón ya probado seguro que ESPNOW_RX.
+    // ====================================================
+
+    bleConnect() {
+        this.sendData("BLE_CONNECT:");
+    }
+
+    bleDisconnect() {
+        this.sendData("BLE_DISCONNECT:");
+    }
+
+    bleWrite(text) {
+        this.sendData(`BLE_WRITE:${WasmBridge._utf8ToHex(text)}`);
+    }
+
     _espId() {
-        return this.simulator.componentManager.getAll().find(c => c.type.startsWith("esp32"))?.id;
+        return this.esp32?.id;
     }
 
     // Mismo criterio que QemuBridge.applyGpioChange() -- búsqueda en
-    // vivo del pin (nunca cachear esp32/pin entre llamadas, ver el
-    // comentario grande del original sobre el bug de import de
-    // proyecto).
+    // vivo del PIN (el ESP32 ya no se busca acá, es this.esp32, fijo
+    // para toda la vida de este bridge -- ver constructor).
     _applyGpioChange(gpioNumber, value) {
 
-        const esp32 = this.simulator.componentManager
-            .getAll()
-            .find(c => c.type.startsWith("esp32"));
+        const esp32 = this.esp32;
         if (!esp32) return;
 
         const exactId = `io${gpioNumber}`;
@@ -548,7 +803,13 @@ class WasmBridge {
     // el UID generado arrancaba con un dígito 0-9). Se agrega como
     // caso aparte en vez de intentar generalizar la regex (es el único
     // protocolo con esta forma, ver el resto de SignalEngine.js).
-    static PROTOCOL_LINE_PREFIXES = ["RFID:"];
+    //
+    // BLE_CONNECT:/BLE_DISCONNECT: (ver BlePanel.js) no tienen NINGÚN
+    // payload después del ":" -- la regex de arriba exige un carácter
+    // ahí, así que nunca matchea una línea vacía. BLE_WRITE:<hex>
+    // tiene el mismo problema que RFID: (el hex puede arrancar con
+    // a-f).
+    static PROTOCOL_LINE_PREFIXES = ["RFID:", "BLE_CONNECT:", "BLE_DISCONNECT:", "BLE_WRITE:"];
 
     static _isProtocolLine(data) {
         if (WasmBridge.PROTOCOL_LINE_RE.test(data)) return true;
@@ -618,16 +879,21 @@ class WasmBridge {
         if (!this._connected) return false;
 
         this._connected = false;
-        this.updateStatus("disconnected");
-        this.simulator.eventBus.emit("qemu:disconnected");
+
+        // Multi-ESP32 (Fase 2): mismo criterio que el resto -- UI del
+        // dispositivo activo solamente. stopSimulation() sí corre
+        // siempre (ver decisión de diseño #1 del plan: un solo
+        // ⏹ Detener para todos los ESP32 a la vez, no hay stop por
+        // dispositivo en esta entrega).
+        if (this.simulator.qemuBridge === this) {
+            this.updateStatus("disconnected");
+            this.simulator.eventBus.emit("qemu:disconnected");
+        }
         this.simulator.stopSimulation();
 
-        const esp32 = this.simulator.componentManager
-            .getAll()
-            .find(c => c.type.startsWith("esp32"));
-        if (esp32) {
-            this.simulator.renderer.setEsp32PowerLed(esp32, false);
-            this.simulator.renderer.setEsp32GpioLed(esp32, false);
+        if (this.esp32) {
+            this.simulator.renderer.setEsp32PowerLed(this.esp32, false);
+            this.simulator.renderer.setEsp32GpioLed(this.esp32, false);
         }
 
         return true;
