@@ -29,6 +29,7 @@ let baseLoaded = false;
 
 const BASE_WASM_URL      = new URL("../../components_wasm/_base_wasm.py", import.meta.url);
 const I2C_BUS_WASM_URL   = new URL("../../components_wasm/_i2c_bus_wasm.py", import.meta.url);
+const KEYPAD_I2C_WASM_URL = new URL("../../components_wasm/_keypad_i2c_wasm.py", import.meta.url);
 const ADC_BUS_WASM_URL   = new URL("../../components_wasm/_adc_bus_wasm.py", import.meta.url);
 const NEOPIXEL_WASM_URL  = new URL("../../components_wasm/_neopixel_wasm.py", import.meta.url);
 const LIBS_BUNDLE_URL    = new URL("../../components_wasm/libs/bundle.json", import.meta.url);
@@ -133,6 +134,9 @@ self.onmessage = async (e) => {
             const i2cCode = await (await fetch(I2C_BUS_WASM_URL)).text();
             mp.runPython(i2cCode);
 
+            const keypadI2cCode = await (await fetch(KEYPAD_I2C_WASM_URL)).text();
+            mp.runPython(keypadI2cCode);
+
             const adcCode = await (await fetch(ADC_BUS_WASM_URL)).text();
             mp.runPython(adcCode);
 
@@ -162,6 +166,18 @@ self.onmessage = async (e) => {
         }
 
         try {
+            // Snapshot de teclado(s) I2C armado por WasmBridge.js
+            // (sendData()) justo antes de postear este mensaje -- ver
+            // _keypad_i2c_wasm.py para por qué esto reemplaza al
+            // mecanismo genérico I2CR:/I2CW: para este componente en
+            // particular. Se aplica SIEMPRE antes de correr (tanto
+            // "Ejecutar" como una línea del REPL) para que una tecla
+            // apretada justo antes de mandar el código ya esté
+            // disponible cuando el script llame a get_key().
+            if (typeof msg.keypadSnapshot === "string") {
+                mp.globals.set("_pit_keypad_snapshot_src", msg.keypadSnapshot);
+                mp.runPython("_pit_apply_keypad_snapshot(_pit_keypad_snapshot_src)");
+            }
             if (msg.replEcho) {
                 // Ver _pit_repl_eval en _base_wasm.py -- SOLO para la
                 // línea suelta del input de abajo (nunca "▶ Ejecutar"):

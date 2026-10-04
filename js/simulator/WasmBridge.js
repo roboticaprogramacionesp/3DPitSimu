@@ -527,6 +527,35 @@ class WasmBridge {
         return WasmBridge.PROTOCOL_LINE_PREFIXES.some(prefix => data.startsWith(prefix));
     }
 
+    // Snapshot de teclado(s) matriciales I2C (keypad4x4_i2c) para
+    // _keypad_i2c_wasm.py -- ver ese archivo para el porqué completo
+    // (get_key() escribe y lee I2C en la MISMA llamada sincrónica, el
+    // mecanismo genérico I2CR:/I2CW: no llega a tiempo). Formato texto
+    // plano "<addr>=<fila,col>;<fila,col>|<addr>=..." (sin JSON, no
+    // depende de que "json" esté compilado en este build del puerto).
+    // Misma lógica de dirección por defecto que
+    // keypad4x4_i2c.behavior.js (_keypadI2cAddress) para no divergir.
+    _computeKeypadI2cSnapshot() {
+        const parts = [];
+        for (const c of this.simulator.componentManager.getAll()) {
+            if (c.type !== "keypad4x4_i2c") continue;
+            const pressed = c.keypadPressed;
+            if (!pressed || pressed.size === 0) continue;
+            const raw = c.properties?.address;
+            let addr;
+            if (raw === undefined || raw === null || raw === "") {
+                addr = 0x20;
+            } else {
+                addr = typeof raw === "string"
+                    ? parseInt(raw, raw.trim().toLowerCase().startsWith("0x") ? 16 : 10)
+                    : raw;
+                if (!Number.isFinite(addr)) addr = 0x20;
+            }
+            parts.push(`${addr}=${[...pressed].join(";")}`);
+        }
+        return parts.join("|");
+    }
+
     // Para código real (rama "run"): devuelve una Promise que se
     // resuelve cuando el Worker confirma que mp.runPython() TERMINÓ
     // de verdad (mensaje "runDone", ver wasmWorker.js) -- no cuando
@@ -548,7 +577,8 @@ class WasmBridge {
 
         const runId = ++this._runIdCounter;
         const promise = new Promise(resolve => this._pendingRunResolvers.set(runId, resolve));
-        this.worker.postMessage({ type: "run", code: data, runId, replEcho });
+        const keypadSnapshot = this._computeKeypadI2cSnapshot();
+        this.worker.postMessage({ type: "run", code: data, runId, replEcho, keypadSnapshot });
         return promise;
 
     }
