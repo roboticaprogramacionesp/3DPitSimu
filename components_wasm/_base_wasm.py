@@ -17,16 +17,20 @@
 # _base.hal.py ("GPIO:<n>:<v>\n") -- WasmBridge.js reusa casi tal
 # cual el parseo de QemuBridge.js para estas líneas.
 #
-# LIMITACIÓN CONOCIDA (ver plan, Fase 0): el modelo de ejecución acá
-# es "Worker + terminate()", no QEMU con Ctrl+C real -- mientras un
-# script está corriendo (ej. un while True:), NADA puede inyectarse
-# desde afuera (confirmado empíricamente, ver el spike de la Fase 0:
-# time.sleep() no le devuelve el control a JS en ningún momento). Por
-# eso _pin_input_states acá se llena SOLO antes de que un run
-# arranque (no hay "poll_input mid-loop" real todavía como en QEMU) --
-# poll_input() igual existe para mantener el mismo contrato y por si
-# más adelante se logra inyección real (ver nota en el plan sobre
-# registerJsModule async + Asyncify, no implementado por ahora).
+# ACTUALIZADO -- el modelo de ejecución sigue siendo "Worker +
+# terminate()" (no hay Ctrl+C real como en QEMU), PERO time.sleep()
+# ahora SÍ le devuelve el control a JS mientras espera (ver
+# mphalport.c del build de micropython.mjs: mp_hal_delay_ms() usa
+# emscripten_sleep() con Asyncify, no el busy-wait original). Eso
+# significa que _pin_input_states (y process_line() en general, ver
+# wasmWorker.js) SÍ se puede actualizar EN VIVO mientras un script ya
+# está corriendo -- confirmado con clics reales actualizando un ADC
+# leído dentro de un while True: con sleep() activo. La única
+# condición real: tiene que haber al menos un sleep() en el bucle
+# para que el Worker tenga una ventana donde atender el mensaje
+# nuevo -- un bucle sin ningún sleep() (ocupando el hilo 100% del
+# tiempo, sin ceder nunca) sigue sin poder recibir nada hasta que
+# termine o se interrumpa, igual que antes.
 # =============================================================
 
 import sys
@@ -98,12 +102,15 @@ def _pit_repl_eval(_pit_src):
 
 
 def poll_input():
-    # Ver LIMITACIÓN CONOCIDA arriba -- por ahora es un no-op real
-    # (no hay ningún canal síncrono para leer del lado JS mid-ejecución
-    # sin SharedArrayBuffer, descartado por los headers que GitHub
-    # Pages no permite configurar). Se mantiene la función para que
-    # el resto de los .hal.py que la llaman (ej. en un loop de
-    # lectura) no rompan por AttributeError.
+    # Sigue siendo un no-op -- NO hace falta ningún canal activo acá:
+    # ver el comentario ACTUALIZADO más arriba, _pin_input_states ya
+    # se actualiza solo (de afuera, vía process_line()) durante
+    # cualquier yield de Asyncify (adentro de un sleep() del propio
+    # script). Esta función no necesita "ir a buscar" nada -- lo único
+    # que hace falta es que Pin.value()/etc. lean el dict en el
+    # momento en que se llaman, que ya hacen. Se mantiene como no-op
+    # para que el resto de los .hal.py que la llaman (ej. en un loop
+    # de lectura) no rompan por AttributeError.
     pass
 
 

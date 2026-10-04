@@ -9,23 +9,36 @@
  regenerarlo con el mismo build que ya se usó en la Fase 0) y ejecuta
  el código del alumno.
 
- Por qué un Worker y no el hilo principal: mp.runPython() es
- SINCRÓNICO y bloquea por completo el hilo que lo llama mientras
- corre -- si fuera el hilo principal, toda la página (UI, canvas,
- clicks) se congelaría durante cualquier script del alumno. Adentro
- de un Worker, solo ESTE hilo se bloquea -- la página sigue viva.
+ Por qué un Worker y no el hilo principal: mp.runPython() puede
+ tardar (ver más abajo), y si fuera el hilo principal, toda la
+ página (UI, canvas, clicks) se congelaría durante cualquier script
+ del alumno. Adentro de un Worker, solo ESTE hilo se bloquea -- la
+ página sigue viva.
 
  "Interrumpir" (ver WasmBridge.interrupt()) no manda ningún mensaje
  acá -- directamente mata este Worker entero desde afuera
- (Worker.terminate()) y arranca uno nuevo. Confirmado en la Fase 0
- que no hay forma de interrumpir un script YA corriendo desde
- adentro (time.sleep() nunca le devuelve el control a este mismo
- message loop mientras espera).
+ (Worker.terminate()) y arranca uno nuevo. No hay Ctrl+C real desde
+ adentro de un script ya corriendo.
+
+ ACTUALIZADO -- time.sleep() SI le devuelve el control a este mismo
+ message loop mientras espera (ver mphalport.c del build de
+ micropython.mjs: mp_hal_delay_ms() usa emscripten_sleep(), que
+ requiere Asyncify, en vez del busy-wait original). Esto es lo que
+ hace posible que un mensaje "processLine" (ver más abajo) llegue y
+ se aplique EN VIVO mientras un while True: con sleep() sigue
+ corriendo -- confirmado en vivo con clics reales desde el hilo
+ principal actualizando un ADC leído dentro de un bucle activo.
+ Fuera de esas ventanas de sleep (mientras el bytecode está
+ activamente ejecutando, sin ningún sleep de por medio), este mismo
+ hilo sigue bloqueado como siempre -- un script sin ningún sleep()
+ en su bucle sigue sin poder recibir actualizaciones hasta que
+ termine o el usuario lo interrumpa.
 ==========================================================
 */
 
 let mp = null;
 let baseLoaded = false;
+let processLineBusy = false;
 
 const BASE_WASM_URL      = new URL("../../components_wasm/_base_wasm.py", import.meta.url);
 const I2C_BUS_WASM_URL   = new URL("../../components_wasm/_i2c_bus_wasm.py", import.meta.url);
@@ -103,7 +116,7 @@ async function _loadUserLibraries(mp) {
 
     // sys.path ya trae algunas entradas por default (ver el propio
     // puerto) -- se agrega /libs al final, nunca se reemplaza nada.
-    mp.runPython("import sys\nif '/libs' not in sys.path:\n    sys.path.append('/libs')\n");
+    await mp.runPython("import sys\nif '/libs' not in sys.path:\n    sys.path.append('/libs')\n");
 
 }
 
@@ -129,19 +142,19 @@ self.onmessage = async (e) => {
             });
 
             const baseCode = await (await fetch(BASE_WASM_URL)).text();
-            mp.runPython(baseCode);
+            await mp.runPython(baseCode);
 
             const i2cCode = await (await fetch(I2C_BUS_WASM_URL)).text();
-            mp.runPython(i2cCode);
+            await mp.runPython(i2cCode);
 
             const keypadI2cCode = await (await fetch(KEYPAD_I2C_WASM_URL)).text();
-            mp.runPython(keypadI2cCode);
+            await mp.runPython(keypadI2cCode);
 
             const adcCode = await (await fetch(ADC_BUS_WASM_URL)).text();
-            mp.runPython(adcCode);
+            await mp.runPython(adcCode);
 
             const neopixelCode = await (await fetch(NEOPIXEL_WASM_URL)).text();
-            mp.runPython(neopixelCode);
+            await mp.runPython(neopixelCode);
 
             await _loadUserLibraries(mp);
 
@@ -176,7 +189,7 @@ self.onmessage = async (e) => {
             // disponible cuando el script llame a get_key().
             if (typeof msg.keypadSnapshot === "string") {
                 mp.globals.set("_pit_keypad_snapshot_src", msg.keypadSnapshot);
-                mp.runPython("_pit_apply_keypad_snapshot(_pit_keypad_snapshot_src)");
+                await mp.runPython("_pit_apply_keypad_snapshot(_pit_keypad_snapshot_src)");
             }
             if (msg.replEcho) {
                 // Ver _pit_repl_eval en _base_wasm.py -- SOLO para la
@@ -188,16 +201,23 @@ self.onmessage = async (e) => {
                 // escapar comillas/backslashes a mano interpolando el
                 // string directo en el source.
                 mp.globals.set("_pit_repl_src", msg.code);
-                mp.runPython("_pit_repl_eval(_pit_repl_src)");
+                await mp.runPython("_pit_repl_eval(_pit_repl_src)");
             } else {
-                mp.runPython(msg.code);
+                // NO se espera a processLineBusy/ningún lock acá -- este
+                // "await" es justamente lo que le permite al event loop
+                // de ESTE Worker atender un mensaje "processLine" que
+                // llegue mientras este script está en un yield de
+                // Asyncify (adentro de un time.sleep()), sin bloquearlo
+                // detrás de la corrida completa. Ver el comentario
+                // grande de processLineBusy más abajo.
+                await mp.runPython(msg.code);
             }
         } catch (err) {
             self.postMessage({ type: "stdout", data: "\n" + String(err) + "\n" });
         }
 
-        // Si esto tarda (o nunca vuelve -- ej. un while True: con
-        // time.sleep(), ver LIMITACIÓN CONOCIDA arriba), este mensaje
+        // Si esto tarda (ej. un while True: con sleep(), ver el
+        // comentario grande al principio del archivo), este mensaje
         // recién sale cuando mp.runPython() finalmente retorna. Si el
         // usuario interrumpe antes (Worker.terminate()), este postMessage
         // nunca llega a mandarse -- no pasa nada, el Worker entero ya
@@ -216,12 +236,35 @@ self.onmessage = async (e) => {
         // interpolarlo dentro de una llamada a runPython(): así no
         // hace falta escapar comillas/backslashes a mano, el valor
         // llega tal cual como string de Python.
-        if (mp && baseLoaded) {
+        //
+        // processLineBusy evita que DOS procesLine se pisen entre sí
+        // (ej. clics muy seguidos) -- si uno ya está en vuelo, este se
+        // descarta en silencio en vez de encolarse (la PRÓXIMA
+        // actualización de ese mismo pin/sensor va a llegar enseguida
+        // de todas formas, no vale la pena acumular mensajes viejos).
+        // A PROPÓSITO no hay ningún guard acá contra el mensaje "run"
+        // -- encadenar esto detrás de una corrida en curso (ej. con
+        // una promesa compartida) fue el primer intento, y rompía
+        // justo lo que se buscaba: con eso, ESTE handler ni arrancaba
+        // hasta que la corrida completa (today el while True: con
+        // sleep() entero) terminara. Sin ningún lock cruzado, el único
+        // mecanismo que decide CUÁNDO puede correr esto es el propio
+        // event loop de JS de este Worker -- que de por sí no le da
+        // una vuelta a este handler mientras mp.runPython(msg.code)
+        // sigue activamente ejecutando bytecode (igual que siempre),
+        // pero SÍ se la da durante cualquier yield de Asyncify
+        // (adentro de un time.sleep()) -- ahí es exactamente donde
+        // esto necesita poder colarse para que un clic se vea reflejado
+        // en vivo dentro de un bucle que ya está corriendo.
+        if (mp && baseLoaded && !processLineBusy) {
+            processLineBusy = true;
             try {
                 mp.globals.set("_incoming_line", msg.line);
-                mp.runPython("process_line(_incoming_line)");
+                await mp.runPython("process_line(_incoming_line)");
             } catch (err) {
                 self.postMessage({ type: "stdout", data: "\n" + String(err) + "\n" });
+            } finally {
+                processLineBusy = false;
             }
         }
 

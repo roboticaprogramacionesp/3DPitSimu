@@ -17,7 +17,7 @@ async function _createMicroPythonModule(moduleArg = {}) {
     return vers.join('');
   }
   // 300000 -> "30.0.0"
-  var packedVersionToHumanReadable = n => [n / 10000 | 0, (n / 100 | 0) % 100, n % 100].join('.');
+  var packedVersionToHumanReadable = n => [n / 10_000 | 0, (n / 100 | 0) % 100, n % 100].join('.');
 
   var TARGET_NOT_SUPPORTED = 2147483647;
 
@@ -449,7 +449,7 @@ function updateMemoryViews() {
   var b = wasmMemory.buffer;
   HEAP8 = new Int8Array(b);
   HEAP16 = new Int16Array(b);
-  HEAPU8 = new Uint8Array(b);
+  Module['HEAPU8'] = HEAPU8 = new Uint8Array(b);
   
   HEAP32 = new Int32Array(b);
   HEAPU32 = new Uint32Array(b);
@@ -619,12 +619,9 @@ async function instantiateAsync(binary, binaryFile, imports) {
   if (!binary
       // Don't use streaming for file:// delivered objects in a webview, fetch them synchronously.
       && !isFileURI(binaryFile)
-      // Avoid instantiateStreaming() on Node.js environment for now, as while
-      // Node.js v18.1.0 implements it, it does not have a full fetch()
-      // implementation yet.
-      //
-      // Reference:
-      //   https://github.com/emscripten-core/emscripten/pull/16917
+      // Avoid using instantiateStreaming() on Node.js since the `fetch()` API
+      // does not support `file://` URLs.
+      // See: https://github.com/emscripten-core/emscripten/pull/16917
       && !ENVIRONMENT_IS_NODE
      ) {
     try {
@@ -1080,17 +1077,8 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
           var buf = Buffer.alloc(BUFSIZE);
           var bytesRead = 0;
   
-          // For some reason we must suppress a closure warning here, even though
-          // fd definitely exists on process.stdin, and is even the proper way to
-          // get the fd of stdin,
-          // https://github.com/nodejs/help/issues/2136#issuecomment-523649904
-          // This started to happen after moving this logic out of library_tty.js,
-          // so it is related to the surrounding code in some unclear manner.
-          /** @suppress {missingProperties} */
-          var fd = process.stdin.fd;
-  
           try {
-            bytesRead = fs.readSync(fd, buf, 0, BUFSIZE);
+            bytesRead = fs.readSync(process.stdin.fd, buf, 0, BUFSIZE);
           } catch(e) {
             // Cross-platform differences: on Windows, reading EOF throws an
             // exception, but on other OSes, reading EOF returns 0. Uniformize
@@ -1100,7 +1088,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
           }
   
           if (bytesRead > 0) {
-            result = buf.slice(0, bytesRead).toString('utf-8');
+            result = buf.toString('utf-8', 0, bytesRead);
           }
         } else
         if (globalThis.window?.prompt) {
@@ -1173,12 +1161,15 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
             } catch (e) {
               throw new FS.ErrnoError(29);
             }
-            if (result === undefined && bytesRead === 0) {
+            if (result === undefined && !bytesRead) {
               throw new FS.ErrnoError(6);
             }
             if (result === null || result === undefined) break;
             bytesRead++;
             buffer[offset+i] = result;
+            // We currently only support canonical mode (ICANON), where
+            // read(2) returns as soon as a line delimiter is read.
+            if (result === 10) break;
           }
           if (bytesRead) {
             stream.node.atime = Date.now();
@@ -1487,10 +1478,10 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
           node.mtime = node.ctime = Date.now();
   
           if (canOwn) {
-            assert(position === 0, 'canOwn must imply no weird position inside the file');
+            assert(!position, 'canOwn must imply no weird position inside the file');
             node.contents = buffer.subarray(offset, offset + length);
             node.usedBytes = length;
-          } else if (node.usedBytes === 0 && position === 0) { // If this is a simple first write to an empty file, do a fast set since we don't need to care about old data.
+          } else if (!node.usedBytes && !position) { // If this is a simple first write to an empty file, do a fast set since we don't need to care about old data.
             node.contents = buffer.slice(offset, offset + length);
             node.usedBytes = length;
           } else {
@@ -1740,6 +1731,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
       'ESTRPIPE': 135,
     };
   
+  
   var asyncLoad = async (url) => {
       var arrayBuffer = await readAsync(url);
       assert(arrayBuffer, `Loading data file "${url}" failed (no arrayBuffer).`);
@@ -1799,7 +1791,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
       assert(id, 'addRunDependency requires an ID')
       assert(!runDependencyTracking[id]);
       runDependencyTracking[id] = 1;
-      if (runDependencyWatcher === null && globalThis.setInterval) {
+      if (!runDependencyWatcher && globalThis.setInterval) {
         // Check for missing dependencies every few seconds
         runDependencyWatcher = setInterval(() => {
           if (ABORT) {
@@ -1818,7 +1810,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
           if (shown) {
             err('(end of list)');
           }
-        }, 10000);
+        }, 10_000);
         // Prevent this timer from keeping the runtime alive if nothing
         // else is.
         runDependencyWatcher.unref?.()
@@ -2518,9 +2510,9 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
         var rtn = {
           bsize: 4096,
           frsize: 4096,
-          blocks: 1e6,
-          bfree: 5e5,
-          bavail: 5e5,
+          blocks: 1_000_000,
+          bfree: 500_000,
+          bavail: 500_000,
           files: FS.nextInode,
           ffree: FS.nextInode - 1,
           fsid: 42,
@@ -3054,8 +3046,8 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
         // to write to file opened in read-only mode with MAP_PRIVATE flag,
         // as all modifications will be visible only in the memory of
         // the current process.
-        if ((prot & 2) !== 0
-            && (flags & 2) === 0
+        if ((prot & 2)
+            && !(flags & 2)
             && (stream.flags & 2097155) !== 2) {
           throw new FS.ErrnoError(2);
         }
@@ -3084,8 +3076,8 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
         return stream.stream_ops.ioctl(stream, cmd, arg);
       },
   readFile(path, opts = {}) {
-        opts.flags = opts.flags ?? 0;
-        opts.encoding = opts.encoding ?? 'binary';
+        opts.flags ??= 0;
+        opts.encoding ??= 'binary';
         if (opts.encoding !== 'utf8' && opts.encoding !== 'binary') {
           abort(`Invalid encoding type "${opts.encoding}"`);
         }
@@ -3101,7 +3093,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
         return buf;
       },
   writeFile(path, data, opts = {}) {
-        opts.flags = opts.flags ?? 577;
+        opts.flags ??= 577;
         var stream = FS.open(path, opts.flags, opts.mode);
         data = FS_fileDataToTypedArray(data);
         FS.write(stream, data, 0, data.byteLength, undefined, opts.canOwn);
@@ -3148,7 +3140,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
         // use a buffer to avoid overhead of individual crypto calls per byte
         var randomBuffer = new Uint8Array(1024), randomLeft = 0;
         var randomByte = () => {
-          if (randomLeft === 0) {
+          if (!randomLeft) {
             randomFill(randomBuffer);
             randomLeft = randomBuffer.byteLength;
           }
@@ -3264,14 +3256,8 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
           }
         }
       },
-  findObject(path, dontResolveLastLink) {
-        var ret = FS.analyzePath(path, dontResolveLastLink);
-        if (!ret.exists) {
-          return null;
-        }
-        return ret.object;
-      },
   analyzePath(path, dontResolveLastLink) {
+        warnOnce('FS.analyzePath is deprecated; use FS.lookupPath or FS.stat instead');
         // operate from within the context of the symlink's target
         try {
           var lookup = FS.lookupPath(path, { follow: !dontResolveLastLink });
@@ -3364,7 +3350,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
               } catch (e) {
                 throw new FS.ErrnoError(29);
               }
-              if (result === undefined && bytesRead === 0) {
+              if (result === undefined && !bytesRead) {
                 throw new FS.ErrnoError(6);
               }
               if (result === null || result === undefined) break;
@@ -3604,15 +3590,17 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
         HEAP64[(((buf)+(24))>>3)] = BigInt(stat.size);
         HEAP32[(((buf)+(32))>>2)] = 4096;
         HEAP32[(((buf)+(36))>>2)] = stat.blocks;
-        var atime = stat.atime.getTime();
-        var mtime = stat.mtime.getTime();
-        var ctime = stat.ctime.getTime();
+        // Prefer `*Ms` properties if available (e.g. from NODEFS / host `fs.Stats`)
+        // for sub-millisecond precision; fall back to Date#getTime for other filesystems.
+        var atime = stat.atimeMs ?? stat.atime.getTime();
+        var mtime = stat.mtimeMs ?? stat.mtime.getTime();
+        var ctime = stat.ctimeMs ?? stat.ctime.getTime();
         HEAP64[(((buf)+(40))>>3)] = BigInt(Math.floor(atime / 1000));
-        HEAPU32[(((buf)+(48))>>2)] = (atime % 1000) * 1000 * 1000;
+        HEAPU32[(((buf)+(48))>>2)] = Math.floor((atime % 1000) * 1_000_000);
         HEAP64[(((buf)+(56))>>3)] = BigInt(Math.floor(mtime / 1000));
-        HEAPU32[(((buf)+(64))>>2)] = (mtime % 1000) * 1000 * 1000;
+        HEAPU32[(((buf)+(64))>>2)] = Math.floor((mtime % 1000) * 1_000_000);
         HEAP64[(((buf)+(72))>>3)] = BigInt(Math.floor(ctime / 1000));
-        HEAPU32[(((buf)+(80))>>2)] = (ctime % 1000) * 1000 * 1000;
+        HEAPU32[(((buf)+(80))>>2)] = Math.floor((ctime % 1000) * 1_000_000);
         HEAP64[(((buf)+(88))>>3)] = BigInt(stat.ino);
         return 0;
       },
@@ -3682,7 +3670,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
   function ___syscall_getcwd(buf, size) {
   try {
   
-      if (size === 0) return -28;
+      if (!size) return -28;
       var cwd = FS.cwd();
       var cwdLengthInBytes = lengthBytesUTF8(cwd) + 1;
       if (size < cwdLengthInBytes) return -68;
@@ -3836,9 +3824,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
       if (!stream) return 32;
       // Streams without a poll handler (regular files, incl. NODERAWFS/NODEFS
       // which leave stream_ops unset) are treated as always readable+writable.
-      var flags = stream.stream_ops?.poll
-        ? stream.stream_ops.poll(stream)
-        : 5;
+      var flags = stream.stream_ops?.poll?.(stream) ?? 5;
       return flags & (events | 8 | 16 | 32);
     };
   
@@ -4083,13 +4069,13 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
         }
       }
     };
-  var callUserCallback = (func) => {
+  var callUserCallback = (func, ...args) => {
       if (ABORT) {
         err('user callback triggered after runtime exited or application aborted.  Ignoring.');
         return;
       }
       try {
-        return func();
+        return func(...args);
       } catch (e) {
         handleException(e);
       } finally {
@@ -4099,10 +4085,13 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
   /** @param {number=} timeout */
   var safeSetTimeout = (func, timeout) => {
       
-      return setTimeout(() => {
+      var id = safeSetTimeout.nextId++;
+      safeSetTimeout.pending.set(id, setTimeout(() => {
+        safeSetTimeout.pending.delete(id);
         
         callUserCallback(func);
-      }, timeout);
+      }, timeout));
+      return id;
     };
   
   var _emscripten_scan_registers = (func) => {
@@ -4120,6 +4109,13 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
       });
     };
   _emscripten_scan_registers.isAsync = true;
+
+  var _emscripten_sleep = function(ms) {
+    let innerFunc =  () => new Promise((resolve) => setTimeout(resolve, ms));
+    return Asyncify.handleAsync(innerFunc);
+  }
+  ;
+  _emscripten_sleep.isAsync = true;
 
   function _fd_close(fd) {
   try {
@@ -4195,7 +4191,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
       var stream = SYSCALLS.getStreamFromFD(fd);
       FS.llseek(stream, offset, whence);
       HEAP64[((newOffset)>>3)] = BigInt(stream.position);
-      if (stream.getdents && offset === 0 && whence === 0) stream.getdents = null; // reset readdir state
+      if (stream.getdents && !offset && whence === 0) stream.getdents = null; // reset readdir state
       return 0;
     } catch (e) {
     if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
@@ -4443,7 +4439,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
   maybeStopUnwind() {
         if (Asyncify.currData &&
             Asyncify.state === Asyncify.State.Unwinding &&
-            Asyncify.exportCallStack.length === 0) {
+            !Asyncify.exportCallStack.length) {
           // We just finished unwinding.
           // Be sure to set the state before calling any other functions to avoid
           // possible infinite recursion here (For example in debug pthread builds
@@ -4590,7 +4586,9 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
           _free(Asyncify.currData);
           Asyncify.currData = null;
           // Call all sleep callbacks now that the sleep-resume is all done.
-          Asyncify.sleepCallbacks.forEach(callUserCallback);
+          for (var cb of Asyncify.sleepCallbacks) {
+            callUserCallback(cb);
+          }
         } else {
           abort(`invalid state: ${Asyncify.state}`);
         }
@@ -4731,7 +4729,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
         for (var i = 0; i < args.length; i++) {
           var converter = toC[argTypes[i]];
           if (converter) {
-            if (stack === 0) stack = stackSave();
+            if (!stack) stack = stackSave();
             cArgs[i] = converter(args[i]);
           } else {
             cArgs[i] = args[i];
@@ -4743,7 +4741,7 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
       var ret = func(...cArgs);
       function onDone(ret) {
         runtimeKeepalivePop();
-        if (stack !== 0) stackRestore(stack);
+        if (stack) stackRestore(stack);
         return convertReturnValue(ret);
       }
     var asyncMode = opts?.async;
@@ -4791,9 +4789,11 @@ var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
 
 
 
+
   FS.createPreloadedFile = FS_createPreloadedFile;
   FS.preloadFile = FS_preloadFile;
   FS.staticInit();;
+safeSetTimeout.pending = new Map(); safeSetTimeout.nextId = 1;;
 if (globalThis.crypto === undefined) { globalThis.crypto = require('crypto'); };
 var MP_JS_EPOCH = Date.now();
 // End JS library code
@@ -4959,6 +4959,7 @@ if (Module['printErr']) err = Module['printErr'];
   'checkWasiClock',
   'wasiRightsToMuslOFlags',
   'wasiOFlagsToMuslOFlags',
+  'safeClearTimeout',
   'setImmediateWrapped',
   'safeRequestAnimationFrame',
   'clearImmediateWrapped',
@@ -4969,10 +4970,6 @@ if (Module['printErr']) err = Module['printErr'];
   'addPromise',
   'idsToPromises',
   'makePromiseCallback',
-  'ExceptionInfo',
-  'findMatchingCatch',
-  'incrementUncaughtExceptionCount',
-  'decrementUncaughtExceptionCount',
   'Browser_asyncPrepareDataCounter',
   'isLeapYear',
   'ydayFromDate',
@@ -5008,7 +5005,6 @@ if (Module['printErr']) err = Module['printErr'];
   'writeAsciiToMemory',
   'allocateUTF8',
   'allocateUTF8OnStack',
-  'demangle',
   'stackTrace',
   'getNativeTypeSize',
 ];
@@ -5027,7 +5023,6 @@ missingLibrarySymbols.forEach(missingLibrarySymbol)
   'INT53_MIN',
   'bigintToI53Checked',
   'HEAP8',
-  'HEAPU8',
   'HEAP16',
   'HEAPU16',
   'HEAP32',
@@ -5094,8 +5089,6 @@ missingLibrarySymbols.forEach(missingLibrarySymbol)
   'emClearImmediate_deps',
   'emClearImmediate',
   'promiseMap',
-  'uncaughtExceptionCount',
-  'exceptionCaught',
   'Browser',
   'requestFullscreen',
   'setCanvasSize',
@@ -5220,7 +5213,6 @@ missingLibrarySymbols.forEach(missingLibrarySymbol)
   'FS_staticInit',
   'FS_init',
   'FS_quit',
-  'FS_findObject',
   'FS_analyzePath',
   'FS_createFile',
   'FS_createDataFile',
@@ -5545,6 +5537,8 @@ var wasmImports = {
   /** @export */
   emscripten_scan_registers: _emscripten_scan_registers,
   /** @export */
+  emscripten_sleep: _emscripten_sleep,
+  /** @export */
   fd_close: _fd_close,
   /** @export */
   fd_read: _fd_read,
@@ -5810,13 +5804,8 @@ function checkUnflushedContent() {
   try { // it doesn't matter if it fails
     _fflush(0);
     // also flush in the JS FS layer
-    for (var name of ['stdout', 'stderr']) {
-      var info = FS.analyzePath('/dev/' + name);
-      if (!info) return;
-      var stream = info.object;
-      var rdev = stream.rdev;
-      var tty = TTY.ttys[rdev];
-      if (tty?.output?.length) {
+    for (var tty of Object.values(TTY.ttys)) {
+      if (tty.output.length) {
         has = true;
       }
     }
@@ -5956,13 +5945,17 @@ export async function loadMicroPython(options) {
     Module = await _createMicroPythonModule(Module);
     globalThis.Module = Module;
     proxy_js_init();
-    const pyimport = (name) => {
+    // PitSimulator: mismo motivo que runPython() mas abajo -- importar un
+    // módulo corre su código de nivel superior, que puede disparar
+    // mp_js_hook() igual que cualquier otro bytecode.
+    const pyimport = async (name) => {
         const value = Module._malloc(3 * 4);
-        Module.ccall(
+        await Module.ccall(
             "mp_js_do_import",
             "null",
             ["string", "pointer"],
             [name, value],
+            { async: true },
         );
         return proxy_convert_mp_to_js_obj_jsside_with_free(value);
     };
@@ -5978,7 +5971,7 @@ export async function loadMicroPython(options) {
         PyProxy: PyProxy,
         FS: Module.FS,
         globals: {
-            __dict__: pyimport("__main__").__dict__,
+            __dict__: (await pyimport("__main__")).__dict__,
             get(key) {
                 return this.__dict__[key];
             },
@@ -6001,30 +5994,44 @@ export async function loadMicroPython(options) {
             Module._free(value);
         },
         pyimport: pyimport,
-        runPython(code) {
+        // PitSimulator: con el Emscripten mas nuevo con el que se recompilo
+        // este puerto, el ccall() de acá abajo SIN { async: true } aborta
+        // ("Assertion failed: The call to mp_js_do_exec is running
+        // asynchronously...") en CUALQUIER ejecución, incluso un for-loop
+        // sin sleep ni nada async -- porque el variant "standard" tiene
+        // MICROPY_VARIANT_ENABLE_JS_HOOK=1 (mpconfigvariant.h), así que la
+        // VM llama a mp_js_hook() periódicamente durante el bytecode, y
+        // mp_js_hook está envuelto por el wrapper de Asyncify (todo el
+        // binario está instrumentado, -s ASYNCIFY sin lista angosta) --
+        // este Emscripten valida en runtime que CUALQUIER ccall que pueda
+        // atravesar un import asyncify-wrapped use { async: true }, sin
+        // importar si ese import realmente suspende algo o no.
+        async runPython(code) {
             const len = Module.lengthBytesUTF8(code);
             const buf = Module._malloc(len + 1);
             Module.stringToUTF8(code, buf, len + 1);
             const value = Module._malloc(3 * 4);
-            Module.ccall(
+            await Module.ccall(
                 "mp_js_do_exec",
                 "number",
                 ["pointer", "number", "pointer"],
                 [buf, len, value],
+                { async: true },
             );
             Module._free(buf);
             return proxy_convert_mp_to_js_obj_jsside_with_free(value);
         },
-        runPythonAsync(code) {
+        async runPythonAsync(code) {
             const len = Module.lengthBytesUTF8(code);
             const buf = Module._malloc(len + 1);
             Module.stringToUTF8(code, buf, len + 1);
             const value = Module._malloc(3 * 4);
-            Module.ccall(
+            await Module.ccall(
                 "mp_js_do_exec_async",
                 "number",
                 ["pointer", "number", "pointer"],
                 [buf, len, value],
+                { async: true },
             );
             Module._free(buf);
             const ret = proxy_convert_mp_to_js_obj_jsside_with_free(value);
