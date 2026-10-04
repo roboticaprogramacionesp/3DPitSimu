@@ -314,6 +314,7 @@ class SignalEngine {
 
   tapRc522(component, uidHex) {
     this.setRc522PresentedCard(component, uidHex);
+    this.simulator.eventBus.emit("component:pressed", { componentId: component.id });
     setTimeout(() => {
       if (component._rc522PresentedUid === uidHex) {
         this.setRc522PresentedCard(component, null);

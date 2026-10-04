@@ -3514,6 +3514,31 @@ class ReplPanel {
             this._retryHalAfterError(type);
         });
 
+        // Auto-Ejecutar al hacer clic -- pedido explícito del usuario
+        // ("no puedo hacer clic en botón y luego soltar y dar clic en
+        // Ejecutar"): en modo navegador (WasmBridge), un clic en un
+        // componente interactivo (tecla de teclado, ADKEY, botón,
+        // TAP de RC522) NO se ve reflejado en Python hasta la
+        // PRÓXIMA corrida -- esa es la limitación real de WASM ya
+        // documentada (ver _base_wasm.py y el comentario grande en
+        // WasmBridge.sendData()/wasmWorker.js: nada puede inyectarse
+        // mientras un script ya está corriendo). En vez de obligar a
+        // un segundo clic manual en "▶ Ejecutar" después de cada
+        // interacción, acá se dispara esa misma corrida SOLA: el
+        // alumno aprieta la tecla/botón UNA sola vez y ve el
+        // resultado directo, siempre que ya haya código cargado, el
+        // REPL esté listo, y no haya otra corrida en curso (si la
+        // hay, se ignora -- iniciar una segunda tanda en paralelo es
+        // justo el bug que _running ya previene en runEditorCode()).
+        // Ver Renderer.js (bindPressButton/bindAdKey/bindKeypadMatrix)
+        // y SignalEngine.tapRc522() para los emisores de este evento.
+        this.simulator.eventBus.on("component:pressed", () => {
+            if (!this.simulator.qemuBridge?.isWasmBridge) return;
+            if (!this._replReady || this._running) return;
+            if (!this.editor.value.trim()) return;
+            this.runEditorCode();
+        });
+
         this.simulator.eventBus.on("gpio:changed", ({ gpio, value }) => {
 
             if (this._gpioLogMuted) return;

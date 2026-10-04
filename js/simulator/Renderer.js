@@ -383,6 +383,7 @@ class Renderer {
       } catch (err) {}
 
       this.simulator.signalEngine.setPressed(component, true);
+      this.simulator.eventBus.emit("component:pressed", { componentId: component.id });
     };
 
     const release = (e) => {
@@ -619,6 +620,7 @@ class Renderer {
           component,
           pressedStack[pressedStack.length - 1],
         );
+        this.simulator.eventBus.emit("component:pressed", { componentId: component.id });
       };
 
       const release = (e) => {
@@ -747,6 +749,7 @@ class Renderer {
           colIndex,
           true,
         );
+        this.simulator.eventBus.emit("component:pressed", { componentId: component.id });
       };
 
       const release = (e) => {
