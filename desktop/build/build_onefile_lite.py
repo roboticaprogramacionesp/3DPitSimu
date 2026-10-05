@@ -19,6 +19,16 @@
 # dist/3DPitSimu-Lite.exe, nombre distinto a propósito para no pisar
 # el .exe completo si ambos se generan en la misma carpeta.
 #
+# --noupx: el .exe armado así quedó marcado como virus por Windows
+# Defender (falso positivo conocido contra el bootloader --onefile,
+# que se autoextrae a una carpeta temporal en cada apertura). UPX
+# (la compresión que PyInstaller aplica por default a los binarios)
+# es, además de la autoextracción en sí, uno de los disparadores más
+# comunes de esa misma heurística -- vale la pena probar sin ella
+# antes de resignarse al aviso o pasarse a --onedir (carpeta, ver
+# build_onedir_lite.py -- no da este aviso pero hay que moverla
+# ENTERA, no el .exe suelto).
+#
 # Uso:
 #   python desktop/build/build_onefile_lite.py
 # ==========================================================
@@ -36,7 +46,7 @@ def main():
 
     args = [
         sys.executable, "-m", "PyInstaller",
-        "--onefile", "--windowed",
+        "--onefile", "--windowed", "--noupx",
         "--icon", str(REPO_ROOT / "desktop" / "build" / "icon.ico"),
         "--name", "3DPitSimu-Lite",
         "--distpath", str(REPO_ROOT / "dist"),
