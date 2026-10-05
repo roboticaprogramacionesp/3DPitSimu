@@ -52,10 +52,6 @@ class BlePanel {
             <div class="ble-header-left">
                 <span class="ble-icon">📱</span>
                 <span class="ble-title">Serial Bluetooth Terminal (simulado)</span>
-                <span id="bleStatus" class="ble-status">🔴 Desconectado</span>
-            </div>
-            <div class="ble-header-right">
-                <button class="ble-btn ble-btn-toggle" id="bleBtnToggle">▲</button>
             </div>
         `;
 
@@ -116,7 +112,6 @@ class BlePanel {
     bindEvents() {
 
         document.getElementById("btnBlePanelToggle")?.addEventListener("click", () => this.toggle());
-        this.header.querySelector("#bleBtnToggle").addEventListener("click", () => this.toggle());
 
         this.header.addEventListener("click", (e) => {
             if (e.target.closest(".ble-btn, .ble-device-select")) return;
@@ -224,10 +219,6 @@ class BlePanel {
         this.input.disabled = false;
         this.sendBtn.disabled = false;
 
-        const status = document.getElementById("bleStatus");
-        status.textContent = `✅ Conectado a ${this._devices.get(esp32Id)?.name || esp32Id}`;
-        status.style.color = "#00ff88";
-
         this.log.innerHTML = "";
         this._appendSystemLine(`Conectado a ${this._devices.get(esp32Id)?.name || esp32Id}`);
 
@@ -246,10 +237,6 @@ class BlePanel {
         this.input.disabled = true;
         this.sendBtn.disabled = true;
         this.deviceSelect.disabled = this._devices.size === 0;
-
-        const status = document.getElementById("bleStatus");
-        status.textContent = "🔴 Desconectado";
-        status.style.color = "#666";
 
     }
 
@@ -299,7 +286,6 @@ class BlePanel {
     toggle() {
         this.open = !this.open;
         this.panel.classList.toggle("ble-closed", !this.open);
-        this.header.querySelector("#bleBtnToggle").textContent = this.open ? "▼" : "▲";
     }
 
     // ====================================================
