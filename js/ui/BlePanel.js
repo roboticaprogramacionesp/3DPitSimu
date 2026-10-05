@@ -36,6 +36,7 @@ class BlePanel {
         this.buildDOM();
         this.bindEvents();
         this.bindBusEvents();
+        this._bindDrag();
 
     }
 
@@ -119,6 +120,10 @@ class BlePanel {
 
         this.header.addEventListener("click", (e) => {
             if (e.target.closest(".ble-btn, .ble-device-select")) return;
+            // Un arrastre real (ver _bindDrag) también dispara "click"
+            // al soltar -- no es un toggle, el usuario estaba moviendo
+            // el panel, no pidiendo abrirlo/cerrarlo.
+            if (this._dragMoved) { this._dragMoved = false; return; }
             this.toggle();
         });
 
@@ -295,6 +300,96 @@ class BlePanel {
         this.open = !this.open;
         this.panel.classList.toggle("ble-closed", !this.open);
         this.header.querySelector("#bleBtnToggle").textContent = this.open ? "▼" : "▲";
+    }
+
+    // ====================================================
+    // Arrastrar el panel libremente por el lienzo, agarrando desde la
+    // cabecera -- mismo mecanismo que TutorialManager._bindDrag()
+    // (pointer capture + left/top explícito + re-clamp con
+    // ResizeObserver), reusado tal cual porque ahí ya se encontró y
+    // resolvió el mismo bug que acá hay que evitar desde el principio:
+    // un left/top fijo calculado una sola vez puede terminar fuera de
+    // #workspace si éste cambia de tamaño después (ventana, o el
+    // panel de propiedades expandiéndose/colapsándose).
+    // ====================================================
+
+    _bindDrag() {
+
+        const header = this.header;
+        const workspaceEl = document.getElementById("workspace") || document.body;
+
+        let dragging = false;
+        let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+        header.addEventListener("pointerdown", (e) => {
+
+            if (e.target.closest(".ble-btn, .ble-device-select")) return;
+
+            dragging = true;
+            this._dragMoved = false;
+
+            const panelRect = this.panel.getBoundingClientRect();
+            const parentRect = workspaceEl.getBoundingClientRect();
+
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = panelRect.left - parentRect.left;
+            startTop  = panelRect.top  - parentRect.top;
+
+            header.setPointerCapture(e.pointerId);
+            this.panel.classList.add("dragging");
+
+        });
+
+        header.addEventListener("pointermove", (e) => {
+
+            if (!dragging) return;
+
+            if (Math.abs(e.clientX - startX) > 3 || Math.abs(e.clientY - startY) > 3) {
+                this._dragMoved = true;
+            }
+
+            const parentRect = workspaceEl.getBoundingClientRect();
+
+            let newLeft = startLeft + (e.clientX - startX);
+            let newTop  = startTop  + (e.clientY - startY);
+
+            const maxLeft = Math.max(4, parentRect.width  - this.panel.offsetWidth  - 4);
+            const maxTop  = Math.max(4, parentRect.height - this.panel.offsetHeight - 4);
+
+            newLeft = Utils.clamp(newLeft, 4, maxLeft);
+            newTop  = Utils.clamp(newTop,  4, maxTop);
+
+            this.panel.style.left  = `${newLeft}px`;
+            this.panel.style.top   = `${newTop}px`;
+            this.panel.style.right = "auto";
+
+        });
+
+        header.addEventListener("pointerup", (e) => {
+            dragging = false;
+            this.panel.classList.remove("dragging");
+            try { header.releasePointerCapture(e.pointerId); } catch (err) { /* ya liberado */ }
+        });
+
+        const reclamp = () => {
+
+            if (this.panel.style.left === "") return;
+
+            const parentRect = workspaceEl.getBoundingClientRect();
+            const maxLeft = Math.max(4, parentRect.width  - this.panel.offsetWidth  - 4);
+            const maxTop  = Math.max(4, parentRect.height - this.panel.offsetHeight - 4);
+
+            const curLeft = parseFloat(this.panel.style.left) || 0;
+            const curTop  = parseFloat(this.panel.style.top)  || 0;
+
+            this.panel.style.left = `${Utils.clamp(curLeft, 4, maxLeft)}px`;
+            this.panel.style.top  = `${Utils.clamp(curTop,  4, maxTop)}px`;
+
+        };
+
+        new ResizeObserver(reclamp).observe(workspaceEl);
+
     }
 
 }

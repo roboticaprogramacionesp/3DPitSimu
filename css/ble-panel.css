@@ -3,12 +3,19 @@
    "Teléfono virtual" BLE -- panel flotante, esquina superior
    derecha del workspace (no compite por espacio con el panel REPL,
    que vive anclado abajo -- ver repl-panel.css).
-   ========================================================== */
 
+   top: 190px -- Debajo de #canvasTools (screenshot/deshacer/rehacer/
+   anotación, apilados verticalmente ahí -- ver simulator.css: 4
+   botones de 34px + gaps + padding = ~166px de alto, arrancando en
+   top:12px, así que su borde inferior cae cerca de 178px) para que no
+   lo tape al abrirlo por primera vez. Igual que .tutorial-modal (ver
+   tutorial.css), esto es solo la posición INICIAL -- de ahí en más el
+   usuario lo puede arrastrar a donde quiera agarrando la cabecera
+   (ver BlePanel._bindDrag(), mismo mecanismo que TutorialManager). */
 #blePanel {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 190px;
+    right: 12px;
     width: 300px;
     z-index: 220;
     display: flex;
@@ -23,6 +30,11 @@
     transition: height 0.2s ease;
 }
 
+#blePanel.dragging {
+    user-select: none;
+    transition: none;
+}
+
 #blePanel.ble-closed .ble-body { display: none; }
 
 /* ---- Cabecera ---- */
@@ -35,9 +47,11 @@
     height: 32px;
     min-height: 32px;
     background: #16213e;
-    cursor: pointer;
+    cursor: grab;
     user-select: none;
 }
+
+#blePanel.dragging .ble-header { cursor: grabbing; }
 
 #blePanel.ble-closed .ble-header { border-bottom: none; }
 #blePanel:not(.ble-closed) .ble-header { border-bottom: 1px solid #2d2d4e; }
