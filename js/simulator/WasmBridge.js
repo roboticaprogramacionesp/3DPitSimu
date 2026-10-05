@@ -199,11 +199,66 @@ class WasmBridge {
         clearInterval(this._keypadI2cHeartbeat);
         this._keypadI2cHeartbeat = setInterval(() => this.setKeypadI2cLive(), 150);
 
+        // BUG REAL (reportado en vivo: "conecto, desconecto, y la
+        // SEGUNDA vez que doy 'Simular' se queda trabado para
+        // siempre" -- en navegador Y en la app de escritorio, con
+        // código tan simple como un blink de LED. Investigado a fondo
+        // -- decenas de ciclos conectar/desconectar, clicks reales,
+        // contra Chrome Y contra la app real vía WebView2 -- sin
+        // lograr reproducirlo ni una vez: siempre reconectaba en bien
+        // menos de 1 segundo. Sin poder ver la sesión real donde pasa,
+        // no hay forma de aislar la causa de fondo desde acá.
+        //
+        // Mientras tanto, esto es una red de seguridad: si el Worker
+        // NUNCA manda "ready" (el mensaje que confirma que terminó de
+        // arrancar) dentro de READY_TIMEOUT_MS, en vez de quedar
+        // trabado para siempre esperando algo que quizás nunca
+        // llegue, se reintenta solo (mismo mecanismo que interrupt():
+        // matar este Worker y levantar uno nuevo de cero) -- hasta
+        // MAX_READY_RETRIES veces. Si ni así arranca, se avisa clARO
+        // en la terminal en vez de dejar "Todavía no está listo"
+        // repitiéndose para siempre sin ninguna pista de qué pasa.
+        clearTimeout(this._readyWatchdog);
+        this._readyWatchdog = setTimeout(() => this._onReadyTimeout(), WasmBridge.READY_TIMEOUT_MS);
+
+    }
+
+    static READY_TIMEOUT_MS = 10000;
+    static MAX_READY_RETRIES = 3;
+
+    _onReadyTimeout() {
+
+        if (this._connected) return; // ya llegó "ready", nada que hacer
+
+        this._readyRetryCount = (this._readyRetryCount || 0) + 1;
+
+        if (this._readyRetryCount > WasmBridge.MAX_READY_RETRIES) {
+            if (this.simulator.qemuBridge === this) {
+                this.simulator.eventBus.emit(
+                    "qemu:output",
+                    "\n⚠️ El simulador no terminó de arrancar después de varios intentos. " +
+                    "Probá '🔄 Recargar' (menú de arriba) o recargar la página entera.\n"
+                );
+            }
+            return;
+        }
+
+        if (this.simulator.qemuBridge === this) {
+            this.simulator.eventBus.emit(
+                "qemu:output",
+                `\n⚠️ El simulador tardó demasiado en responder -- reintentando (${this._readyRetryCount}/${WasmBridge.MAX_READY_RETRIES})...\n`
+            );
+        }
+
+        this._spawnWorker();
+
     }
 
     _onWorkerMessage(msg) {
 
         if (msg.type === "ready") {
+            clearTimeout(this._readyWatchdog);
+            this._readyRetryCount = 0;
             this._connected = true;
 
             // Multi-ESP32 (Fase 2): updateStatus()/"qemu:connected" son
@@ -945,10 +1000,33 @@ class WasmBridge {
     // lo visual/de simulación, mismo criterio que QemuBridge.onClose().
     _teardown() {
 
-        if (!this._connected) return false;
+        // BUG REAL (candidato fuerte para "conecto, desconecto, y la
+        // SEGUNDA vez que doy 'Simular' queda trabado para siempre" --
+        // ver el comentario grande en _onReadyTimeout()): antes esto
+        // cortaba acá si this._connected era false -- PERO
+        // this._connected recién pasa a true cuando el Worker manda
+        // "ready" (_onWorkerMessage), bastante después de que
+        // _spawnWorker() ya levantó un Worker de verdad y mandó
+        // "init". Si el usuario aprieta "⏹ Detener" (disconnect())
+        // JUSTO en esa ventana -- "conectando" pero todavía no
+        // "conectado" -- esto cortaba de una SIN matar el Worker ni
+        // limpiar nada: this.worker seguía siendo el mismo objeto
+        // (apuntando a un Worker que ni se tocó), this._connected ya
+        // era false antes de empezar. El siguiente "▶ Simular"
+        // (_spawnWorker() de nuevo) SÍ mata ese Worker viejo -- pero
+        // stopSimulation()/"qemu:disconnected" (que resetean el
+        // estado "esperando ready" del lado de ReplPanel.js) nunca se
+        // habían disparado para la corrida anterior, dejando ese
+        // estado potencialmente mezclado con el de la corrida nueva.
+        // Ahora alcanza con que haya ALGO que limpiar (conectado DE
+        // VERDAD, o un Worker en vuelo) -- solo el caso "no hay
+        // absolutamente nada que hacer" (ni conectado ni Worker vivo)
+        // sigue siendo un no-op real.
+        if (!this._connected && !this.worker) return false;
 
         this._connected = false;
 
+        clearTimeout(this._readyWatchdog);
         clearInterval(this._keypadI2cHeartbeat);
         this._keypadI2cHeartbeat = null;
 
