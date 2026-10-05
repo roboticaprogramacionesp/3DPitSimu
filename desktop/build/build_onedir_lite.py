@@ -43,7 +43,7 @@ def main():
 
     args = [
         sys.executable, "-m", "PyInstaller",
-        "--onedir", "--windowed",
+        "--onedir", "--windowed", "--noconfirm",
         "--icon", str(REPO_ROOT / "desktop" / "build" / "icon.ico"),
         "--name", "3DPitSimu-Lite",
         "--distpath", str(REPO_ROOT / "dist"),
