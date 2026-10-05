@@ -1,5 +1,5 @@
 from machine import Pin
-from time import ticks_ms, ticks_diff
+from time import ticks_ms, ticks_diff, sleep_ms
 
 
 class Keypad:
@@ -42,6 +42,23 @@ class Keypad:
         """
         for col_index, col_pin in enumerate(self._column_pins):
             col_pin.value(0)  # Activa columna
+
+            # BUG REAL (reportado en vivo: el teclado nunca detectaba
+            # ninguna tecla) -- en el runtime WASM del simulador, un
+            # cambio de GPIO manejado por el simulador (acá: la fila
+            # que depende de esta columna) sólo puede llegar a este
+            # script durante un yield de Asyncify (adentro de un
+            # sleep()), nunca en medio de código síncrono -- ver
+            # components_wasm/_base_wasm.py y WasmBridge.js. Sin este
+            # sleep_ms(), row_pin.value() de abajo siempre leía el
+            # estado de ANTES de poner esta columna en bajo -- la
+            # tecla nunca se detectaba. 20ms sigue siendo imperceptible
+            # para quien aprieta una tecla, pero le da margen real al
+            # viaje de ida y vuelta por postMessage entre el Worker y
+            # el hilo principal (confirmado en vivo: con 1ms el valor
+            # de la fila llegaba tarde, a destiempo con la SIGUIENTE
+            # columna, leyendo la tecla de al lado).
+            sleep_ms(20)
 
             for row_index, row_pin in enumerate(self._row_pins):
                 if not row_pin.value():  # Activo en bajo

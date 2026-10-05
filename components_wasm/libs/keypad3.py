@@ -1,5 +1,5 @@
 from machine import Pin
-from time import ticks_ms, ticks_diff
+from time import ticks_ms, ticks_diff, sleep_ms
 
 class Keypad:
     def __init__(self, keymap=None, row_pins=None, column_pins=None, num_rows=4, num_cols=3):
@@ -31,6 +31,14 @@ class Keypad:
         """
         for col_index, col_pin in enumerate(self._column_pins):
             col_pin.value(0)
+
+            # Ver el mismo comentario en keypad4.py (libs/keypad4.py)
+            # -- sin este sleep_ms(), el Worker nunca tiene ventana
+            # para aplicarle a row_pin el valor ya actualizado antes
+            # de leerlo, y la tecla nunca se detecta. 20ms confirmado
+            # en vivo como el mínimo que no queda a destiempo con la
+            # columna siguiente.
+            sleep_ms(20)
 
             for row_index, row_pin in enumerate(self._row_pins):
                 if not row_pin.value():

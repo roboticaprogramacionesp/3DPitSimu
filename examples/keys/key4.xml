@@ -1,0 +1,57 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id="QtcX}Z2jlPLE*IiGxe`u">key</variable>
+  </variables>
+  <block type="init_keypad_4x4" id="NEHoN%;0(IB(C[2L~%Ce" x="110" y="90">
+    <field name="NAME">teclado_4x4</field>
+    <field name="R1">26</field>
+    <field name="R2">25</field>
+    <field name="R3">17</field>
+    <field name="R4">16</field>
+    <field name="C1">27</field>
+    <field name="C2">14</field>
+    <field name="C3">12</field>
+    <field name="C4">13</field>
+    <next>
+      <block type="controls_whileUntil" id="1NwtHz%HwO+:TGOnl|T}">
+        <field name="MODE">WHILE</field>
+        <value name="BOOL">
+          <block type="logic_boolean" id="*s^J~D$B@r-l}L3+,YQ-">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="variables_set" id="@Gu++BB^j7_;-8ndaP1j">
+            <field name="VAR" id="QtcX}Z2jlPLE*IiGxe`u">key</field>
+            <value name="VALUE">
+              <block type="keypad_get_key" id="-D%W(f~Dz:hf3!=LJc0d">
+                <field name="NAME">teclado_4x4</field>
+              </block>
+            </value>
+            <next>
+              <block type="controls_if" id=".u/I;;qf$*dh,4u+k3Pm">
+                <value name="IF0">
+                  <block type="variables_get" id="(r*84}@wpod[Sj1lr]*y">
+                    <field name="VAR" id="QtcX}Z2jlPLE*IiGxe`u">key</field>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="text_print" id="{x}/WAgHa@556!ChUy.~">
+                    <value name="TEXT">
+                      <shadow type="text" id="COVKVHapp165o*:cr2u!">
+                        <field name="TEXT">3DPit</field>
+                      </shadow>
+                      <block type="variables_get" id="esGV:g7VuDX)-c=reVZ[">
+                        <field name="VAR" id="QtcX}Z2jlPLE*IiGxe`u">key</field>
+                      </block>
+                    </value>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </next>
+  </block>
+</xml>

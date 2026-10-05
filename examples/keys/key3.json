@@ -1,0 +1,189 @@
+{
+  "version": "1.0",
+  "timestamp": 1791165608870,
+  "components": [
+    {
+      "id": "esp32_wroom_zdnl55q",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 400,
+      "y": 150,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "85:97:69:26:24:26"
+      },
+      "locked": false
+    },
+    {
+      "id": "keypad3x4_nga3ngr",
+      "type": "keypad3x4",
+      "name": "Teclado matricial 3x4",
+      "x": 584.3151265725612,
+      "y": 41.77783185896571,
+      "width": 59,
+      "height": 89,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": true,
+      "properties": {
+        "modelo": "Teclado matricial 3x4 (12 teclas, filas activo-bajo con pull-up + columnas de salida)",
+        "nota": "Reutilizá la misma clase Keypad de keypad4.py con num_cols=3, row_pins de 4 elementos, column_pins de 3 elementos, y el keymap ['1','2','3','4','5','6','7','8','9','*','0','#']. No usa ningún HAL nuevo -- son 7 pines digitales comunes, ya cubiertos por _base_hal.py. El escaneo lo resuelve SignalEngine.evaluateKeypadMatrix() (misma función genérica que usa el 4x4) en tiempo real."
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_n9tdxqt",
+      "from": {
+        "componentId": "keypad3x4_nga3ngr",
+        "pinId": "r1"
+      },
+      "to": {
+        "componentId": "esp32_wroom_zdnl55q",
+        "pinId": "io26"
+      },
+      "points": [],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_vcfu73q",
+      "from": {
+        "componentId": "keypad3x4_nga3ngr",
+        "pinId": "r2"
+      },
+      "to": {
+        "componentId": "esp32_wroom_zdnl55q",
+        "pinId": "io25"
+      },
+      "points": [],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_lgxk31h",
+      "from": {
+        "componentId": "keypad3x4_nga3ngr",
+        "pinId": "r3"
+      },
+      "to": {
+        "componentId": "esp32_wroom_zdnl55q",
+        "pinId": "io17"
+      },
+      "points": [
+        {
+          "x": 621.3151265725612,
+          "y": 150.73144385218626
+        },
+        {
+          "x": 616.28,
+          "y": 150.73144385218626
+        }
+      ],
+      "color": "#f2994a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_ck55hmt",
+      "from": {
+        "componentId": "keypad3x4_nga3ngr",
+        "pinId": "r4"
+      },
+      "to": {
+        "componentId": "esp32_wroom_zdnl55q",
+        "pinId": "io16"
+      },
+      "points": [
+        {
+          "x": 613.8151265725612,
+          "y": 148.56477979322273
+        },
+        {
+          "x": 606.28,
+          "y": 148.56477979322273
+        }
+      ],
+      "color": "#f2994a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_3e2q747",
+      "from": {
+        "componentId": "keypad3x4_nga3ngr",
+        "pinId": "c1"
+      },
+      "to": {
+        "componentId": "esp32_wroom_zdnl55q",
+        "pinId": "io27"
+      },
+      "points": [
+        {
+          "x": 606.3151265725612,
+          "y": 145.39811194936433
+        },
+        {
+          "x": 596.28,
+          "y": 145.39811194936433
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_3kxmtwg",
+      "from": {
+        "componentId": "keypad3x4_nga3ngr",
+        "pinId": "c2"
+      },
+      "to": {
+        "componentId": "esp32_wroom_zdnl55q",
+        "pinId": "io14"
+      },
+      "points": [
+        {
+          "x": 598.8151265725612,
+          "y": 140.73144415020946
+        },
+        {
+          "x": 586.28,
+          "y": 140.73144415020946
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_83senvw",
+      "from": {
+        "componentId": "keypad3x4_nga3ngr",
+        "pinId": "c3"
+      },
+      "to": {
+        "componentId": "esp32_wroom_zdnl55q",
+        "pinId": "io12"
+      },
+      "points": [
+        {
+          "x": 591.3151265725612,
+          "y": 136.56478015085057
+        },
+        {
+          "x": 570.28,
+          "y": 136.56478015085057
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}
