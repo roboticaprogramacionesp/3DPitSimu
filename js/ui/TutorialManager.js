@@ -1513,7 +1513,281 @@ class TutorialManager {
                     isLast: true,
                 },
             ],
-        },    ];
+        },
+        {
+            id: "espnow_led",
+            title: "ESP-NOW: control remoto de un LED",
+            icon: "📡",
+            category: "📡 Comunicación inalámbrica",
+            steps: [
+                {
+                    title: "Paso 1 — Coloca la primera ESP32",
+                    text: "Vamos a usar DOS ESP32: una manda la orden (con un botón) y la otra prende un LED al recibirla -- así se ve, sin dudas, que el mensaje de verdad llegó. Arrastra la primera ESP32 al lienzo.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("esp32_wroom"),
+                    isDone: (tm) => tm.hasComponent("esp32_wroom"),
+                },
+                {
+                    title: "Paso 2 — Coloca una segunda ESP32",
+                    text: "Arrastra OTRA ESP32 al lienzo, aparte de la primera -- con 2 o más ESP32 presentes va a aparecer un selector de dispositivo arriba del panel MicroPython, para elegir cuál estás mirando/programando en cada momento.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("esp32_wroom"),
+                    isDone: (tm) => tm.hasComponentCount("esp32_wroom", 2),
+                },
+                {
+                    title: "Paso 3 — Toma un botón",
+                    text: "Arrastra el botón KY-004 desde el panel de componentes hasta el lienzo -- va a ser el control remoto.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("ky_004"),
+                    isDone: (tm) => tm.hasComponent("ky_004"),
+                },
+                {
+                    title: "Paso 4 — Conecta el GND del botón",
+                    text: "Traza un cable desde un pin GND de CUALQUIERA de las dos ESP32 hasta el GND del botón -- esa va a ser la ESP32 \"emisora\".",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.type === "ground" },
+                        { type: "ky_004", match: (p) => p.id === "gnd" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetween(
+                        (pin) => pin.type === "ground",
+                        (comp, pin) => comp.type === "ky_004" && pin.id === "gnd",
+                    ),
+                },
+                {
+                    title: "Paso 5 — Conecta la alimentación del botón",
+                    text: "Conecta un pin 3V3 de la MISMA ESP32 que usaste en el paso anterior al VCC del botón.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.id === "3v3" },
+                        { type: "ky_004", match: (p) => p.id === "vcc" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetween(
+                        (pin) => pin.id === "3v3",
+                        (comp, pin) => comp.type === "ky_004" && pin.id === "vcc",
+                    ),
+                },
+                {
+                    title: "Paso 6 — Conecta la señal del botón",
+                    text: "Elige un pin GPIO libre de esa misma ESP32 y conéctalo a la S (señal) del botón.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.type === "gpio" && !p.inputOnly && p.signal !== "uart" },
+                        { type: "ky_004", match: (p) => p.id === "senal" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetween(
+                        (pin) => pin.type === "gpio" && !pin.inputOnly && pin.signal !== "uart",
+                        (comp, pin) => comp.type === "ky_004" && pin.id === "senal",
+                    ),
+                },
+                {
+                    title: "Paso 7 — Toma un LED",
+                    text: "Arrastra un LED hasta el lienzo -- lo vamos a conectar a la OTRA ESP32 (la que NO tiene el botón), la \"receptora\".",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("led"),
+                    isDone: (tm) => tm.hasComponent("led"),
+                },
+                {
+                    title: "Paso 8 — Conecta el GND del LED",
+                    text: "Conecta un GND de la ESP32 que NO tiene el botón al cátodo (–, la pata corta) del LED.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.type === "ground" },
+                        { type: "led", match: (p) => p.id === "catodo" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetween(
+                        (pin) => pin.type === "ground",
+                        (comp, pin) => comp.type === "led" && pin.id === "catodo",
+                    ),
+                },
+                {
+                    title: "Paso 9 — Conecta el ánodo del LED",
+                    text: "Elige un pin GPIO libre de esa misma ESP32 (la que NO tiene el botón) y conéctalo al ánodo (+, la pata larga) del LED.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.type === "gpio" && !p.inputOnly && p.signal !== "uart" },
+                        { type: "led", match: (p) => p.id === "anodo" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetween(
+                        (pin) => pin.type === "gpio" && !pin.inputOnly && pin.signal !== "uart",
+                        (comp, pin) => comp.type === "led" && pin.id === "anodo",
+                    ),
+                },
+                {
+                    title: "Paso 10 — Simula el circuito",
+                    text: "Presiona ▶ Simular, arriba a la derecha, para arrancar las DOS ESP32 a la vez.",
+                    highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
+                    isDone: (tm) => !!tm.simulator.isRunning,
+                },
+                {
+                    title: "Paso 11 — Elige la ESP32 del LED y programa el receptor",
+                    text: "Usa el selector de arriba del panel MicroPython para elegir la ESP32 que tiene el LED. Pega este código (fijate la MAC que imprime -- la vas a necesitar en el paso siguiente) y dale ▶ Ejecutar:\n\nimport network, espnow\nfrom machine import Pin\n\nled = Pin(2, Pin.OUT)  # cambia el 2 por el numero de tu GPIO\n\nsta = network.WLAN(network.WLAN.IF_STA)\nsta.active(True)\nprint('Mi MAC:', sta.config('mac').hex())\n\ne = espnow.ESPNow()\ne.active(True)\n\ndef on_recv(e):\n    mac, msg = e.recv()\n    if msg == b'on':\n        led.value(1)\n    elif msg == b'off':\n        led.value(0)\n\ne.irq(on_recv)\nprint('Esperando ordenes...')",
+                    highlight: (tm) => tm.highlightElements(["#replDeviceSelect", "#replPanel .repl-header", "#replBtnRun"]),
+                    onEnter: (tm) => {
+                        if (tm.replPanel && !tm.replPanel.open) tm.replPanel.toggle();
+                        tm.replPanel?.switchTab("editor");
+                    },
+                    isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
+                },
+                {
+                    title: "Paso 12 — Elige la ESP32 del botón y programa el emisor",
+                    text: "Ahora cambia el selector a la OTRA ESP32 (la del botón) y pega este código -- reemplaza AABBCCDDEEFF por la MAC que te imprimió el receptor en el paso anterior (sin los \":\"):\n\nimport network, espnow\nfrom machine import Pin\nimport time\n\nboton = Pin(4, Pin.IN, Pin.PULL_DOWN)  # cambia el 4 por tu GPIO de señal\n\nsta = network.WLAN(network.WLAN.IF_STA)\nsta.active(True)\n\ne = espnow.ESPNow()\ne.active(True)\npeer = bytes.fromhex('AABBCCDDEEFF')\ne.add_peer(peer)\n\nestado = False\nwhile True:\n    if boton.value():\n        estado = not estado\n        e.send(peer, b'on' if estado else b'off')\n        print('Mandado:', 'on' if estado else 'off')\n        time.sleep(0.3)  # evita mandar muchas veces de un solo apreton\n    time.sleep(0.05)\n\nDale ▶ Ejecutar, apreta el botón del lienzo, y volvé a elegir la otra ESP32 en el selector para ver el LED prendido.",
+                    highlight: (tm) => tm.highlightElements(["#replDeviceSelect", "#replPanel .repl-header", "#replBtnRun"]),
+                    isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
+                    isLast: true,
+                },
+            ],
+        },
+        {
+            id: "wifi_led",
+            title: "WiFi: prender un LED desde internet",
+            icon: "🌐",
+            category: "📡 Comunicación inalámbrica",
+            steps: [
+                {
+                    title: "Paso 1 — Coloca la ESP32",
+                    text: "Arrastra la placa ESP32 WeMos D1 R32 desde el panel de componentes hasta el lienzo.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("esp32_wroom"),
+                    isDone: (tm) => tm.hasComponent("esp32_wroom"),
+                },
+                {
+                    title: "Paso 2 — Toma un LED",
+                    text: "Arrastra un LED desde el panel de componentes hasta el lienzo.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("led"),
+                    isDone: (tm) => tm.hasComponent("led"),
+                },
+                {
+                    title: "Paso 3 — Conecta el GND del LED",
+                    text: "Traza un cable desde un pin GND de la ESP32 hasta el cátodo (–, la pata corta) del LED.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.type === "ground" },
+                        { type: "led", match: (p) => p.id === "catodo" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetween(
+                        (pin) => pin.type === "ground",
+                        (comp, pin) => comp.type === "led" && pin.id === "catodo",
+                    ),
+                },
+                {
+                    title: "Paso 4 — Conecta el ánodo del LED",
+                    text: "Elige un pin GPIO libre de la ESP32 y conéctalo al ánodo (+, la pata larga) del LED.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.type === "gpio" && !p.inputOnly && p.signal !== "uart" },
+                        { type: "led", match: (p) => p.id === "anodo" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetween(
+                        (pin) => pin.type === "gpio" && !pin.inputOnly && pin.signal !== "uart",
+                        (comp, pin) => comp.type === "led" && pin.id === "anodo",
+                    ),
+                },
+                {
+                    title: "Paso 5 — Simula el circuito",
+                    text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
+                    isDone: (tm) => !!tm.simulator.isRunning,
+                },
+                {
+                    title: "Paso 6 — Escribe tu código",
+                    text: "Elegí un nombre de canal único (ej. tuNombre-123) y pegá este código, cambiando CANAL por el tuyo:\n\nimport network, time, requests, json\nfrom machine import Pin\n\nled = Pin(2, Pin.OUT)  # cambia el 2 por tu GPIO\n\nwlan = network.WLAN(network.WLAN.IF_STA)\nwlan.active(True)\nwlan.connect('CualquierNombre', 'CualquierClave')\nwhile not wlan.isconnected():\n    time.sleep(0.1)\nprint('Conectado!')\n\nCANAL = 'tuNombre-123'\nvisto = set()\n\nwhile True:\n    r = requests.get('https://ntfy.sh/' + CANAL + '/json?poll=1')\n    for linea in r.text.strip().split('\\n'):\n        if not linea:\n            continue\n        msg = json.loads(linea)\n        if msg['id'] not in visto:\n            visto.add(msg['id'])\n            if msg['message'] == 'on':\n                led.value(1)\n            elif msg['message'] == 'off':\n                led.value(0)\n            print('Recibido:', msg['message'])\n    time.sleep(2)",
+                    highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
+                    onEnter: (tm) => {
+                        if (tm.replPanel && !tm.replPanel.open) tm.replPanel.toggle();
+                        tm.replPanel?.switchTab("editor");
+                    },
+                    isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
+                },
+                {
+                    title: "Paso 7 — Probalo mandando un mensaje real",
+                    text: "Con tu código corriendo (▶ Ejecutar), abrí https://ntfy.sh/tuNombre-123 (tu mismo canal) en OTRA pestaña del navegador -- o desde tu celular, abriendo telefono_virtual.html (está en la carpeta del proyecto). Mandá el texto \"on\" o \"off\" y mirá la terminal: el LED del lienzo tiene que prender o apagar en un par de segundos.",
+                    highlight: (tm) => tm.highlightElements(["#workspace"]),
+                    isDone: () => true,
+                    isLast: true,
+                },
+            ],
+        },
+        {
+            id: "ble_servo",
+            title: "Bluetooth (BLE): mover un servo desde el teléfono virtual",
+            icon: "📱",
+            category: "📡 Comunicación inalámbrica",
+            steps: [
+                {
+                    title: "Paso 1 — Coloca la ESP32",
+                    text: "Arrastra la placa ESP32 WeMos D1 R32 desde el panel de componentes hasta el lienzo.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("esp32_wroom"),
+                    isDone: (tm) => tm.hasComponent("esp32_wroom"),
+                },
+                {
+                    title: "Paso 2 — Toma el servo",
+                    text: "Arrastra el Servo SG90 desde el panel de componentes hasta el lienzo -- lo vamos a mover a control remoto por Bluetooth.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("sg90"),
+                    isDone: (tm) => tm.hasComponent("sg90"),
+                },
+                {
+                    title: "Paso 3 — Conecta el GND",
+                    text: "Traza un cable desde un pin GND de la ESP32 hasta el cable café/negro (GND) del servo.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.type === "ground" },
+                        { type: "sg90", match: (p) => p.id === "gnd" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetween(
+                        (pin) => pin.type === "ground",
+                        (comp, pin) => comp.type === "sg90" && pin.id === "gnd",
+                    ),
+                },
+                {
+                    title: "Paso 4 — Conecta la alimentación",
+                    text: "Conecta un pin de 3V3 de la ESP32 al cable rojo (VCC) del servo.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.id === "3v3" },
+                        { type: "sg90", match: (p) => p.id === "vcc" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetween(
+                        (pin) => pin.id === "3v3",
+                        (comp, pin) => comp.type === "sg90" && pin.id === "vcc",
+                    ),
+                },
+                {
+                    title: "Paso 5 — Conecta la señal",
+                    text: "Elige un pin GPIO libre de la ESP32 y conéctalo al cable naranja/amarillo (SIGNAL) del servo.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "esp32_wroom", match: (p) => p.type === "gpio" && !p.inputOnly && p.signal !== "uart" },
+                        { type: "sg90", match: (p) => p.id === "signal" },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetween(
+                        (pin) => pin.type === "gpio" && !pin.inputOnly && pin.signal !== "uart",
+                        (comp, pin) => comp.type === "sg90" && pin.id === "signal",
+                    ),
+                },
+                {
+                    title: "Paso 6 — Simula el circuito",
+                    text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
+                    isDone: (tm) => !!tm.simulator.isRunning,
+                },
+                {
+                    title: "Paso 7 — Escribe tu código",
+                    text: "Pega este código (usa la librería BLEUART, la forma más simple de BLE) y dale ▶ Ejecutar:\n\nfrom BLE import BLEUART\nfrom machine import Pin, PWM\nimport bluetooth\n\nservo = PWM(Pin(13), freq=50)  # cambia el 13 por tu GPIO de señal\n\nble = bluetooth.BLE()\nuart = BLEUART(ble, 'MiServo')\n\ndef datos_recibidos():\n    msg = uart.read().decode().strip()\n    print('Recibido:', msg)\n    if msg == '0':\n        servo.duty(26)    # ~0 grados\n    elif msg == '90':\n        servo.duty(74)    # ~90 grados\n    elif msg == '180':\n        servo.duty(123)   # ~180 grados\n\nuart.irq(handler=datos_recibidos)\nprint('Esperando conexion BLE...')",
+                    highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
+                    onEnter: (tm) => {
+                        if (tm.replPanel && !tm.replPanel.open) tm.replPanel.toggle();
+                        tm.replPanel?.switchTab("editor");
+                    },
+                    isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
+                },
+                {
+                    title: "Paso 8 — Abre el teléfono virtual y conectá",
+                    text: "Abrí el panel 📱 (arriba a la derecha) -- tu ESP32 (\"MiServo\") debería aparecer en la lista apenas corriste el código. Elegila y dale \"Conectar\".",
+                    highlight: (tm) => tm.highlightElements(["#btnBlePanelToggle"]),
+                    onEnter: () => {
+                        const panel = document.getElementById("blePanel");
+                        if (panel?.classList.contains("ble-closed")) {
+                            document.getElementById("btnBlePanelToggle")?.click();
+                        }
+                    },
+                    isDone: () => !document.getElementById("blePanel")?.classList.contains("ble-closed"),
+                },
+                {
+                    title: "Paso 9 — Mandá \"0\", \"90\" o \"180\"",
+                    text: "Escribí uno de esos tres números en el teléfono virtual y dale Enviar -- el servo del lienzo tiene que girar al ángulo que mandaste. Probá los tres para confirmar que el control remoto funciona de punta a punta.",
+                    highlight: (tm) => tm.highlightElements(["#blePanel"]),
+                    isDone: () => true,
+                    isLast: true,
+                },
+            ],
+        },
+    ];
 
     // ====================================================
     // DOM: botón selector (dropdown) + modal flotante
@@ -2033,6 +2307,14 @@ class TutorialManager {
 
     hasComponent(type) {
         return this.simulator.componentManager.getAll().some((c) => c.type === type);
+    }
+
+    // Para pasos tipo "coloca una SEGUNDA ESP32" (tutoriales de
+    // comunicación inalámbrica, ver categoría "📡 Comunicación
+    // inalámbrica") -- hasComponent() de arriba no alcanza porque ya
+    // da true con la PRIMERA.
+    hasComponentCount(type, min) {
+        return this.simulator.componentManager.getAll().filter((c) => c.type === type).length >= min;
     }
 
     // Busca, entre TODOS los cables, uno cuyos dos extremos matcheen
