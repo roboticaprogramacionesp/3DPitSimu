@@ -855,9 +855,36 @@ class WasmBridge {
     // única forma de que esta Promise SI o SI se resuelva es que el
     // script termine solo o que se llame a interrupt(), que resuelve
     // todo lo pendiente al matar el Worker viejo).
+    // BUG REAL (reportado en vivo con el teclado matricial: "Aborted
+    // ... We cannot start an async operation when one is already in
+    // flight", seguido de un alud de "TypeError: 'set' on proxy" --
+    // el Worker quedaba en un estado roto después del primer crash)
+    // -- "IN:<gpio>:<valor>" es el protocolo de GPIO digital genérico
+    // (botones, switches, Y AHORA el escaneo de teclados matriciales,
+    // que lo manda varias veces por tecla en un bucle muy ajustado,
+    // ver keypad3.py/keypad4.py). Mandarlo por "processLine" dispara
+    // un mp.runPython() nuevo -- con el volumen que genera un teclado
+    // (a diferencia de un click de botón, ocasional) alcanza para que
+    // choque con el mp.runPython() del script principal si éste está
+    // suspendido en su propio sleep(). Mismo bug/mismo fix ya probado
+    // para WiFi/HTTP (ver "setGlobal" en wasmWorker.js): se manda por
+    // ahí en vez de por processLine -- Pin.value() en _base_wasm.py
+    // ya lo lee directo del namespace global, sin ejecutar nada.
+    static GPIO_IN_RE = /^IN:(\d+):(-?\d+)$/;
+
     sendData(data, { replEcho = false } = {}) {
 
         if (!this.worker || !this._connected) return Promise.resolve();
+
+        const gpioMatch = WasmBridge.GPIO_IN_RE.exec(data);
+        if (gpioMatch) {
+            this.worker.postMessage({
+                type: "setGlobal",
+                key: `_pit_gpio_in_${gpioMatch[1]}`,
+                value: parseInt(gpioMatch[2], 10),
+            });
+            return Promise.resolve();
+        }
 
         if (WasmBridge._isProtocolLine(data)) {
             this.worker.postMessage({ type: "processLine", line: data.trim() });

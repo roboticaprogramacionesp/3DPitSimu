@@ -154,6 +154,20 @@ class Pin:
         if v is None:
             if self._mode == Pin.OUT:
                 return self._last_val or 0
+            # BUG REAL (reportado en vivo: "RuntimeError: ... We
+            # cannot start an async operation when one is already in
+            # flight" escaneando un teclado matricial) -- WasmBridge.js
+            # ahora manda "IN:<gpio>:<valor>" por setGlobal (variable
+            # global directa, sin mp.runPython()) en vez de por
+            # processLine/process_line() de más arriba -- mismo fix ya
+            # probado para WiFi/HTTP, ver ese comentario en
+            # wasmWorker.js. _pin_input_states (poblado por
+            # process_line(), que SÍ sigue andando para quien lo use)
+            # queda como fallback, nunca se deja de escribir.
+            g = globals()
+            key = "_pit_gpio_in_%d" % self._pin_num
+            if key in g:
+                return g[key]
             return _pin_input_states.get(self._pin_num, 0)
         if v:
             self.on()
