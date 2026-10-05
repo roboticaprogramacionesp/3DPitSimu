@@ -181,6 +181,24 @@ class WasmBridge {
             : "000000000000";
         this.worker.postMessage({ type: "init", macHex });
 
+        // BUG REAL (reportado en vivo: apretar una tecla del teclado
+        // I2C con el script ya corriendo seguía sin detectarse A VECES
+        // -- confirmado que el envío disparado por evaluate() en cada
+        // cambio de keypadPressed SÍ sale con el valor correcto
+        // (instrumentado postMessage, visto en vivo), pero el Worker
+        // no siempre terminaba de aplicarlo -- no se pudo aislar la
+        // causa exacta pese a varias rondas de instrumentación. En vez
+        // de seguir afinando CUÁNDO se manda, esto manda el snapshot
+        // actual cada 150ms SIEMPRE que el bridge esté conectado,
+        // además del envío disparado por evento -- autocorrectivo: si
+        // UN envío puntual se pierde por el motivo que sea, el próximo
+        // tick (como mucho 150ms después) lo corrige solo. Costo real:
+        // un postMessage() con un string corto cada 150ms -- nada
+        // comparado con el volumen que ya generan los propios I2CW/
+        // GPIO de cualquier sensor activo.
+        clearInterval(this._keypadI2cHeartbeat);
+        this._keypadI2cHeartbeat = setInterval(() => this.setKeypadI2cLive(), 150);
+
     }
 
     _onWorkerMessage(msg) {
@@ -930,6 +948,9 @@ class WasmBridge {
         if (!this._connected) return false;
 
         this._connected = false;
+
+        clearInterval(this._keypadI2cHeartbeat);
+        this._keypadI2cHeartbeat = null;
 
         // Multi-ESP32 (Fase 2): mismo criterio que el resto -- UI del
         // dispositivo activo solamente. stopSimulation() sí corre
