@@ -845,6 +845,30 @@ class WasmBridge {
         return parts.join("|");
     }
 
+    // BUG REAL (reportado en vivo: "probé el teclado 4x4 I2C y no
+    // funcionó al presionar") -- _computeKeypadI2cSnapshot() de
+    // arriba solo se manda UNA vez, antes de cada "run" (ver
+    // wasmWorker.js, mensaje "run" -> _pit_apply_keypad_snapshot()) --
+    // apretar una tecla DESPUÉS de que el script ya arrancó su propio
+    // while True: nunca se veía (limitación documentada en
+    // _keypad_i2c_wasm.py). Mismo fix ya probado para el teclado por
+    // GPIO (ver GPIO_IN_RE/setGlobal más arriba): esto empuja el
+    // snapshot actualizado por setGlobal (variable global directa,
+    // sin mp.runPython()) cada vez que cambia qué teclas están
+    // apretadas -- _keypad_i2c_wasm.py ahora relee esa variable en
+    // cada lectura I2C en vez de depender solo del snapshot congelado
+    // al arrancar. Llamado desde keypad4x4_i2c.behavior.js en cada
+    // evaluate(), con el script principal corriendo o no (setGlobal
+    // es seguro en cualquier momento).
+    setKeypadI2cLive() {
+        if (!this.worker || !this._connected) return;
+        this.worker.postMessage({
+            type: "setGlobal",
+            key: "_pit_keypad_snapshot_live",
+            value: this._computeKeypadI2cSnapshot(),
+        });
+    }
+
     // Para código real (rama "run"): devuelve una Promise que se
     // resuelve cuando el Worker confirma que mp.runPython() TERMINÓ
     // de verdad (mensaje "runDone", ver wasmWorker.js) -- no cuando

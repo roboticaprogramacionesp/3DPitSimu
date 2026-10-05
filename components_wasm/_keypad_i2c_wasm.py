@@ -28,17 +28,82 @@
 # sensores I2C) la primera vez que aparece una dirección nueva en un
 # snapshot.
 #
-# LIMITACIÓN que se mantiene (mismo criterio que ADKEY con bucles,
-# documentado en _base_wasm.py): el snapshot se toma UNA vez, al
-# arrancar la corrida -- soltar/apretar una tecla DESPUÉS de tocar
-# "Ejecutar", mientras el script sigue corriendo, no se ve hasta la
-# PRÓXIMA corrida. Para el uso típico (apretar la tecla y DESPUÉS
-# tocar "Ejecutar"/mandar la línea del REPL, sin un while True:
-# alrededor) esto alcanza.
+# ACTUALIZADO -- la limitación de arriba ("solo se ve la tecla si se
+# aprieta ANTES de Ejecutar") quedó resuelta: WasmBridge.js ahora
+# también empuja el snapshot por setGlobal (_pit_keypad_snapshot_live,
+# ver setKeypadI2cLive()) cada vez que cambia qué teclas están
+# apretadas, CON el script ya corriendo -- mismo mecanismo ya probado
+# para IN: del teclado por GPIO (setGlobal nunca dispara
+# mp.runPython(), así que es seguro llamarlo mientras el script
+# principal está suspendido en su propio sleep()). _on_read() de abajo
+# relee esa variable en cada lectura I2C en vez de depender solo del
+# snapshot congelado al arrancar (_pit_apply_keypad_snapshot(), que
+# sigue existiendo -- es lo que registra la dirección la primera vez).
 # =============================================================
 
 _pit_keypad_pressed_by_addr = {}
 _pit_keypad_registered_addrs = set()
+_pit_keypad_live_raw_seen = None
+
+
+def _pit_parse_keypad_raw(raw):
+    # Mismo formato ("<addr>=<fila,col>;...|<addr>=...") que
+    # _pit_apply_keypad_snapshot() de más abajo -- separado acá porque
+    # ahora lo usan DOS caminos (el snapshot inicial de cada corrida Y
+    # el refresco en vivo de _pit_refresh_keypad_live()).
+    result = {}
+    if not raw:
+        return result
+    for part in raw.split("|"):
+        if "=" not in part:
+            continue
+        addr_str, pairs = part.split("=", 1)
+        try:
+            addr = int(addr_str)
+        except ValueError:
+            continue
+        pressed = set()
+        for pair in pairs.split(";"):
+            if pair:
+                pressed.add(pair)
+        result[addr] = pressed
+    return result
+
+
+def _pit_refresh_keypad_live():
+    # Llamado al principio de cada _on_read() -- lee
+    # _pit_keypad_snapshot_live (variable global, la escribe
+    # WasmBridge.setKeypadI2cLive() por setGlobal, nunca por
+    # mp.runPython()) y la compara contra la última vista para no
+    # reparsear en cada llamada si no cambió nada. A diferencia de
+    # _pit_apply_keypad_snapshot() (que solo corre UNA vez, al
+    # arrancar cada corrida), esto se re-evalúa en CADA lectura I2C --
+    # por eso una tecla apretada mientras el script ya está en su
+    # propio while True: ahora sí se ve.
+    global _pit_keypad_live_raw_seen
+
+    raw = globals().get("_pit_keypad_snapshot_live")
+    if raw is None or raw == _pit_keypad_live_raw_seen:
+        return
+
+    _pit_keypad_live_raw_seen = raw
+    fresh = _pit_parse_keypad_raw(raw)
+
+    # Direcciones ya registradas: se actualizan SIEMPRE (incluso a un
+    # set() vacío si ya no hay nada apretado ahí -- si no, una tecla
+    # soltada quedaría "pegada" para siempre).
+    for addr in _pit_keypad_registered_addrs:
+        _pit_keypad_pressed_by_addr[addr] = fresh.get(addr, set())
+
+    # Direcciones nuevas que el snapshot inicial todavía no conocía
+    # (ej. el teclado se construyó recién, el primer cambio en vivo es
+    # lo primero que avisa de esta dirección).
+    for addr, pressed in fresh.items():
+        if addr in _pit_keypad_registered_addrs:
+            continue
+        _pit_keypad_registered_addrs.add(addr)
+        _pit_keypad_pressed_by_addr[addr] = pressed
+        register_i2c_device(addr, on_read=_pit_keypad_i2c_make_on_read(addr))
 
 # Estado de escaneo por dirección: {addr: [ultimo output_byte visto, cantidad
 # de on_read() consecutivos con ESE MISMO output_byte]} -- se reinicia cada
@@ -78,6 +143,8 @@ def _pit_keypad_i2c_make_on_read(addr):
     # tiene su propia columna K, así que cada una dispara en SU
     # propio llamado número K+1 dentro del escaneo de SU fila.
     def _on_read():
+        _pit_refresh_keypad_live()
+
         output_byte = _i2c_reg_out.get(addr, 0xFF)
         pressed = _pit_keypad_pressed_by_addr.get(addr)
 
@@ -107,23 +174,13 @@ def _pit_apply_keypad_snapshot(raw):
     # Formato: "<addr>=<fila,col>;<fila,col>|<addr>=..." -- texto
     # plano a propósito (sin json.loads) para no depender de que el
     # módulo "json" esté compilado en este build del puerto. Armado
-    # del lado JS en WasmBridge.js, ver sendData().
+    # del lado JS en WasmBridge.js, ver sendData(). Sigue corriendo
+    # UNA vez por corrida (ver wasmWorker.js, mensaje "run") -- lo que
+    # pase DESPUÉS, con el script ya corriendo, lo cubre
+    # _pit_refresh_keypad_live() más arriba.
     _pit_keypad_pressed_by_addr.clear()
     _pit_keypad_scan_state.clear()
-    if not raw:
-        return
-    for part in raw.split("|"):
-        if "=" not in part:
-            continue
-        addr_str, pairs = part.split("=", 1)
-        try:
-            addr = int(addr_str)
-        except ValueError:
-            continue
-        pressed = set()
-        for pair in pairs.split(";"):
-            if pair:
-                pressed.add(pair)
+    for addr, pressed in _pit_parse_keypad_raw(raw).items():
         _pit_keypad_pressed_by_addr[addr] = pressed
         if addr not in _pit_keypad_registered_addrs:
             _pit_keypad_registered_addrs.add(addr)

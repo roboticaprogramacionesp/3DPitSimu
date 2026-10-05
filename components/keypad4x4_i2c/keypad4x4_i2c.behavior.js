@@ -53,8 +53,20 @@ ComponentBehaviorRegistry.register("keypad4x4_i2c", {
 
             readByte &= 0xff;
 
-            if (engine.simulator.qemuBridge?.connected) {
-                engine.simulator.qemuBridge.sendData(`I2CR:${address}:${readByte}`);
+            const bridge = engine.simulator.qemuBridge;
+            if (bridge?.connected) {
+                // Modo navegador (WasmBridge): el "I2CR:" genérico de
+                // abajo no sirve para este componente -- get_key()
+                // escanea en la MISMA llamada sincrónica, ese mensaje
+                // nunca llega a tiempo (ver _keypad_i2c_wasm.py). El
+                // snapshot en vivo (setKeypadI2cLive(), WasmBridge.js)
+                // es lo que de verdad hace que una tecla apretada
+                // mientras el script ya está corriendo se detecte.
+                if (bridge.isWasmBridge) {
+                    bridge.setKeypadI2cLive();
+                } else {
+                    bridge.sendData(`I2CR:${address}:${readByte}`);
+                }
             }
 
         },

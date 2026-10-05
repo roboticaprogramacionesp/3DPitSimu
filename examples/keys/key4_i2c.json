@@ -1,0 +1,77 @@
+{
+  "version": "1.0",
+  "timestamp": 1791166000000,
+  "components": [
+    {
+      "id": "esp32_wroom_i2ckey1",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 300,
+      "y": 260,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "4A:1F:8C:92:7B:3D"
+      },
+      "locked": false
+    },
+    {
+      "id": "keypad4x4_i2c_1",
+      "type": "keypad4x4_i2c",
+      "name": "Teclado matricial 4x4 (I2C)",
+      "x": 500,
+      "y": 130,
+      "width": 65,
+      "height": 79.4,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "address": "0x20"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_i2ckey_sda",
+      "from": { "componentId": "keypad4x4_i2c_1", "pinId": "sda" },
+      "to": { "componentId": "esp32_wroom_i2ckey1", "pinId": "io21" },
+      "points": [],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_i2ckey_scl",
+      "from": { "componentId": "keypad4x4_i2c_1", "pinId": "scl" },
+      "to": { "componentId": "esp32_wroom_i2ckey1", "pinId": "io22" },
+      "points": [],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_i2ckey_vcc",
+      "from": { "componentId": "keypad4x4_i2c_1", "pinId": "vcc" },
+      "to": { "componentId": "esp32_wroom_i2ckey1", "pinId": "3v3" },
+      "points": [],
+      "color": "#e53935",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_i2ckey_gnd",
+      "from": { "componentId": "keypad4x4_i2c_1", "pinId": "gnd" },
+      "to": { "componentId": "esp32_wroom_i2ckey1", "pinId": "gnd_0" },
+      "points": [],
+      "color": "#333333",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

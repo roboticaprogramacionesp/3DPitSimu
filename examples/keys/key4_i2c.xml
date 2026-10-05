@@ -1,0 +1,62 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id="G7,Z?R(X0_sO.K-VW?_q">key</variable>
+  </variables>
+  <block type="init_keypad4x4_i2c" id="+Gj=^`+*qAa6-{ttC/~G" x="170" y="70">
+    <field name="NAME">teclado_4x4_i2c</field>
+    <field name="SDA">21</field>
+    <field name="SCL">22</field>
+    <field name="ADDR">0x20</field>
+    <next>
+      <block type="controls_whileUntil" id="hdplZTW)^Znrn3,H3`fH">
+        <field name="MODE">WHILE</field>
+        <value name="BOOL">
+          <block type="logic_boolean" id="iT7FudvPc=Vnh-lyAv4,">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="variables_set" id="4_AWAz@T9fI@KoZ*Hpkf">
+            <field name="VAR" id="G7,Z?R(X0_sO.K-VW?_q">key</field>
+            <value name="VALUE">
+              <block type="keypad_get_key_i2c" id="C@92ck(M7Vh(cc)#qxO$">
+                <field name="NAME">teclado_4x4_i2c</field>
+              </block>
+            </value>
+            <next>
+              <block type="controls_if" id=",Xm7x4r|Mh*-1Z[3H?b,">
+                <value name="IF0">
+                  <block type="variables_get" id="S|$6V_n#t~}Xqg,9[dd(">
+                    <field name="VAR" id="G7,Z?R(X0_sO.K-VW?_q">key</field>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="text_print" id="d^mcHD[GTU+cCP%7s8@8">
+                    <value name="TEXT">
+                      <shadow type="text" id="Rnn|J]}6wU%i7QzLcrCn">
+                        <field name="TEXT">3DPit</field>
+                      </shadow>
+                      <block type="variables_get" id="e/gfPuv0*EwdUWXW;AOh">
+                        <field name="VAR" id="G7,Z?R(X0_sO.K-VW?_q">key</field>
+                      </block>
+                    </value>
+                  </block>
+                </statement>
+                <next>
+                  <block type="time_sleep" id="WH:rwJVC)!q*dnh_z4_F">
+                    <field name="UNIT">S</field>
+                    <value name="VALUE">
+                      <shadow type="math_number" id="zxUbQaiTcC/aW=]uLE?2">
+                        <field name="NUM">1</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </next>
+  </block>
+</xml>
