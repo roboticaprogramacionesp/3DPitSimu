@@ -339,6 +339,28 @@ class ReplPanel {
         // que ahora hay un CodeMirror de por medio.
         this.codeMirror.on("change", () => this.codeMirror.save());
 
+        // BUG REAL (reportado en vivo: "uso 🔄 Recargar para destrabar
+        // la conexión y se me borra el código que tenía escrito") --
+        // _switchActiveDevice() ya guarda el código en
+        // component.properties.espnowCode (que SÍ viaja con
+        // ProjectManager.serialize()/el autoguardado normal a
+        // localStorage, ver _persistActiveDeviceCode() más abajo) pero
+        // SOLO al cambiar de dispositivo en el selector -- y ese
+        // selector está OCULTO con 0 o 1 ESP32 (el caso de la enorme
+        // mayoría de los proyectos, ver _refreshDeviceSelector()), así
+        // que _switchActiveDevice() nunca se llega a llamar ni una vez
+        // en esa situación: el código vivía ÚNICAMENTE en el DOM del
+        // editor, sin guardarse en ningún lado -- CUALQUIER recarga
+        // (este botón, F5, cerrar la pestaña sin querer) lo perdía
+        // siempre, no solo cuando esto se usaba para destrabar una
+        // conexión. Mismo debounce que ya usa ProjectManager para su
+        // propio autoguardado (evita escribir en cada tecla).
+        clearTimeout(this._codePersistTimeout);
+        this.codeMirror.on("change", () => {
+            clearTimeout(this._codePersistTimeout);
+            this._codePersistTimeout = setTimeout(() => this._persistActiveDeviceCode(), 800);
+        });
+
         // Placeholder propio -- CodeMirror core no trae uno (eso es
         // un addon aparte que no está vendorizado acá, ver
         // lib/codemirror/), así que se simula con un <pre> superpuesto
@@ -427,6 +449,22 @@ class ReplPanel {
         // cambio visual para el 99% de los proyectos existentes.
         if (esp32s.length <= 1) {
             this.deviceSelect.style.display = "none";
+
+            // Restaurar el código guardado la vez anterior -- SOLO
+            // acá (con 2+, _switchActiveDevice() ya se encarga de
+            // esto al elegir uno en el selector). Guardas: nunca
+            // pisar código que el alumno ya esté escribiendo (si el
+            // editor no está vacío, no toca nada -- esto corre en
+            // cada "component:added", no solo al cargar un proyecto
+            // nuevo), y nunca repetir la restauración más de una vez
+            // por panel (_activeEsp32Id ya no-null después de la
+            // primera).
+            if (esp32s.length === 1 && !this._activeEsp32Id && !this.codeMirror.getValue().trim()) {
+                const saved = esp32s[0].properties?.espnowCode;
+                if (saved) this.codeMirror.setValue(saved);
+                this._activeEsp32Id = esp32s[0].id;
+            }
+
             return;
         }
 
@@ -451,6 +489,26 @@ class ReplPanel {
         }
 
         this.deviceSelect.style.display = "";
+
+    }
+
+    // BUG REAL (ver el comentario grande en el "change" de codeMirror,
+    // constructor) -- único punto que escribe el código del editor en
+    // component.properties.espnowCode, para que viaje con el resto
+    // del proyecto (ProjectManager.serialize() ya hace spread
+    // genérico de "properties") en vez de vivir solo en el DOM. Sin
+    // argumento, usa el dispositivo activo de siempre (mismo fallback
+    // que ya usaba _switchActiveDevice() antes de este refactor).
+    _persistActiveDeviceCode(esp32Id) {
+
+        const id = esp32Id || this._activeEsp32Id || this.simulator.qemuBridge?.esp32?.id;
+        if (!id) return;
+
+        const component = this.simulator.componentManager.get(id);
+        if (!component) return;
+
+        component.properties = component.properties || {};
+        component.properties.espnowCode = this.codeMirror.getValue();
 
     }
 
@@ -493,15 +551,8 @@ class ReplPanel {
             });
 
             // Código del dispositivo que se deja de mirar, persistido
-            // en el proyecto -- ProjectManager.serialize() ya hace
-            // spread genérico de "properties" (confirmado leyendo su
-            // código), así que no hace falta tocarlo para que esto se
-            // guarde/cargue junto con el resto del proyecto.
-            const outgoingComponent = this.simulator.componentManager.get(outgoingId);
-            if (outgoingComponent) {
-                outgoingComponent.properties = outgoingComponent.properties || {};
-                outgoingComponent.properties.espnowCode = this.codeMirror.getValue();
-            }
+            // en el proyecto -- ver _persistActiveDeviceCode().
+            this._persistActiveDeviceCode(outgoingId);
 
         }
 
