@@ -237,6 +237,15 @@ class ProjectManager {
             this.simulator.componentLayer.innerHTML = "";
             this.simulator.annotationManager?.clear();
 
+            // BUG REAL (ver el comentario grande en
+            // Simulator.resetBridgesForNewProject()): sin esto, el
+            // bridge del ESP32 del proyecto VIEJO (ya desconectado,
+            // apuntando a un componente que ya no existe) quedaba
+            // atrás para siempre en simulator.bridges -- el próximo
+            // "▶ Simular" con el proyecto NUEVO terminaba con
+            // qemuBridge apuntando al viejo, muerto, en vez del nuevo.
+            this.simulator.resetBridgesForNewProject?.();
+
             // Restaurar componentes (usar createFromDefinition para cargar SVG)
             for (const compData of data.components) {
                 const component = await this.simulator.componentManager.createFromDefinition(

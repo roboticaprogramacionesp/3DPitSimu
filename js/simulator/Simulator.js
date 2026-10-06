@@ -880,4 +880,43 @@ class Simulator {
         this.bridges.forEach(bridge => bridge.disconnect());
     }
 
+    // BUG REAL (reportado en vivo: "cargo un archivo, simulo,
+    // desconecto, cargo OTRO archivo y simular ya no responde -- se
+    // queda en 'Conectando...' para siempre") -- teardownAllBridges()
+    // (arriba) desconecta cada bridge, pero nunca los saca de
+    // this.bridges NI resetea this.qemuBridge. ProjectManager.deserialize()
+    // (al cargar un archivo nuevo) limpia componentManager pero nunca
+    // llamaba a nada de esto -- el bridge del ESP32 del archivo VIEJO
+    // (ya desconectado, apuntando a un componente que ya no existe)
+    // quedaba atrás en el Map para siempre. spawnBridgesForAllEsp32()
+    // (al apretar "Simular" con el archivo NUEVO) agrega el bridge
+    // del ESP32 nuevo al MISMO Map -- pero "this.qemuBridge =
+    // this.bridges.values().next().value" toma el PRIMERO por orden
+    // de inserción, que seguía siendo el viejo, huérfano y
+    // desconectado -- el bridge nuevo SÍ se conectaba bien en segundo
+    // plano, pero toda la UI (que lee this.qemuBridge.connected)veía
+    // para siempre el viejo, muerto. Confirmado en vivo: bridges.keys()
+    // con 2 entradas después de cargar el archivo nuevo, debería tener
+    // 1 sola.
+    //
+    // Fix: limpiar el Map entero (no solo desconectar) cada vez que
+    // se carga un proyecto nuevo -- llamado desde
+    // ProjectManager.deserialize(), al mismo tiempo que
+    // componentManager.clear().
+    resetBridgesForNewProject() {
+        this.bridges.forEach(bridge => bridge.disconnect());
+        this.bridges.clear();
+
+        // Modo QEMU (#modo=qemu): this.qemuBridge es la ÚNICA
+        // instancia global de QemuBridge (asignada una sola vez en
+        // app.js, nunca via this.bridges) -- NUNCA pisarla acá, o
+        // "cargar un proyecto nuevo" rompería QEMU por completo. Solo
+        // tocar el alias si hoy apunta a un WasmBridge (o ya es null)
+        // -- se vuelve a asignar solo, correctamente, en el próximo
+        // "▶ Simular" (spawnBridgesForAllEsp32()).
+        if (!this.qemuBridge || this.qemuBridge.isWasmBridge) {
+            this.qemuBridge = null;
+        }
+    }
+
 }
