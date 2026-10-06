@@ -901,8 +901,30 @@ class WasmBridge {
         const parts = [];
         for (const c of this.simulator.componentManager.getAll()) {
             if (c.type !== "keypad4x4_i2c") continue;
-            const pressed = c.keypadPressed;
-            if (!pressed || pressed.size === 0) continue;
+            const pressed = c.keypadPressed || new Set();
+            // BUG REAL (reportado en vivo: "sigo dejando presionado y
+            // no responde", 100% reproducible sin importar cuánto se
+            // esperara) -- esto ANTES omitía por completo la dirección
+            // si pressed.size === 0 (nada apretado), que es el estado
+            // normal al arrancar "Ejecutar" (el alumno recién después
+            // aprieta una tecla). _pit_keypad_i2c_wasm.py SOLO registra
+            // on_read() para una dirección la primera vez que aparece
+            // en un snapshot (_pit_apply_keypad_snapshot()/
+            // _pit_refresh_keypad_live()) -- pero _pit_refresh_keypad_live()
+            // se llama DESDE DENTRO de on_read(), que I2C.readfrom()
+            // (_i2c_bus_wasm.py) solo invoca si la dirección YA está
+            // registrada. Huevo y gallina real: sin una tecla apretada
+            // en el PRIMER snapshot que viaja, la dirección nunca se
+            // registraba -- y sin registrar, jamás se iba a volver a
+            // intentar, sin importar cuántas teclas se apretaran
+            // después ni cuánto se esperara (confirmado en vivo:
+            // _pit_keypad_registered_addrs seguía vacío tras 12s
+            // sosteniendo la tecla). Ahora SIEMPRE se incluye la
+            // dirección de cada teclado I2C del circuito, con o sin
+            // nada apretado -- así la primera aplicación del snapshot
+            // (al arrancar, o el primer tick del heartbeat de 150ms)
+            // ya registra on_read(), y de ahí en más las teclas sí se
+            // ven en vivo.
             const raw = c.properties?.address;
             let addr;
             if (raw === undefined || raw === null || raw === "") {

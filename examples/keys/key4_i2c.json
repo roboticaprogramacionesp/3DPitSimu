@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": 1791166000000,
+  "timestamp": 1791301720843,
   "components": [
     {
       "id": "esp32_wroom_i2ckey1",
@@ -42,33 +42,75 @@
   "wires": [
     {
       "id": "wire_i2ckey_sda",
-      "from": { "componentId": "keypad4x4_i2c_1", "pinId": "sda" },
-      "to": { "componentId": "esp32_wroom_i2ckey1", "pinId": "io21" },
+      "from": {
+        "componentId": "keypad4x4_i2c_1",
+        "pinId": "sda"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "io21"
+      },
       "points": [],
       "color": "#26c6da",
       "connectorType": "hembra-hembra"
     },
     {
       "id": "wire_i2ckey_scl",
-      "from": { "componentId": "keypad4x4_i2c_1", "pinId": "scl" },
-      "to": { "componentId": "esp32_wroom_i2ckey1", "pinId": "io22" },
-      "points": [],
+      "from": {
+        "componentId": "keypad4x4_i2c_1",
+        "pinId": "scl"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "io22"
+      },
+      "points": [
+        {
+          "x": 525.83,
+          "y": 220.61854901099775
+        },
+        {
+          "x": 380.28,
+          "y": 220.61854901099775
+        }
+      ],
       "color": "#26c6da",
       "connectorType": "hembra-hembra"
     },
     {
       "id": "wire_i2ckey_vcc",
-      "from": { "componentId": "keypad4x4_i2c_1", "pinId": "vcc" },
-      "to": { "componentId": "esp32_wroom_i2ckey1", "pinId": "3v3" },
+      "from": {
+        "componentId": "keypad4x4_i2c_1",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "3v3"
+      },
       "points": [],
       "color": "#e53935",
       "connectorType": "hembra-hembra"
     },
     {
       "id": "wire_i2ckey_gnd",
-      "from": { "componentId": "keypad4x4_i2c_1", "pinId": "gnd" },
-      "to": { "componentId": "esp32_wroom_i2ckey1", "pinId": "gnd_0" },
-      "points": [],
+      "from": {
+        "componentId": "keypad4x4_i2c_1",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "gnd_0"
+      },
+      "points": [
+        {
+          "x": 552.5,
+          "y": 231.5037186641594
+        },
+        {
+          "x": 410.28,
+          "y": 231.5037186641594
+        }
+      ],
       "color": "#333333",
       "connectorType": "hembra-hembra"
     }
