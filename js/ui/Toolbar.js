@@ -118,11 +118,33 @@ class Toolbar {
 
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
+        // No alcanza con c.x/c.y/c.width/c.height: Component.updateTransform()
+        // aplica "translate(x,y) rotate(rotation) scale(...)", o sea que
+        // rotation gira la caja ALREDEDOR DE (x,y) -- que es una esquina,
+        // no el centro. Un componente rotado 90/180/270 (ej. el motor o la
+        // pila del reporte del usuario, "se corta a la mitad") termina
+        // ocupando en pantalla una región bien distinta de
+        // [x,x+width]x[y,y+height], incluso con offsets NEGATIVOS respecto
+        // a ese rectángulo -- por eso el viewBox viejo lo recortaba. Acá se
+        // calculan las 4 esquinas reales (escala + rotación, igual que
+        // updateTransform -- el flip no cambia el bbox, ver
+        // Component.getPinPosition()) y se usa el rectángulo que las
+        // contiene a las cuatro.
         components.forEach((c) => {
-            minX = Math.min(minX, c.x);
-            minY = Math.min(minY, c.y);
-            maxX = Math.max(maxX, c.x + c.width);
-            maxY = Math.max(maxY, c.y + c.height);
+            const rad = (c.rotation * Math.PI) / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+            const w = c.width * c.scale;
+            const h = c.height * c.scale;
+
+            [[0, 0], [w, 0], [w, h], [0, h]].forEach(([lx, ly]) => {
+                const absX = c.x + (lx * cos - ly * sin);
+                const absY = c.y + (lx * sin + ly * cos);
+                minX = Math.min(minX, absX);
+                minY = Math.min(minY, absY);
+                maxX = Math.max(maxX, absX);
+                maxY = Math.max(maxY, absY);
+            });
         });
 
         // Las notas también entran en el recorte -- si no se cuentan acá,
