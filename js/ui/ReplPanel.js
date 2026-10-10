@@ -18,9 +18,22 @@
 
 class ReplPanel {
 
-    constructor(simulator) {
+    // options.fixedEsp32Id: "modo flotante" (ver Fase 2.5 del plan
+    // ESP-NOW/multi-ESP32) -- ventana flotante y arrastrable, atada PARA
+    // SIEMPRE a un solo ESP32, en vez del panel acoplado de siempre (que
+    // sigue siendo EXACTAMENTE el mismo código de acá, instanciado sin
+    // este parámetro -- ver el getter "bridge" y los checks de
+    // this._fixedEsp32Id repartidos en el resto de la clase, todos no-ops
+    // para el panel de siempre). Administradas por ReplWindowManager.js,
+    // nunca instanciadas sueltas.
+    constructor(simulator, options = {}) {
 
         this.simulator = simulator;
+        this._fixedEsp32Id = options.fixedEsp32Id || null;
+        // ReplWindowManager.js (modo flotante) o app.js (panel de
+        // siempre, asignado ahí mismo tras construir ambos) -- usado
+        // solo por el botón 🗗 (panel de siempre) y ✕ (flotante).
+        this.windowManager = options.windowManager || null;
 
         this.open    = false;
         this.history = [];
@@ -187,10 +200,56 @@ class ReplPanel {
         this.bindBusEvents();
         this._bindNativeClipboard();
 
-        this._refreshDeviceSelector();
-        this.simulator.eventBus.on("component:added",   () => this._refreshDeviceSelector());
-        this.simulator.eventBus.on("component:removed", () => this._refreshDeviceSelector());
+        // El selector de dispositivo no tiene sentido en modo flotante --
+        // el dispositivo ya es fijo (ver options.fixedEsp32Id arriba).
+        if (!this._fixedEsp32Id) {
+            this._refreshDeviceSelector();
+            this.simulator.eventBus.on("component:added",   () => this._refreshDeviceSelector());
+            this.simulator.eventBus.on("component:removed", () => this._refreshDeviceSelector());
+        } else {
+            // Sin colapsar/expandir (ver toggle(), deshabilitado para
+            // este modo en bindEvents()) -- la ventana flotante siempre
+            // cuenta como "abierta" para el resto de la clase (ej.
+            // _safeFit() del ajuste de tamaño de la terminal).
+            this.open = true;
 
+            // Restaurar el código guardado la vez anterior -- mismo
+            // mecanismo que _refreshDeviceSelector()/_switchActiveDevice()
+            // usan para el panel de siempre, simplificado acá porque el
+            // dispositivo ya es fijo (sin selector ni sesión que elegir).
+            const saved = this.simulator.componentManager
+                .get(this._fixedEsp32Id)?.properties?.espnowCode;
+            if (saved) this.codeMirror.setValue(saved);
+
+            // Si el bridge de este dispositivo YA estaba conectado
+            // ANTES de abrir esta ventana (caso normal: "▶ Simular" ya
+            // corriendo, el usuario abre la ventana flotante recién
+            // después) -- bindBusEvents() de arriba solo escucha
+            // eventos FUTUROS ("device:connected"), así que sin esto la
+            // ventana quedaría trabada en "🔴 Desconectado" para
+            // siempre, sin jamás ver el banner ni habilitar "Ejecutar".
+            if (this.bridge?.connected) {
+                this.statusEl.textContent = "✅ Simulando";
+                this.statusEl.style.color = "#00ff88";
+                this._activateWasmDeviceReady();
+            }
+        }
+
+    }
+
+    // Bridge real de ESTE panel -- en modo flotante, SIEMPRE el del
+    // dispositivo fijo (nunca repuntea simulator.qemuBridge, así que
+    // puede convivir con el panel acoplado y con otras ventanas
+    // flotantes sin pisarse); en modo default (panel de siempre), el
+    // alias global de toda la vida, sin ningún cambio de comportamiento.
+    // Reemplaza los usos directos de "this.simulator.qemuBridge" en el
+    // resto de la clase (ver Fase 2.5 del plan ESP-NOW) -- excepto
+    // _switchActiveDevice(), que es la única que todavía ESCRIBE ese
+    // alias y nunca corre en modo flotante.
+    get bridge() {
+        return this._fixedEsp32Id
+            ? (this.simulator.bridges.get(this._fixedEsp32Id) || null)
+            : this.simulator.qemuBridge;
     }
 
     // ====================================================
@@ -199,19 +258,29 @@ class ReplPanel {
 
     buildDOM() {
 
+        // Ids SOLO en el panel de siempre (modo default) -- en modo
+        // flotante no hace falta ninguno (se podrían repetir entre
+        // ventanas abiertas a la vez), todo se busca por clase, scopeado
+        // a this.panel/this.header (ver más abajo). CSS de cada modo en
+        // repl-panel.css (acoplado) / repl-window.css (flotante, nuevo).
         this.panel = document.createElement("div");
-        this.panel.id = "replPanel";
-        this.panel.className = "repl-panel repl-closed";
+        if (!this._fixedEsp32Id) this.panel.id = "replPanel";
+        this.panel.className = this._fixedEsp32Id
+            ? "repl-window"
+            : "repl-panel repl-closed";
 
         // ---- Cabecera ----
+        const esp32 = this._fixedEsp32Id
+            ? this.simulator.componentManager.get(this._fixedEsp32Id)
+            : null;
+
         this.header = document.createElement("div");
         this.header.className = "repl-header";
-        this.header.innerHTML = `
+        this.header.innerHTML = this._fixedEsp32Id ? `
             <div class="repl-header-left">
                 <span class="repl-icon">⚡</span>
-                <span class="repl-title">MicroPython</span>
-                <span id="qemuStatus" class="repl-status">🔴 Desconectado</span>
-                <select id="replDeviceSelect" class="repl-device-select" title="Dispositivo ESP32 que muestra este panel" style="display:none;"></select>
+                <span class="repl-title"></span>
+                <span class="repl-status">🔴 Desconectado</span>
             </div>
             <div class="repl-header-right">
                 <div class="repl-font-size-group" title="Tamaño de fuente">
@@ -220,13 +289,53 @@ class ReplPanel {
                     <button class="repl-btn repl-font-btn" data-size="L">L</button>
                     <button class="repl-btn repl-font-btn" data-size="XL">XL</button>
                 </div>
-                <button class="repl-btn" id="replBtnInterrupt" title="Interrumpir (Ctrl+C)">■</button>
-                <button class="repl-btn" id="replBtnReset"     title="Soft Reset (Ctrl+D) -- reinicia el firmware, no el simulador">↺</button>
-                <button class="repl-btn" id="replBtnGpioLog"   title="Silenciar actividad de pines (📌 GPIOxx)">📌</button>
-                <button class="repl-btn" id="replBtnClear"     title="Limpiar output">⌫</button>
-                <button class="repl-btn repl-btn-toggle" id="replBtnToggle">▲</button>
+                <button class="repl-btn repl-btn-interrupt" title="Interrumpir (Ctrl+C)">■</button>
+                <button class="repl-btn repl-btn-reset"     title="Soft Reset (Ctrl+D) -- reinicia el firmware, no el simulador">↺</button>
+                <button class="repl-btn repl-btn-gpiolog"   title="Silenciar actividad de pines (📌 GPIOxx)">📌</button>
+                <button class="repl-btn repl-btn-clear"     title="Limpiar output">⌫</button>
+                <button class="repl-btn repl-btn-close" title="Cerrar esta ventana">✕</button>
+            </div>
+        ` : `
+            <div class="repl-header-left">
+                <span class="repl-icon">⚡</span>
+                <span class="repl-title">MicroPython</span>
+                <span id="qemuStatus" class="repl-status">🔴 Desconectado</span>
+                <select class="repl-device-select" title="Dispositivo ESP32 que muestra este panel" style="display:none;"></select>
+                <button class="repl-btn repl-btn-popout" title="Abrir el dispositivo elegido en una ventana flotante" style="display:none;">🗗</button>
+            </div>
+            <div class="repl-header-right">
+                <div class="repl-font-size-group" title="Tamaño de fuente">
+                    <button class="repl-btn repl-font-btn" data-size="S">S</button>
+                    <button class="repl-btn repl-font-btn" data-size="M">M</button>
+                    <button class="repl-btn repl-font-btn" data-size="L">L</button>
+                    <button class="repl-btn repl-font-btn" data-size="XL">XL</button>
+                </div>
+                <button class="repl-btn repl-btn-interrupt" title="Interrumpir (Ctrl+C)">■</button>
+                <button class="repl-btn repl-btn-reset"     title="Soft Reset (Ctrl+D) -- reinicia el firmware, no el simulador">↺</button>
+                <button class="repl-btn repl-btn-gpiolog"   title="Silenciar actividad de pines (📌 GPIOxx)">📌</button>
+                <button class="repl-btn repl-btn-clear"     title="Limpiar output">⌫</button>
+                <button class="repl-btn repl-btn-toggle">▲</button>
             </div>
         `;
+
+        // Referencias cacheadas UNA sola vez, scopeadas a this.header --
+        // reemplazan los document.getElementById("replBtnX") de siempre
+        // (que solo podían apuntar a UN panel en todo el documento, el
+        // primero del DOM -- con 2+ instancias a la vez eso ya no alcanza).
+        this.statusEl     = this.header.querySelector(".repl-status");
+        this.interruptBtn = this.header.querySelector(".repl-btn-interrupt");
+        this.resetBtn     = this.header.querySelector(".repl-btn-reset");
+        this._gpioLogBtn  = this.header.querySelector(".repl-btn-gpiolog");
+        this.clearBtn     = this.header.querySelector(".repl-btn-clear");
+
+        if (this._fixedEsp32Id) {
+            this.header.querySelector(".repl-title").textContent =
+                esp32?.name || esp32?.type || "ESP32";
+            this.closeBtn = this.header.querySelector(".repl-btn-close");
+        } else {
+            this.toggleBtn  = this.header.querySelector(".repl-btn-toggle");
+            this.popOutBtn  = this.header.querySelector(".repl-btn-popout");
+        }
 
         // ---- Tabs ----
         this.tabBar = document.createElement("div");
@@ -291,11 +400,17 @@ class ReplPanel {
         editorToolbar.innerHTML = `
             <span class="repl-editor-label">editor.py</span>
             <div class="repl-editor-actions">
-                <button class="repl-btn" id="replBtnLoadCode" title="Abrir código desde un archivo .py de tu computadora">📂 Abrir</button>
-                <button class="repl-btn" id="replBtnSaveCode" title="Guardar el código del editor a un archivo .py">💾 Guardar</button>
-                <button class="repl-btn repl-btn-run" id="replBtnRun" disabled title="Esperando a que el simulador esté corriendo y listo (>>>)">▶ Ejecutar</button>
+                <button class="repl-btn repl-btn-loadcode" title="Abrir código desde un archivo .py de tu computadora">📂 Abrir</button>
+                <button class="repl-btn repl-btn-savecode" title="Guardar el código del editor a un archivo .py">💾 Guardar</button>
+                <button class="repl-btn repl-btn-run" disabled title="Esperando a que el simulador esté corriendo y listo (>>>)">▶ Ejecutar</button>
             </div>
         `;
+
+        // Cacheadas una sola vez -- mismo criterio que las del header
+        // (ver comentario grande más arriba).
+        this.loadCodeBtn = editorToolbar.querySelector(".repl-btn-loadcode");
+        this.saveCodeBtn = editorToolbar.querySelector(".repl-btn-savecode");
+        this.runBtn      = editorToolbar.querySelector(".repl-btn-run");
 
         // -- Cuerpo del editor: CodeMirror (resaltado de sintaxis real,
         // ver lib/codemirror/) sobre un <textarea> de respaldo. --
@@ -409,10 +524,109 @@ class ReplPanel {
 
         this._initTerminal();
 
-        this.deviceSelect = this.header.querySelector("#replDeviceSelect");
-        this.deviceSelect.addEventListener("change", () => {
-            this._switchActiveDevice(this.deviceSelect.value);
+        if (this._fixedEsp32Id) {
+            // Modo flotante: sin selector, el cierre lo maneja
+            // ReplWindowManager.js (quita los listeners de "device:*" y
+            // destruye el DOM) -- este panel solo avisa que lo apretaron.
+            this.closeBtn.addEventListener("click", () => {
+                this.windowManager?.close(this._fixedEsp32Id);
+            });
+            this._bindDrag();
+        } else {
+            this.deviceSelect = this.header.querySelector(".repl-device-select");
+            this.deviceSelect.addEventListener("change", () => {
+                this._switchActiveDevice(this.deviceSelect.value);
+            });
+            this.popOutBtn.addEventListener("click", () => {
+                if (this.deviceSelect.value) this.windowManager?.open(this.deviceSelect.value);
+            });
+        }
+
+    }
+
+    // ====================================================
+    // Arrastrar la ventana flotante por su cabecera -- copiado tal
+    // cual de BlePanel._bindDrag() (a su vez copiado de
+    // TutorialManager._bindDrag()), mismo mecanismo: pointer capture +
+    // posición relativa a #workspace (no al viewport, por eso
+    // this.panel cuelga de #workspace y no de <body>) + reclamp con
+    // ResizeObserver para que la ventana nunca quede fuera del área
+    // visible si #workspace cambia de tamaño (ventana redimensionada,
+    // panel de propiedades que se abre/cierra, etc.)
+    // ====================================================
+
+    _bindDrag() {
+
+        const header = this.header;
+        const workspaceEl = document.getElementById("workspace") || document.body;
+
+        let dragging = false;
+        let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+        header.addEventListener("pointerdown", (e) => {
+
+            if (e.target.closest(".repl-btn")) return;
+
+            dragging = true;
+
+            const panelRect  = this.panel.getBoundingClientRect();
+            const parentRect = workspaceEl.getBoundingClientRect();
+
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = panelRect.left - parentRect.left;
+            startTop  = panelRect.top  - parentRect.top;
+
+            header.setPointerCapture(e.pointerId);
+            this.panel.classList.add("dragging");
+
         });
+
+        header.addEventListener("pointermove", (e) => {
+
+            if (!dragging) return;
+
+            const parentRect = workspaceEl.getBoundingClientRect();
+
+            let newLeft = startLeft + (e.clientX - startX);
+            let newTop  = startTop  + (e.clientY - startY);
+
+            const maxLeft = Math.max(4, parentRect.width  - this.panel.offsetWidth  - 4);
+            const maxTop  = Math.max(4, parentRect.height - this.panel.offsetHeight - 4);
+
+            newLeft = Utils.clamp(newLeft, 4, maxLeft);
+            newTop  = Utils.clamp(newTop,  4, maxTop);
+
+            this.panel.style.left   = `${newLeft}px`;
+            this.panel.style.top    = `${newTop}px`;
+            this.panel.style.right  = "auto";
+            this.panel.style.bottom = "auto";
+
+        });
+
+        header.addEventListener("pointerup", (e) => {
+            dragging = false;
+            this.panel.classList.remove("dragging");
+            try { header.releasePointerCapture(e.pointerId); } catch (err) { /* ya liberado */ }
+        });
+
+        const reclamp = () => {
+
+            if (this.panel.style.left === "") return;
+
+            const parentRect = workspaceEl.getBoundingClientRect();
+            const maxLeft = Math.max(4, parentRect.width  - this.panel.offsetWidth  - 4);
+            const maxTop  = Math.max(4, parentRect.height - this.panel.offsetHeight - 4);
+
+            const curLeft = parseFloat(this.panel.style.left) || 0;
+            const curTop  = parseFloat(this.panel.style.top)  || 0;
+
+            this.panel.style.left = `${Utils.clamp(curLeft, 4, maxLeft)}px`;
+            this.panel.style.top  = `${Utils.clamp(curTop,  4, maxTop)}px`;
+
+        };
+
+        new ResizeObserver(reclamp).observe(workspaceEl);
 
     }
 
@@ -439,6 +653,7 @@ class ReplPanel {
         // alcance del plan, el selector no aplica ahí.
         if (location.hash === "#modo=qemu") {
             this.deviceSelect.style.display = "none";
+            this.popOutBtn.style.display = "none";
             return;
         }
 
@@ -449,6 +664,7 @@ class ReplPanel {
         // cambio visual para el 99% de los proyectos existentes.
         if (esp32s.length <= 1) {
             this.deviceSelect.style.display = "none";
+            this.popOutBtn.style.display = "none";
 
             // Restaurar el código guardado la vez anterior -- SOLO
             // acá (con 2+, _switchActiveDevice() ya se encarga de
@@ -481,7 +697,7 @@ class ReplPanel {
         // Preferir seguir mostrando el mismo dispositivo que ya se
         // estaba mostrando (si sigue existiendo) -- agregar/quitar
         // OTRO ESP32 no debería cambiar lo que el usuario está mirando.
-        const currentId = this._activeEsp32Id || this.simulator.qemuBridge?.esp32?.id;
+        const currentId = this._activeEsp32Id || this.bridge?.esp32?.id;
         if (currentId && esp32s.some(e => e.id === currentId)) {
             this.deviceSelect.value = currentId;
         } else if (previousValue && esp32s.some(e => e.id === previousValue)) {
@@ -489,6 +705,7 @@ class ReplPanel {
         }
 
         this.deviceSelect.style.display = "";
+        this.popOutBtn.style.display = "";
 
     }
 
@@ -501,7 +718,10 @@ class ReplPanel {
     // que ya usaba _switchActiveDevice() antes de este refactor).
     _persistActiveDeviceCode(esp32Id) {
 
-        const id = esp32Id || this._activeEsp32Id || this.simulator.qemuBridge?.esp32?.id;
+        // this._fixedEsp32Id primero (modo flotante) -- no depende de
+        // que el bridge ya exista (sim.bridges recién se puebla al
+        // arrancar "▶ Simular"), a diferencia de this.bridge?.esp32?.id.
+        const id = esp32Id || this._fixedEsp32Id || this._activeEsp32Id || this.bridge?.esp32?.id;
         if (!id) return;
 
         const component = this.simulator.componentManager.get(id);
@@ -525,7 +745,7 @@ class ReplPanel {
         // en esta sesión del panel, es el que simulator.qemuBridge ya
         // apunta por default (el primer ESP32 encontrado, ver
         // Simulator.spawnBridgesForAllEsp32()).
-        const outgoingId = this._activeEsp32Id || this.simulator.qemuBridge?.esp32?.id;
+        const outgoingId = this._activeEsp32Id || this.bridge?.esp32?.id;
 
         if (outgoingId) {
 
@@ -612,7 +832,7 @@ class ReplPanel {
             bridge._pendingVisibleOutput = "";
         }
 
-        const runBtn = document.getElementById("replBtnRun");
+        const runBtn = this.runBtn;
 
         if (bridge?.connected && this._replReady) {
             // Ya había terminado de arrancar la última vez que se miró
@@ -895,15 +1115,23 @@ class ReplPanel {
 
     bindEvents() {
 
-        // Toggle
-        document.getElementById("replBtnToggle").addEventListener("click", () => this.toggle());
-        this.header.addEventListener("click", (e) => {
-            // BUG REAL reportado (clic en el selector de dispositivo
-            // -- Fase 2 -- minimizaba el panel entero): faltaba acá,
-            // mismo criterio que .repl-btn/.repl-tabbar de siempre.
-            if (e.target.closest(".repl-btn, .repl-tabbar, .repl-device-select")) return;
-            this.toggle();
-        });
+        // Toggle (colapsar/expandir) -- no existe en modo flotante: la
+        // ventana siempre está "abierta" (closeBtn + _bindDrag() del
+        // header la reemplazan, ya conectados en buildDOM()); si se
+        // dejara este listener puesto, un click en el header (que
+        // _bindDrag() usa para arrastrar) dispararía un toggle() que
+        // además asume document.getElementById("replBtnToggle"), que
+        // en modo flotante no existe.
+        if (!this._fixedEsp32Id) {
+            this.toggleBtn.addEventListener("click", () => this.toggle());
+            this.header.addEventListener("click", (e) => {
+                // BUG REAL reportado (clic en el selector de dispositivo
+                // -- Fase 2 -- minimizaba el panel entero): faltaba acá,
+                // mismo criterio que .repl-btn/.repl-tabbar de siempre.
+                if (e.target.closest(".repl-btn, .repl-tabbar, .repl-device-select")) return;
+                this.toggle();
+            });
+        }
 
         // Tabs
         this.tabBar.addEventListener("click", (e) => {
@@ -940,7 +1168,7 @@ class ReplPanel {
                     return;
                 }
                 e.preventDefault();
-                this.simulator.qemuBridge?.interrupt();
+                this.bridge?.interrupt();
                 this.appendOutput("^C\n", "repl-ctrl");
                 return;
             }
@@ -955,11 +1183,11 @@ class ReplPanel {
         });
 
         // Botones cabecera
-        document.getElementById("replBtnInterrupt").addEventListener("click", () => {
-            this.simulator.qemuBridge?.interrupt();
+        this.interruptBtn.addEventListener("click", () => {
+            this.bridge?.interrupt();
             this.appendOutput("^C\n", "repl-ctrl");
         });
-        document.getElementById("replBtnReset").addEventListener("click", () => {
+        this.resetBtn.addEventListener("click", () => {
 
             // A diferencia de "■ Interrumpir" (Ctrl+C, que SÍ tiene
             // que poder cortar algo trabado incluso a mitad de un
@@ -976,12 +1204,12 @@ class ReplPanel {
             // _pasteQueue, este Ctrl+D espera a que cualquier paste en
             // curso termine solo, en vez de interrumpirlo.
             this._enqueuePaste(async () => {
-                this.simulator.qemuBridge?.softReset();
+                this.bridge?.softReset();
                 this.appendOutput("↺ Soft reset...\n", "repl-ctrl");
             });
 
         });
-        document.getElementById("replBtnClear").addEventListener("click", () => {
+        this.clearBtn.addEventListener("click", () => {
             this.terminal?.clear();
         });
 
@@ -1000,7 +1228,6 @@ class ReplPanel {
         // pensado para el usuario final (alumno/profesor) -- oculto
         // salvo que se active window.PIT_DEBUG (mismo flag que ya usa
         // el resto del proyecto para logs de desarrollo, ver app.js).
-        this._gpioLogBtn = document.getElementById("replBtnGpioLog");
         this._gpioLogBtn.style.display = window.PIT_DEBUG ? "" : "none";
         this._updateGpioLogBtn();
         this._gpioLogBtn.addEventListener("click", () => {
@@ -1010,9 +1237,9 @@ class ReplPanel {
         });
 
         // Editor
-        document.getElementById("replBtnRun").addEventListener("click", () => this.runEditorCode());
-        document.getElementById("replBtnLoadCode").addEventListener("click", () => this._loadCodeFromDisk());
-        document.getElementById("replBtnSaveCode").addEventListener("click", () => this._saveCodeToDisk());
+        this.runBtn.addEventListener("click", () => this.runEditorCode());
+        this.loadCodeBtn.addEventListener("click", () => this._loadCodeFromDisk());
+        this.saveCodeBtn.addEventListener("click", () => this._saveCodeToDisk());
 
         // Tab (4 espacios), Ctrl+Enter (ejecutar) y auto-indentación
         // tras ":" ahora los maneja CodeMirror nativamente (modo
@@ -1020,10 +1247,16 @@ class ReplPanel {
         // buildDOM() -- "Ctrl-Enter" está en extraKeys ahí mismo).
         // Ya no hace falta ningún listener a mano sobre el textarea.
 
-        // Atajo global
-        window.addEventListener("keydown", (e) => {
-            if (e.ctrlKey && e.key === "`") { e.preventDefault(); this.toggle(); }
-        });
+        // Atajo global -- colapsar/expandir no existe en modo flotante
+        // (ver toggle(), ya deshabilitado arriba para este modo); sin
+        // este guard, cada ventana flotante registraría su PROPIO
+        // listener global y Ctrl+` dispararía toggle() en todas a la vez
+        // (incluido el panel de siempre), no solo en la que tiene foco.
+        if (!this._fixedEsp32Id) {
+            window.addEventListener("keydown", (e) => {
+                if (e.ctrlKey && e.key === "`") { e.preventDefault(); this.toggle(); }
+            });
+        }
 
     }
 
@@ -1909,7 +2142,7 @@ class ReplPanel {
         // en QemuBridge.send()) puede meter una línea propia en medio
         // del paste. Se libera SIEMPRE en el finally, incluso si algo
         // de acá adentro tira una excepción.
-        this.simulator.qemuBridge?.beginPasteLock();
+        this.bridge?.beginPasteLock();
 
         try {
 
@@ -1956,7 +2189,7 @@ class ReplPanel {
             const pasteModeStarted = await this._waitForPasteModeStart(ReplPanel.PASTE_MODE_START_TIMEOUT_MS);
             if (!pasteModeStarted) {
                 this._suppressEcho = false;
-                this.simulator.qemuBridge?.interrupt(); // Ctrl+C -- nunca Ctrl+D acá
+                this.bridge?.interrupt(); // Ctrl+C -- nunca Ctrl+D acá
                 return;
             }
 
@@ -2021,7 +2254,7 @@ class ReplPanel {
 
         } finally {
 
-            this.simulator.qemuBridge?.endPasteLock();
+            this.bridge?.endPasteLock();
 
         }
 
@@ -2091,7 +2324,7 @@ class ReplPanel {
 
     _waitForBridgeReady() {
 
-        const bridge = this.simulator.qemuBridge;
+        const bridge = this.bridge;
 
         if (!bridge || bridge.isWasmBridge || bridge.bridgeReady) {
             return Promise.resolve();
@@ -2434,7 +2667,7 @@ class ReplPanel {
 
             this.simulator.eventBus.on("qemu:rawpaste-result", onResult);
 
-            const sent = this.simulator.qemuBridge?.sendRawPasteRequest(code);
+            const sent = this.bridge?.sendRawPasteRequest(code);
             if (!sent) onResult({ ok: false, reason: "not_connected" });
 
         });
@@ -2483,7 +2716,7 @@ class ReplPanel {
         const block = this._buildRawPasteUserBlock(userCode);
         let fellBackUnsupported = false;
 
-        this.simulator.qemuBridge?.beginPasteLock();
+        this.bridge?.beginPasteLock();
 
         try {
 
@@ -2540,7 +2773,7 @@ class ReplPanel {
             }
 
         } finally {
-            this.simulator.qemuBridge?.endPasteLock();
+            this.bridge?.endPasteLock();
         }
 
         if (this._stopRequested) return;
@@ -2885,7 +3118,7 @@ class ReplPanel {
         // síntoma exacto reportado. QemuBridge.interrupt() manda el
         // byte crudo de un solo golpe (this.ws.send("\x03") directo,
         // sin pasar por _sendImmediate), preservando el bypass real.
-        this.simulator.qemuBridge?.interrupt();
+        this.bridge?.interrupt();
         await this._sleep(150);
 
         return new Promise((resolve) => {
@@ -3139,7 +3372,7 @@ class ReplPanel {
             delete this._halRetryCounts[type]; // exito -- si vuelve a fallar mas adelante, cuenta de nuevo desde 0
         });
 
-        if (this.simulator.qemuBridge?.isWasmBridge) {
+        if (this.bridge?.isWasmBridge) {
             // Mismo motivo que en runEditorCode(): no hay paste mode
             // acá, se manda directo. Sin esta rama, un componente ya
             // en el lienzo AL CONECTAR (ej. DHT11) nunca recibía su
@@ -3149,7 +3382,7 @@ class ReplPanel {
             // todavía no había corrido, así que process_line() no
             // tenía a quién avisarle (reportado por el usuario, DHT11
             // devolviendo siempre el default).
-            await this.simulator.qemuBridge.sendData(halBlock);
+            await this.bridge.sendData(halBlock);
         } else {
             await this._enqueuePaste(() => this._pasteBlock(halBlock, 0, { silent: true }));
         }
@@ -3185,7 +3418,7 @@ class ReplPanel {
         this._halRetryCounts[type] = count;
 
         if (count > ReplPanel.HAL_RETRY_MAX) {
-            const msg = this.simulator.qemuBridge?.isWasmBridge
+            const msg = this.bridge?.isWasmBridge
                 ? `\n⚠️ El componente "${type}" no carga en modo navegador -- probablemente usa algo que este modo ` +
                   `todavía no soporta (no es un problema pasajero, reintentar no lo va a arreglar). Si este componente ` +
                   `te hace falta, probá el modo normal (QEMU).\n`
@@ -3242,13 +3475,13 @@ class ReplPanel {
 
         this._running = true;
         this._stopRequested = false;
-        const runBtn = document.getElementById("replBtnRun");
+        const runBtn = this.runBtn;
         if (runBtn) runBtn.disabled = true;
 
         this.switchTab("repl");
         this.appendOutput("\n▶ Ejecutando...\n", "repl-info");
 
-        if (this.simulator.qemuBridge?.isWasmBridge) {
+        if (this.bridge?.isWasmBridge) {
 
             const { fullCode, newlySent } = await this._assembleCode(userCode);
 
@@ -3289,7 +3522,7 @@ class ReplPanel {
             // visible arriba (_assembleCode, "fullCode + \n") y el
             // botón ▶ Ejecutar sigue deshabilitado hasta que termine
             // -- esa señal alcanza sin necesidad de un mensaje aparte.
-            await this.simulator.qemuBridge.sendData(fullCode);
+            await this.bridge.sendData(fullCode);
 
         } else {
             // DOS llamadas separadas a propósito, no una sola anidada
@@ -3359,7 +3592,7 @@ class ReplPanel {
         this.panel.classList.toggle("repl-closed", !this.open);
         this.panel.classList.toggle("repl-open",    this.open);
 
-        document.getElementById("replBtnToggle").textContent = this.open ? "▼" : "▲";
+        this.toggleBtn.textContent = this.open ? "▼" : "▲";
 
         if (this.open) {
             if (this.activeTab === "repl")   this.input.focus();
@@ -3428,7 +3661,14 @@ class ReplPanel {
             return PROTOCOL_PREFIXES.some(p => p.startsWith(t) || t.startsWith(p));
         };
 
-        this.simulator.eventBus.on("qemu:output", (text) => {
+        // Modo flotante (Fase 2.5): el mismo handler de abajo, pero
+        // alimentado por "device:output" (SIEMPRE emitido, ver
+        // WasmBridge.js) filtrado por this._fixedEsp32Id, en vez de
+        // "qemu:output" (que WasmBridge solo emite para el bridge
+        // "activo" del panel de siempre -- ver _onWorkerMessage/
+        // _handleStdout). Mismísima lógica, nada duplicado: solo
+        // cambia de dónde sale el texto.
+        const onQemuOutput = (text) => {
 
             // Marcador de _probeWarmBoot() (ver más abajo) -- se
             // chequea ANTES del "if (this._suppressEcho) return;" de
@@ -3571,7 +3811,21 @@ class ReplPanel {
                 this._onReplReady();
             }
 
-        });
+        };
+
+        if (this._fixedEsp32Id) {
+            // Referencia guardada (this._onDeviceX) -- EventBus.off()
+            // necesita la MISMA función que se pasó a on() (compara por
+            // referencia, ver EventBus.js) para poder desuscribirse de
+            // verdad cuando ReplWindowManager.close() destruye esta
+            // ventana; si no, el listener quedaría vivo para siempre.
+            this._onDeviceOutput = (data) => {
+                if (data.esp32Id === this._fixedEsp32Id) onQemuOutput(data.text);
+            };
+            this.simulator.eventBus.on("device:output", this._onDeviceOutput);
+        } else {
+            this.simulator.eventBus.on("qemu:output", onQemuOutput);
+        }
 
         // Historial que server.js manda apenas se conecta (ver la nota
         // grande en server.js/OUTPUT_HISTORY_MAX_BYTES) -- por ejemplo,
@@ -3619,7 +3873,10 @@ class ReplPanel {
             );
         });
 
-        this.simulator.eventBus.on("qemu:connected", async () => {
+        // Modo flotante (Fase 2.5): mismo criterio que "device:output"
+        // más arriba -- "device:connected" SIEMPRE llega (ver
+        // WasmBridge.js), filtrado por this._fixedEsp32Id.
+        const onQemuConnected = async () => {
 
             this._lastGpioLogged = {};
 
@@ -3649,7 +3906,7 @@ class ReplPanel {
             // nuevo -> loop infinito, confirmado en la práctica). El
             // Worker ya cargó _base_wasm.py/_i2c_bus_wasm.py antes de
             // mandar "ready", así que queda listo de una.
-            if (this.simulator.qemuBridge?.isWasmBridge) {
+            if (this.bridge?.isWasmBridge) {
                 // Multi-ESP32 (Fase 2): extraído a _activateWasmDeviceReady()
                 // -- este mismo camino (banner + marcar HAL "siempre
                 // presente" + _onReplReady + preloadHal + resync) se
@@ -3673,7 +3930,7 @@ class ReplPanel {
             this._replReady = false;
             this.input.disabled   = true;
             this.sendBtn.disabled = true;
-            const runBtn = document.getElementById("replBtnRun");
+            const runBtn = this.runBtn;
             if (runBtn) runBtn.disabled = true;
 
             // Ver el comentario grande de this._awaitingInitialResync
@@ -3740,25 +3997,44 @@ class ReplPanel {
             // .hal.py del componente registre su protocolo, se
             // pierde igual que cualquier mensaje sin listener.
             this.simulator.signalEngine.resyncAllComponents();
-        });
+        };
+
+        if (this._fixedEsp32Id) {
+            this._onDeviceConnected = (data) => {
+                if (data.esp32Id === this._fixedEsp32Id) onQemuConnected();
+            };
+            this.simulator.eventBus.on("device:connected", this._onDeviceConnected);
+        } else {
+            this.simulator.eventBus.on("qemu:connected", onQemuConnected);
+        }
 
         // Ver el comentario grande de this._stopRequested en el
         // constructor -- esto es lo que faltaba para que "⏹ Detener"
         // corte de verdad un reintento de "Ejecutar" en curso, en vez
         // de dejarlo terminar sus hasta 6 intentos solo.
-        this.simulator.eventBus.on("simulation:stop", () => {
+        this._onSimulationStop = () => {
             this._stopRequested = true;
-        });
+        };
+        this.simulator.eventBus.on("simulation:stop", this._onSimulationStop);
 
-        this.simulator.eventBus.on("qemu:disconnected", () => {
+        const onQemuDisconnected = () => {
             this.appendOutput("\n🔴 ESP32 desconectada\n", "repl-error");
             this._replReady = false;
             this.input.disabled   = true;
             this.sendBtn.disabled = true;
-            const runBtn = document.getElementById("replBtnRun");
+            const runBtn = this.runBtn;
             if (runBtn) runBtn.disabled = true;
             this.prompt.style.color = "#666";
-        });
+        };
+
+        if (this._fixedEsp32Id) {
+            this._onDeviceDisconnected = (data) => {
+                if (data.esp32Id === this._fixedEsp32Id) onQemuDisconnected();
+            };
+            this.simulator.eventBus.on("device:disconnected", this._onDeviceDisconnected);
+        } else {
+            this.simulator.eventBus.on("qemu:disconnected", onQemuDisconnected);
+        }
 
         // Un HAL puntual falló al cargarse (ver el comentario grande
         // en QemuBridge.parseLine(), rama "HAL_ERROR:") -- lo sacamos
@@ -3767,7 +4043,7 @@ class ReplPanel {
         // para siempre en esta sesión del navegador (que era el
         // comportamiento de antes: sin esto, un HAL corrupto una vez
         // quedaba roto hasta un F5 completo de la página).
-        this.simulator.eventBus.on("qemu:hal-error", (type) => {
+        const onQemuHalError = (type) => {
 
             // Aviso corto y claro -- justo antes de esto, el usuario
             // suele ver el eco crudo del wrapper Python (líneas de
@@ -3789,7 +4065,7 @@ class ReplPanel {
             // "ruido, reintentando solo" -- pensado para la corrupción
             // real de QEMU -- sería directamente mentirle al usuario
             // sobre qué pasó.
-            if (this.simulator.qemuBridge?.isWasmBridge) {
+            if (this.bridge?.isWasmBridge) {
                 this.appendOutput(
                     `\n⚠️ El componente "${type}" no pudo cargar en modo navegador (no es un problema de transmisión -- ` +
                     `puede que use algo que este modo todavía no soporta). Mirá el error justo arriba.\n`,
@@ -3819,7 +4095,33 @@ class ReplPanel {
 
             this._halSentToFirmware.delete(type);
             this._retryHalAfterError(type);
-        });
+        };
+
+        if (this._fixedEsp32Id) {
+            this._onDeviceHalError = (data) => {
+                if (data.esp32Id === this._fixedEsp32Id) onQemuHalError(data.halType);
+            };
+            this.simulator.eventBus.on("device:hal-error", this._onDeviceHalError);
+        } else {
+            this.simulator.eventBus.on("qemu:hal-error", onQemuHalError);
+        }
+
+        // Badge de estado propio (this.statusEl) -- en modo default lo
+        // sigue escribiendo WasmBridge.updateStatus() directo al DOM
+        // (#qemuStatus, sin cambios); en modo flotante no existe ese id
+        // (ver buildDOM()), así que este panel se actualiza solo con
+        // "device:status" (ver WasmBridge.js, emitido junto a cada
+        // llamado a updateStatus()).
+        if (this._fixedEsp32Id) {
+            const STATUS_LABELS = { connected: "✅ Simulando", disconnected: "🔴 Desconectado" };
+            const STATUS_COLORS = { connected: "#00ff88", disconnected: "#666" };
+            this._onDeviceStatus = (data) => {
+                if (data.esp32Id !== this._fixedEsp32Id) return;
+                this.statusEl.textContent = STATUS_LABELS[data.status] || data.status;
+                this.statusEl.style.color = STATUS_COLORS[data.status] || "#eee";
+            };
+            this.simulator.eventBus.on("device:status", this._onDeviceStatus);
+        }
 
         // Auto-Ejecutar al hacer clic -- pedido explícito del usuario
         // ("no puedo hacer clic en botón y luego soltar y dar clic en
@@ -3842,14 +4144,15 @@ class ReplPanel {
         // justo el bug que _running ya previene en runEditorCode()).
         // Ver Renderer.js (bindPressButton/bindAdKey/bindKeypadMatrix)
         // y SignalEngine.tapRc522() para los emisores de este evento.
-        this.simulator.eventBus.on("component:pressed", () => {
-            if (!this.simulator.qemuBridge?.isWasmBridge) return;
+        this._onComponentPressed = () => {
+            if (!this.bridge?.isWasmBridge) return;
             if (!this._replReady || this._running) return;
             if (!this.editor.value.trim()) return;
             this.runEditorCode();
-        });
+        };
+        this.simulator.eventBus.on("component:pressed", this._onComponentPressed);
 
-        this.simulator.eventBus.on("gpio:changed", ({ gpio, value }) => {
+        this._onGpioChanged = ({ gpio, value }) => {
 
             if (this._gpioLogMuted) return;
 
@@ -3864,7 +4167,40 @@ class ReplPanel {
                 `📌 GPIO${gpio} → ${value ? "HIGH ▲" : "LOW  ▼"}\n`,
                 "repl-gpio"
             );
-        });
+        };
+        this.simulator.eventBus.on("gpio:changed", this._onGpioChanged);
+
+    }
+
+    // ====================================================
+    // Solo modo flotante -- llamado por ReplWindowManager.close().
+    // Saca los listeners de "device:*" (guardados en bindBusEvents()
+    // con nombre -- EventBus.off() compara por referencia de función,
+    // así que hace falta la MISMA que se usó en on()) y destruye el
+    // DOM. El panel de siempre (modo default) nunca se destruye en la
+    // vida de la página, así que no necesita este método.
+    // ====================================================
+
+    destroy() {
+
+        const bus = this.simulator.eventBus;
+        if (this._onDeviceOutput)       bus.off("device:output",       this._onDeviceOutput);
+        if (this._onDeviceConnected)    bus.off("device:connected",    this._onDeviceConnected);
+        if (this._onDeviceDisconnected) bus.off("device:disconnected", this._onDeviceDisconnected);
+        if (this._onDeviceHalError)     bus.off("device:hal-error",    this._onDeviceHalError);
+        if (this._onDeviceStatus)       bus.off("device:status",       this._onDeviceStatus);
+        bus.off("simulation:stop",   this._onSimulationStop);
+        bus.off("component:pressed", this._onComponentPressed);
+        bus.off("gpio:changed",      this._onGpioChanged);
+
+        // Volcar el guardado pendiente (si lo hay) ANTES de cancelar su
+        // timer -- BUG REAL encontrado probando esto en vivo: cerrar la
+        // ventana justo después de escribir código perdía ese código
+        // para siempre (el debounce de 800ms nunca llegaba a disparar).
+        clearTimeout(this._codePersistTimeout);
+        this._persistActiveDeviceCode();
+
+        this.panel.remove();
 
     }
 
@@ -3898,7 +4234,7 @@ class ReplPanel {
         this.sendBtn.disabled = false;
         this.prompt.style.color = "#00ff88";
 
-        const runBtn = document.getElementById("replBtnRun");
+        const runBtn = this.runBtn;
         if (runBtn) runBtn.disabled = false;
 
         // BUG REAL (reportado: "en ocasiones me impide enviar comandos

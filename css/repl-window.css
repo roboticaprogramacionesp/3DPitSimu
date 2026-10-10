@@ -1,0 +1,64 @@
+/* ==========================================================
+   PitSimulator — repl-window.css
+   Ventana REPL flotante por ESP32 (ver Fase 2.5 del plan ESP-NOW/
+   multi-ESP32, ReplWindowManager.js) -- mismo molde que ble-panel.css
+   (panel flotante dentro de #workspace, arrastrable por su cabecera),
+   pero reusa TODAS las clases .repl-* de repl-panel.css para el
+   contenido (header, tabs, output, input, editor) -- acá solo se
+   define la forma de la ventana en sí (tamaño fijo, posición
+   absoluta, sombra) y los toques puntuales que la diferencian del
+   panel acoplado de siempre (cursor de arrastre, botón ✕).
+   ========================================================== */
+
+.repl-window {
+    position: absolute;
+    width: 440px;
+    height: 520px;
+    min-width: 440px;
+    min-height: 520px;
+    z-index: 230; /* arriba de #replPanel (200) y #blePanel (220) */
+    display: flex;
+    flex-direction: column;
+    background: #1a1a2e;
+    border: 1px solid #2d2d4e;
+    border-radius: 10px;
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    font-size: 13px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .45);
+}
+
+.repl-window.dragging { user-select: none; }
+
+/* La cabecera del panel acoplado usa cursor:pointer (clic = colapsar/
+   expandir, ver repl-panel.css) -- acá se arrastra en vez de
+   colapsarse, mismo criterio que .ble-header. */
+.repl-window .repl-header {
+    cursor: grab;
+    border-radius: 10px 10px 0 0;
+}
+.repl-window.dragging .repl-header { cursor: grabbing; }
+
+/* Nombre del ESP32 fijo de esta ventana -- más ancho que el título
+   genérico "MicroPython" del panel acoplado, así que se le da más
+   lugar y un recorte prolijo si no entra. */
+.repl-window .repl-title {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.repl-btn-close {
+    color: #ff8a80;
+    border-color: #4a2d2d;
+}
+.repl-btn-close:hover {
+    background: #4a1f1f;
+    color: #ff5252;
+}
+
+/* El cuerpo (tabs + REPL/editor) ocupa el resto de la ventana --
+   mismas clases .repl-body/.repl-pane/.repl-output/etc. que el panel
+   acoplado, que ya son flex:1 sin asumir ninguna altura fija propia. */
+.repl-window .repl-body { flex: 1; }

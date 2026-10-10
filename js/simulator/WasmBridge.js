@@ -274,6 +274,14 @@ class WasmBridge {
             if (this.simulator.qemuBridge === this) {
                 this.updateStatus("connected");
             }
+            // Emisión aditiva, SIEMPRE (no gateada por "es el bridge
+            // activo") -- ver Fase 2.5 del plan ESP-NOW: las ventanas
+            // flotantes por ESP32 necesitan enterarse de esto aunque no
+            // sean el dispositivo que el panel inferior está mirando. No
+            // reemplaza nada de arriba, es puro agregado.
+            if (this.esp32) {
+                this.simulator.eventBus.emit("device:status", { esp32Id: this.esp32.id, status: "connected" });
+            }
 
             // BUG REAL (reportado: "doy clic en Simular y tarda un monton
             // mostrando Conectando, pero el boton Ejecutar ya esta
@@ -303,6 +311,10 @@ class WasmBridge {
             if (this.simulator.qemuBridge === this) {
                 this.simulator.eventBus.emit("qemu:connected");
             }
+            // Aditivo -- ver comentario de "device:status" más arriba.
+            if (this.esp32) {
+                this.simulator.eventBus.emit("device:connected", { esp32Id: this.esp32.id });
+            }
 
             if (this.esp32) this.simulator.renderer.setEsp32PowerLed(this.esp32, true);
 
@@ -322,6 +334,10 @@ class WasmBridge {
                 this.simulator.eventBus.emit("qemu:output", msg.data);
             } else {
                 this._pendingVisibleOutput = (this._pendingVisibleOutput || "") + msg.data;
+            }
+            // Aditivo -- ver comentario de "device:status" más arriba.
+            if (this.esp32) {
+                this.simulator.eventBus.emit("device:output", { esp32Id: this.esp32.id, text: msg.data });
             }
             return;
         }
@@ -385,6 +401,10 @@ class WasmBridge {
                 this.simulator.eventBus.emit("qemu:output", text);
             } else {
                 this._pendingVisibleOutput = (this._pendingVisibleOutput || "") + text;
+            }
+            // Aditivo -- ver comentario de "device:status" en _onWorkerMessage.
+            if (this.esp32) {
+                this.simulator.eventBus.emit("device:output", { esp32Id: this.esp32.id, text });
             }
         }
 
@@ -678,6 +698,10 @@ class WasmBridge {
             if (this.simulator.qemuBridge === this) {
                 this.simulator.eventBus.emit("qemu:hal-error", halErrorMatch[1]);
             }
+            // Aditivo -- ver comentario de "device:status" en _onWorkerMessage.
+            if (this.esp32) {
+                this.simulator.eventBus.emit("device:hal-error", { esp32Id: this.esp32.id, halType: halErrorMatch[1] });
+            }
             return true;
         }
 
@@ -882,7 +906,19 @@ class WasmBridge {
     // ahí, así que nunca matchea una línea vacía. BLE_WRITE:<hex>
     // tiene el mismo problema que RFID: (el hex puede arrancar con
     // a-f).
-    static PROTOCOL_LINE_PREFIXES = ["RFID:", "BLE_CONNECT:", "BLE_DISCONNECT:", "BLE_WRITE:"];
+    // "ESPNOW_RX:<mac hex>:<payload hex>" (ver EspNowBus.js/
+    // _espnow_wasm.py) -- mismo motivo que RFID: arriba: el payload
+    // (MAC en hex) puede empezar con una letra a-f, PROTOCOL_LINE_RE
+    // no lo reconocía. BUG REAL encontrado probando ESP-NOW de punta a
+    // punta en vivo (Fase 2.5, ventanas flotantes): EspNowBus.send()
+    // SÍ llamaba bridge.sendData() en el dispositivo receptor, pero
+    // sendData() mandaba la línea entera como código Python fresco
+    // (mp.runPython("ESPNOW_RX:bb...:...")) en vez de inyectarla para
+    // que _espnow_wasm.py la procese -- SyntaxError inmediato en
+    // CUALQUIER receptor, sin importar si estaba en el panel acoplado
+    // o en una ventana flotante (el bug no depende de cuál esté
+    // "activo" -- sendData() nunca mira eso).
+    static PROTOCOL_LINE_PREFIXES = ["RFID:", "BLE_CONNECT:", "BLE_DISCONNECT:", "BLE_WRITE:", "ESPNOW_RX:"];
 
     static _isProtocolLine(data) {
         if (WasmBridge.PROTOCOL_LINE_RE.test(data)) return true;
@@ -1060,6 +1096,11 @@ class WasmBridge {
         if (this.simulator.qemuBridge === this) {
             this.updateStatus("disconnected");
             this.simulator.eventBus.emit("qemu:disconnected");
+        }
+        // Aditivo -- ver comentario de "device:status" en _onWorkerMessage.
+        if (this.esp32) {
+            this.simulator.eventBus.emit("device:status", { esp32Id: this.esp32.id, status: "disconnected" });
+            this.simulator.eventBus.emit("device:disconnected", { esp32Id: this.esp32.id });
         }
         this.simulator.stopSimulation();
 

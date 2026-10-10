@@ -36,6 +36,17 @@
     //    ReplPanel se suscribe al EventBus para recibir output del bridge
     const replPanel = new ReplPanel(sim);
 
+    // 2a. Ventanas REPL flotantes, una por ESP32 (ver Fase 2.5 del plan
+    //     ESP-NOW/multi-ESP32) -- botón 🗗 junto al selector de
+    //     dispositivo de replPanel (oculto salvo con 2+ ESP32, mismo
+    //     criterio que el selector). Se asigna DESPUÉS de construir
+    //     replPanel porque su botón 🗗 llama a replPanel.windowManager
+    //     recién al hacer click (closure, no al construirse) -- no hay
+    //     problema de orden real, pero se deja este mismo acá al lado
+    //     para que quede claro que van juntos.
+    const replWindowManager = new ReplWindowManager(sim);
+    replPanel.windowManager = replWindowManager;
+
     // 2b. Teléfono virtual BLE (ver plan ESP-NOW→WiFi→BLE, última fase)
     //     -- panel aparte, no depende de ReplPanel, solo del eventBus.
     const blePanel = new BlePanel(sim);
@@ -109,6 +120,7 @@
     // 10. Exponer globalmente para debug en consola del navegador
     window.sim             = sim;
     window.replPanel       = replPanel;
+    window.replWindowManager = replWindowManager;
     window.blePanel        = blePanel;
     window.tutorialManager = tutorialManager;
     window.toolbar         = toolbar;
