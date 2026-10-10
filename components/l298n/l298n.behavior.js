@@ -6,7 +6,7 @@
  ComponentBehaviorRegistry.
 
  A diferencia de otros tipos migrados, los helpers
- _findMotorOnOutputs()/_computeL298nMotorState() y el método
+ _findMotorsOnOutputs()/_computeL298nMotorState() y el método
  getL298nState() SIGUEN viviendo en SignalEngine.js -- no se
  movieron acá porque getL298nState() tiene un llamador externo
  real (PropertyPanel.js, para pintar el estado inicial del panel
@@ -14,6 +14,25 @@
  behavior los llama de vuelta vía "engine".
 ==========================================================
 */
+
+// Aplica motorState a TODOS los motores encontrados en un par de
+// salidas (antes solo había uno) e invierte "adelante"/"atrás" para
+// cualquiera que haya quedado cableado al revés (pin1 en la red de
+// outPinB en vez de outPinA -- ver _findMotorsOnOutputs()). "freno"/
+// "detenido"/"deshabilitado" no tienen sentido de giro, así que no se
+// tocan.
+function _applyMotorStateToAll(engine, motors, motorState) {
+    motors.forEach(({ component, reversed }) => {
+        let state = motorState;
+        if (reversed && (motorState.state === "adelante" || motorState.state === "atrás")) {
+            state = {
+                ...motorState,
+                state: motorState.state === "adelante" ? "atrás" : "adelante",
+            };
+        }
+        engine.simulator.renderer.applyMotorState(component, state);
+    });
+}
 
 // Bloque de estado + jumper para un motor (A o B) del L298N -- usado
 // solo por propertyPanel.render() de abajo. _l298nStateColor()/
@@ -78,11 +97,8 @@ ComponentBehaviorRegistry.register("l298n", {
             if (!engine.isComponentPowered(component)) {
                 const off = { state: "deshabilitado", enabled: false, in_a: false, in_b: false };
 
-                const motorAComponent = engine._findMotorOnOutputs(component, "out1", "out2");
-                if (motorAComponent) engine.simulator.renderer.applyMotorState(motorAComponent, off);
-
-                const motorBComponent = engine._findMotorOnOutputs(component, "out3", "out4");
-                if (motorBComponent) engine.simulator.renderer.applyMotorState(motorBComponent, off);
+                _applyMotorStateToAll(engine, engine._findMotorsOnOutputs(component, "out1", "out2"), off);
+                _applyMotorStateToAll(engine, engine._findMotorsOnOutputs(component, "out3", "out4"), off);
 
                 engine.simulator.eventBus.emit("motor:changed", {
                     componentId: component.id,
@@ -107,13 +123,8 @@ ComponentBehaviorRegistry.register("l298n", {
                 "jumperEnbInstalled",
             );
 
-            const motorAComponent = engine._findMotorOnOutputs(component, "out1", "out2");
-            if (motorAComponent)
-                engine.simulator.renderer.applyMotorState(motorAComponent, motorA);
-
-            const motorBComponent = engine._findMotorOnOutputs(component, "out3", "out4");
-            if (motorBComponent)
-                engine.simulator.renderer.applyMotorState(motorBComponent, motorB);
+            _applyMotorStateToAll(engine, engine._findMotorsOnOutputs(component, "out1", "out2"), motorA);
+            _applyMotorStateToAll(engine, engine._findMotorsOnOutputs(component, "out3", "out4"), motorB);
 
             engine.simulator.eventBus.emit("motor:changed", {
                 componentId: component.id,

@@ -1089,19 +1089,47 @@ class SignalEngine {
   }
 
   // Busca, entre los dos cables que salen de un par OUTx/OUTy del
-  // L298N, si alguno llega a un componente de tipo "motor".
-  _findMotorOnOutputs(l298nComponent, outPinA, outPinB) {
-    for (const outPin of [outPinA, outPinB]) {
-      const net = this.getNet(`${l298nComponent.id}:${outPin}`);
-      for (const key of net) {
-        const [cId] = key.split(":");
-        if (cId === l298nComponent.id) continue;
-        const other = this.simulator.componentManager.get(cId);
-        if (other && other.type === "motor") return other;
-      }
+  // L298N, TODOS los componentes de tipo "motor" conectados (plural --
+  // antes devolvía solo el primero que encontraba y cortaba ahí, así
+  // que con 2+ motores en paralelo sobre el MISMO par de salidas
+  // -confirmado en vivo: 4 motores, uno por rueda/hélice, con solo 2
+  // salidas OUT1/2+OUT3/4- únicamente el primero de cada par recibía
+  // applyMotorState() y el resto quedaba con su indicador de giro
+  // permanentemente oculto, aunque sí tuvieran corriente real).
+  //
+  // Además determina la POLARIDAD real de cada motor encontrado: pin1
+  // en la red de outPinA (orientación "normal", asumida por defecto)
+  // o pin1 en la red de outPinB (motor cableado al revés respecto a
+  // outPinA/outPinB -- el motor gira en el sentido contrario al que
+  // indican IN1/IN2, igual que en la vida real si se invierten los
+  // dos cables en las terminales). Devuelve [{ component, reversed }].
+  _findMotorsOnOutputs(l298nComponent, outPinA, outPinB) {
+    const netA = this.getNet(`${l298nComponent.id}:${outPinA}`);
+    const netB = this.getNet(`${l298nComponent.id}:${outPinB}`);
+    const keysA = new Set(netA);
+    const keysB = new Set(netB);
+
+    const found = new Map(); // componentId -> { component, reversed }
+
+    for (const key of [...netA, ...netB]) {
+      const [cId] = key.split(":");
+      if (cId === l298nComponent.id || found.has(cId)) continue;
+      const other = this.simulator.componentManager.get(cId);
+      if (!other || other.type !== "motor") continue;
+
+      const pin1OnA = keysA.has(`${cId}:pin1`);
+      const pin1OnB = keysB.has(`${cId}:pin1`);
+      // Si pin1 cae en la red de outPinB (y no en la de outPinA), el
+      // motor quedó cableado al revés respecto al sentido asumido --
+      // en cualquier otro caso (ambigüo/sin cablear del todo) se
+      // asume la orientación normal, igual que el comportamiento de
+      // siempre.
+      const reversed = pin1OnB && !pin1OnA;
+
+      found.set(cId, { component: other, reversed });
     }
 
-    return null;
+    return [...found.values()];
   }
 
   // Igual que evaluateL298n() pero sin emitir el evento -- para
