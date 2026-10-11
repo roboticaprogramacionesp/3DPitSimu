@@ -511,6 +511,18 @@ class ReplPanel {
         this.panel.appendChild(this.tabBar);
         this.panel.appendChild(this.body);
 
+        if (this._fixedEsp32Id) {
+            // Agarradera de redimensionar -- esquina inferior derecha,
+            // mismo patrón pointer-capture que _bindDrag()/_bindResize()
+            // más abajo. Solo modo flotante (el panel acoplado de
+            // siempre no se redimensiona, ocupa todo el ancho del
+            // workspace).
+            this.resizeHandle = document.createElement("div");
+            this.resizeHandle.className = "repl-window-resize-handle";
+            this.resizeHandle.title = "Arrastrar para cambiar el tamaño";
+            this.panel.appendChild(this.resizeHandle);
+        }
+
         // Se agrega dentro de #workspace (no de document.body) para que
         // el panel quede confinado al área del canvas/cableado -- antes,
         // colgado directo de <body> con position:fixed a todo el ancho,
@@ -532,6 +544,7 @@ class ReplPanel {
                 this.windowManager?.close(this._fixedEsp32Id);
             });
             this._bindDrag();
+            this._bindResize();
         } else {
             this.deviceSelect = this.header.querySelector(".repl-device-select");
             this.deviceSelect.addEventListener("change", () => {
@@ -627,6 +640,85 @@ class ReplPanel {
         };
 
         new ResizeObserver(reclamp).observe(workspaceEl);
+
+    }
+
+    // ====================================================
+    // Redimensionar la ventana flotante arrastrando su esquina inferior
+    // derecha -- mismo mecanismo de pointer capture que _bindDrag(),
+    // aplicado a width/height en vez de left/top. Pedido explícito del
+    // usuario tras usar las ventanas flotantes por primera vez.
+    // ====================================================
+
+    static MIN_WIDTH  = 320;
+    static MIN_HEIGHT = 260;
+
+    _bindResize() {
+
+        const handle = this.resizeHandle;
+        const workspaceEl = document.getElementById("workspace") || document.body;
+
+        let resizing = false;
+        let startX = 0, startY = 0, startWidth = 0, startHeight = 0;
+
+        handle.addEventListener("pointerdown", (e) => {
+
+            resizing = true;
+
+            const panelRect = this.panel.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth  = panelRect.width;
+            startHeight = panelRect.height;
+
+            handle.setPointerCapture(e.pointerId);
+            this.panel.classList.add("resizing");
+
+            // No tiene que arrastrar la ventana a la vez (el handle
+            // está DENTRO del panel, que a su vez está dentro del
+            // header a efectos de bubbling -- en realidad no, el
+            // handle es hijo directo de this.panel, no de this.header,
+            // así que _bindDrag() ni se entera -- este stopPropagation
+            // es solo para estar seguros si en algún momento cambia esa
+            // jerarquía).
+            e.stopPropagation();
+
+        });
+
+        handle.addEventListener("pointermove", (e) => {
+
+            if (!resizing) return;
+
+            const parentRect = workspaceEl.getBoundingClientRect();
+            const panelRect  = this.panel.getBoundingClientRect();
+
+            // Tope: que la ventana no se estire más allá del borde
+            // derecho/inferior visible del workspace -- mismo margen de
+            // 4px que ya usa el reclamp de _bindDrag().
+            const maxWidth  = Math.max(ReplPanel.MIN_WIDTH,  parentRect.right  - panelRect.left - 4);
+            const maxHeight = Math.max(ReplPanel.MIN_HEIGHT, parentRect.bottom - panelRect.top  - 4);
+
+            const newWidth  = Utils.clamp(startWidth  + (e.clientX - startX), ReplPanel.MIN_WIDTH,  maxWidth);
+            const newHeight = Utils.clamp(startHeight + (e.clientY - startY), ReplPanel.MIN_HEIGHT, maxHeight);
+
+            this.panel.style.width  = `${newWidth}px`;
+            this.panel.style.height = `${newHeight}px`;
+
+            // CodeMirror y xterm.js cachean su tamaño renderizado --
+            // ninguno de los dos se entera solo de que su contenedor
+            // cambió de tamaño, hay que avisarles en cada paso para que
+            // el cursor/scroll/wrap del editor y las filas/columnas de
+            // la terminal no queden desalineados con el nuevo tamaño.
+            this.codeMirror.refresh();
+            this._safeFit();
+
+        });
+
+        handle.addEventListener("pointerup", (e) => {
+            resizing = false;
+            this.panel.classList.remove("resizing");
+            try { handle.releasePointerCapture(e.pointerId); } catch (err) { /* ya liberado */ }
+        });
 
     }
 

@@ -14,8 +14,13 @@
     position: absolute;
     width: 440px;
     height: 520px;
-    min-width: 440px;
-    min-height: 520px;
+    /* Mínimos reales -- deben coincidir con ReplPanel.MIN_WIDTH/
+       MIN_HEIGHT (ver _bindResize()). Si estos fueran más grandes que
+       esos, el CSS ganaría sobre el width/height inline que pone la
+       agarradera de resize y la ventana nunca podría achicarse por
+       debajo de ESTE valor, sin importar qué calcule el JS. */
+    min-width: 320px;
+    min-height: 260px;
     z-index: 230; /* arriba de #replPanel (200) y #blePanel (220) */
     display: flex;
     flex-direction: column;
@@ -27,6 +32,8 @@
     overflow: hidden;
     box-shadow: 0 4px 16px rgba(0, 0, 0, .45);
 }
+
+.repl-window.resizing { user-select: none; }
 
 .repl-window.dragging { user-select: none; }
 
@@ -62,3 +69,24 @@
    mismas clases .repl-body/.repl-pane/.repl-output/etc. que el panel
    acoplado, que ya son flex:1 sin asumir ninguna altura fija propia. */
 .repl-window .repl-body { flex: 1; }
+
+/* ---- Agarradera de redimensionar (ver ReplPanel._bindResize()) ---- */
+
+.repl-window-resize-handle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 18px;
+    height: 18px;
+    cursor: nwse-resize;
+    /* Dos diagonales cortas, mismo estilo "grip" que usan los
+       sistemas operativos de siempre para esta esquina -- dibujadas
+       con un gradiente en vez de un ícono/imagen aparte. */
+    background:
+        linear-gradient(135deg, transparent 0%, transparent 38%, #555 38%, #555 46%, transparent 46%),
+        linear-gradient(135deg, transparent 58%, transparent 66%, #555 66%, #555 74%, transparent 74%);
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+
+.repl-window-resize-handle:hover { opacity: 1; }
