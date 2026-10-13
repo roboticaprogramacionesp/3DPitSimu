@@ -332,8 +332,11 @@ class ReplPanel {
         this.locateBtn    = this.header.querySelector(".repl-btn-locate");
 
         if (this._fixedEsp32Id) {
-            this.header.querySelector(".repl-title").textContent =
-                esp32?.name || esp32?.type || "ESP32";
+            const titleEl = this.header.querySelector(".repl-title");
+            const label = this.simulator.componentManager.getEsp32DisplayLabel(this._fixedEsp32Id)
+                || esp32?.name || esp32?.type || "ESP32";
+            titleEl.textContent = label;
+            titleEl.title = label; // tooltip completo si el ancho lo recorta con "..."
             this.closeBtn = this.header.querySelector(".repl-btn-close");
             // Siempre visible acá (el dispositivo ya es fijo) -- resalta
             // ESTA placa. Ver el botón equivalente del panel de siempre
@@ -806,7 +809,13 @@ class ReplPanel {
         esp32s.forEach(esp32 => {
             const opt = document.createElement("option");
             opt.value = esp32.id;
-            opt.textContent = esp32.properties?.macAddress ? `${esp32.id} (${esp32.properties.macAddress})` : esp32.id;
+            // Antes mostraba esp32.id (ej. "esp32_wroom_3") -- un id
+            // interno sin ningún significado para el alumno. Mismo
+            // criterio que el título de la ventana flotante (ver
+            // buildDOM()): "#N <nombre>" (getEsp32DisplayLabel()),
+            // identificable de un vistazo aunque todas compartan el
+            // mismo nombre de fábrica.
+            opt.textContent = this.simulator.componentManager.getEsp32DisplayLabel(esp32.id) || esp32.id;
             this.deviceSelect.appendChild(opt);
         });
 

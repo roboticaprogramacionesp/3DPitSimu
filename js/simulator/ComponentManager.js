@@ -148,6 +148,32 @@ class ComponentManager {
     }
 
     //------------------------------------------------------
+    // Etiqueta amigable de un ESP32 para mostrar en ventanas REPL/
+    // selector -- pedido explícito del usuario: con 2-3 ESP32 en el
+    // lienzo (ESP-NOW), TODAS traen el mismo nombre genérico de
+    // fábrica ("ESP32 WeMos D1 R32", ver esp32_wroom.json) salvo que
+    // el alumno las haya renombrado a mano, así que el nombre solo no
+    // alcanza para distinguirlas -- se antepone "#N" (N = orden de
+    // creación entre los ESP32 del proyecto, estable mientras no se
+    // borre ninguno de en medio) para que CADA ventana/selector sea
+    // identificable de un vistazo, se haya renombrado o no. Con 0-1
+    // ESP32 en el proyecto no hace falta numerar nada -- mismo criterio
+    // de visibilidad que ya usa ReplPanel._refreshDeviceSelector()
+    // para el selector/popout/locate (ver ahí).
+    //------------------------------------------------------
+
+    getEsp32DisplayLabel(esp32Id) {
+
+        const esp32s = this.components.filter(c => c.type.startsWith("esp32"));
+        const index = esp32s.findIndex(c => c.id === esp32Id);
+        if (index === -1) return null;
+
+        const esp32 = esp32s[index];
+        return esp32s.length > 1 ? `#${index + 1} ${esp32.name}` : esp32.name;
+
+    }
+
+    //------------------------------------------------------
     // Limpiar simulador
     //------------------------------------------------------
 

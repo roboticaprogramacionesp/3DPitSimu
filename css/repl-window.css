@@ -50,7 +50,7 @@
    genérico "MicroPython" del panel acoplado, así que se le da más
    lugar y un recorte prolijo si no entra. */
 .repl-window .repl-title {
-    max-width: 150px;
+    max-width: 190px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
