@@ -2988,28 +2988,64 @@ class Renderer {
     );
   }
 
-  // Resaltar un componente en el lienzo con un contorno pulsante por
-  // un momento -- pedido explícito del usuario: con 2-3 ESP32 en el
-  // lienzo (ESP-NOW), todas comparten el mismo nombre genérico ("ESP32
-  // WeMos D1 R32") salvo que el alumno las haya renombrado a mano, así
-  // que el título de una ventana REPL flotante o el selector del panel
-  // de siempre no alcanzan para saber CUÁL placa física es -- esto le
-  // da una respuesta visual inmediata (ver ReplWindowManager.open() y
-  // ReplPanel._switchActiveDevice()). Mismo mecanismo que
-  // ".tutorial-highlight" (glow pulsante sobre component-graphic, ver
-  // tutorial.css) pero con su propia clase/color (".locate-highlight",
-  // css/simulator.css) para no interferir si un tutorial está resaltando
-  // ese mismo componente a la vez.
-  static LOCATE_HIGHLIGHT_MS = 1800;
+  // Resaltar un componente en el lienzo por un momento -- pedido
+  // explícito del usuario: con 2-3 ESP32 en el lienzo (ESP-NOW), todas
+  // comparten el mismo nombre genérico ("ESP32 WeMos D1 R32") salvo
+  // que el alumno las haya renombrado a mano, así que el título de una
+  // ventana REPL flotante o el selector del panel de siempre no
+  // alcanzan para saber CUÁL placa física es -- esto le da una
+  // respuesta visual inmediata (ver ReplWindowManager.open() y
+  // ReplPanel._switchActiveDevice()).
+  //
+  // PRIMER INTENTO (revertido -- "se ve muy poco", reportado en vivo):
+  // un filter:drop-shadow pulsante sobre el propio SVG del componente
+  // (misma técnica que ".tutorial-highlight", ver tutorial.css). El
+  // problema: drop-shadow sigue el canal alfa del PROPIO dibujo -- en
+  // un SVG con mucho detalle interno (silkscreen, texto, pines) el
+  // resultado queda disperso/manchado en vez de un contorno limpio, y
+  // se pierde fácil contra wires/otros componentes alrededor.
+  //
+  // ARREGLO: en vez de un filtro sobre el componente, se dibuja un
+  // rectángulo redondeado APARTE en selectionLayer (una capa de SVG
+  // que ya está POR ENCIMA de componentLayer/wireLayer, ver
+  // index.html) -- nunca queda tapado por nada, con su propio trazo
+  // grueso + relleno semitransparente + glow, independiente del
+  // contenido real del componente. Usa el MISMO transform que
+  // Component.updateTransform() (translate+rotate+scale) para quedar
+  // bien alineado incluso si el componente está rotado.
+  static LOCATE_HIGHLIGHT_MS = 2200;
+  static LOCATE_HIGHLIGHT_PADDING = 14;
 
   locateComponent(component) {
-    if (!component?.element) return;
+    if (!component?.element || !this.simulator.selectionLayer) return;
 
-    component.element.classList.add("locate-highlight");
+    const NS = Utils.SVG_NS;
+    const pad = Renderer.LOCATE_HIGHLIGHT_PADDING;
 
+    // Una sola a la vez por componente -- si ya había una en curso
+    // (ej. el usuario clickeó 📍 varias veces seguidas), se reemplaza
+    // en vez de acumular rectángulos superpuestos.
+    component._locateHighlightEl?.remove();
     clearTimeout(component._locateHighlightTimeout);
+
+    const rect = document.createElementNS(NS, "rect");
+    rect.setAttribute("class", "locate-highlight-box");
+    rect.setAttribute("x", -pad);
+    rect.setAttribute("y", -pad);
+    rect.setAttribute("width",  component.width  + pad * 2);
+    rect.setAttribute("height", component.height + pad * 2);
+    rect.setAttribute("rx", 12);
+    rect.setAttribute(
+      "transform",
+      `translate(${component.x},${component.y}) rotate(${component.rotation}) scale(${component.scale})`
+    );
+
+    this.simulator.selectionLayer.appendChild(rect);
+    component._locateHighlightEl = rect;
+
     component._locateHighlightTimeout = setTimeout(() => {
-      component.element?.classList.remove("locate-highlight");
+      rect.remove();
+      if (component._locateHighlightEl === rect) component._locateHighlightEl = null;
     }, Renderer.LOCATE_HIGHLIGHT_MS);
   }
 
