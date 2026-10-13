@@ -281,6 +281,7 @@ class ReplPanel {
                 <span class="repl-icon">⚡</span>
                 <span class="repl-title"></span>
                 <span class="repl-status">🔴 Desconectado</span>
+                <button class="repl-btn repl-btn-locate" title="¿Cuál placa es esta? Resaltarla en el lienzo">📍</button>
             </div>
             <div class="repl-header-right">
                 <div class="repl-font-size-group" title="Tamaño de fuente">
@@ -301,6 +302,7 @@ class ReplPanel {
                 <span class="repl-title">MicroPython</span>
                 <span id="qemuStatus" class="repl-status">🔴 Desconectado</span>
                 <select class="repl-device-select" title="Dispositivo ESP32 que muestra este panel" style="display:none;"></select>
+                <button class="repl-btn repl-btn-locate" title="¿Cuál placa es esta? Resaltarla en el lienzo" style="display:none;">📍</button>
                 <button class="repl-btn repl-btn-popout" title="Abrir el dispositivo elegido en una ventana flotante" style="display:none;">🗗</button>
             </div>
             <div class="repl-header-right">
@@ -327,11 +329,21 @@ class ReplPanel {
         this.resetBtn     = this.header.querySelector(".repl-btn-reset");
         this._gpioLogBtn  = this.header.querySelector(".repl-btn-gpiolog");
         this.clearBtn     = this.header.querySelector(".repl-btn-clear");
+        this.locateBtn    = this.header.querySelector(".repl-btn-locate");
 
         if (this._fixedEsp32Id) {
             this.header.querySelector(".repl-title").textContent =
                 esp32?.name || esp32?.type || "ESP32";
             this.closeBtn = this.header.querySelector(".repl-btn-close");
+            // Siempre visible acá (el dispositivo ya es fijo) -- resalta
+            // ESTA placa. Ver el botón equivalente del panel de siempre
+            // más abajo (bindEvents()), que resalta la que esté elegida
+            // en el selector.
+            this.locateBtn.addEventListener("click", () => {
+                this.simulator.renderer.locateComponent(
+                    this.simulator.componentManager.get(this._fixedEsp32Id)
+                );
+            });
         } else {
             this.toggleBtn  = this.header.querySelector(".repl-btn-toggle");
             this.popOutBtn  = this.header.querySelector(".repl-btn-popout");
@@ -553,6 +565,16 @@ class ReplPanel {
             this.popOutBtn.addEventListener("click", () => {
                 if (this.deviceSelect.value) this.windowManager?.open(this.deviceSelect.value);
             });
+            // Resalta la placa que esté ELEGIDA en el selector en ese
+            // momento -- _switchActiveDevice() ya dispara esto solo al
+            // cambiar de dispositivo (ver más abajo), este botón es
+            // para volver a pedirlo sin cambiar de nada (ej. el alumno
+            // ya está escribiendo código y se le perdió de vista cuál
+            // placa es).
+            this.locateBtn.addEventListener("click", () => {
+                const id = this.deviceSelect.value || this._activeEsp32Id || this.bridge?.esp32?.id;
+                if (id) this.simulator.renderer.locateComponent(this.simulator.componentManager.get(id));
+            });
         }
 
     }
@@ -746,6 +768,7 @@ class ReplPanel {
         if (location.hash === "#modo=qemu") {
             this.deviceSelect.style.display = "none";
             this.popOutBtn.style.display = "none";
+            this.locateBtn.style.display = "none";
             return;
         }
 
@@ -757,6 +780,7 @@ class ReplPanel {
         if (esp32s.length <= 1) {
             this.deviceSelect.style.display = "none";
             this.popOutBtn.style.display = "none";
+            this.locateBtn.style.display = "none";
 
             // Restaurar el código guardado la vez anterior -- SOLO
             // acá (con 2+, _switchActiveDevice() ya se encarga de
@@ -798,6 +822,7 @@ class ReplPanel {
 
         this.deviceSelect.style.display = "";
         this.popOutBtn.style.display = "";
+        this.locateBtn.style.display = "";
 
     }
 
@@ -832,6 +857,10 @@ class ReplPanel {
     _switchActiveDevice(esp32Id) {
 
         if (!esp32Id || esp32Id === this._activeEsp32Id) return;
+
+        // Resaltar en el lienzo cuál placa física es la recién elegida
+        // -- ver Renderer.locateComponent()/el botón 📍 de arriba.
+        this.simulator.renderer.locateComponent(this.simulator.componentManager.get(esp32Id));
 
         // Id "saliente": si todavía no se tocó el selector ni una vez
         // en esta sesión del panel, es el que simulator.qemuBridge ya

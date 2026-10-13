@@ -2988,6 +2988,31 @@ class Renderer {
     );
   }
 
+  // Resaltar un componente en el lienzo con un contorno pulsante por
+  // un momento -- pedido explícito del usuario: con 2-3 ESP32 en el
+  // lienzo (ESP-NOW), todas comparten el mismo nombre genérico ("ESP32
+  // WeMos D1 R32") salvo que el alumno las haya renombrado a mano, así
+  // que el título de una ventana REPL flotante o el selector del panel
+  // de siempre no alcanzan para saber CUÁL placa física es -- esto le
+  // da una respuesta visual inmediata (ver ReplWindowManager.open() y
+  // ReplPanel._switchActiveDevice()). Mismo mecanismo que
+  // ".tutorial-highlight" (glow pulsante sobre component-graphic, ver
+  // tutorial.css) pero con su propia clase/color (".locate-highlight",
+  // css/simulator.css) para no interferir si un tutorial está resaltando
+  // ese mismo componente a la vez.
+  static LOCATE_HIGHLIGHT_MS = 1800;
+
+  locateComponent(component) {
+    if (!component?.element) return;
+
+    component.element.classList.add("locate-highlight");
+
+    clearTimeout(component._locateHighlightTimeout);
+    component._locateHighlightTimeout = setTimeout(() => {
+      component.element?.classList.remove("locate-highlight");
+    }, Renderer.LOCATE_HIGHLIGHT_MS);
+  }
+
   async loadSVG(path) {
     if (this.svgCache[path] !== undefined) return this.svgCache[path];
     try {

@@ -34,6 +34,14 @@ class ReplWindowManager {
 
     open(esp32Id) {
 
+        // Resaltar en el lienzo CUÁL placa física corresponde a esta
+        // ventana -- pedido explícito del usuario: con 2-3 ESP32 en el
+        // lienzo todas comparten el mismo nombre genérico salvo que se
+        // hayan renombrado a mano, así que el título de la ventana no
+        // alcanza para saber cuál es cuál. Tanto al abrir una nueva
+        // como al traer al frente una que ya estaba abierta.
+        this.simulator.renderer.locateComponent(this.simulator.componentManager.get(esp32Id));
+
         const existing = this.windows.get(esp32Id);
         if (existing) {
             // Ya está abierta -- traerla al frente en vez de abrir una

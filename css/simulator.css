@@ -642,6 +642,23 @@ body{
 
 }
 
+/* Resaltar brevemente qué componente físico corresponde a una ventana
+   REPL (ver Renderer.locateComponent()) -- mismo mecanismo que
+   .tutorial-highlight (glow pulsante), pero con su propia clase/color
+   (cian, no ámbar) para no mezclarse con un resaltado de tutorial que
+   esté activo sobre el mismo componente a la vez. */
+.component.locate-highlight .component-graphic,
+.component.locate-highlight .component-placeholder{
+
+    animation: locateHighlightPulse 0.9s ease-in-out infinite;
+
+}
+
+@keyframes locateHighlightPulse {
+    0%, 100% { filter: drop-shadow(0 0 4px #4dd4ff); }
+    50%      { filter: drop-shadow(0 0 16px #4dd4ff); }
+}
+
 
 /* ==========================================================
    Pines
