@@ -46,11 +46,40 @@
 }
 .repl-window.dragging .repl-header { cursor: grabbing; }
 
-/* Nombre del ESP32 fijo de esta ventana -- más ancho que el título
-   genérico "MicroPython" del panel acoplado, así que se le da más
-   lugar y un recorte prolijo si no entra. */
-.repl-window .repl-title {
-    max-width: 190px;
+/* Badge de estado -- en el panel acoplado es una píldora con texto
+   ("✅ Simulando"/"🔴 Desconectado", ver repl-panel.css); acá, pedido
+   explícito del usuario ("quiero que mejor solo aparezca el círculo
+   rojo... y verde cuando se conecte"): un punto de color nomás, sin
+   texto, para no competir por espacio con los botones de tamaño de
+   fuente -- el detalle completo sigue disponible al pasar el mouse
+   (title, ver ReplPanel._setFloatingStatusDot()). Se gana por
+   especificidad a la regla ".repl-status" de repl-panel.css (que
+   sigue aplicando tal cual al panel acoplado).
+*/
+.repl-window .repl-status {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #ff5252; /* desconectado */
+}
+.repl-window .repl-status.status-connected {
+    background: #00ff88; /* conectado */
+}
+
+/* Nombre/número de la placa ("#1 ESP32 WeMos D1 R32") -- movido del
+   header (quedaba muy apretado, título largo recortado con "...") a
+   esta fila, que de por sí tiene mucho espacio libre sin usar (solo
+   dos pestañas chicas). Empujado a la derecha, con su propio recorte
+   prolijo si el nombre es muy largo (tooltip con el texto completo). */
+.repl-window-device-label {
+    margin-left: auto;
+    align-self: center;
+    padding-right: 10px;
+    color: #6b7394;
+    font-size: 11px;
+    max-width: 55%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

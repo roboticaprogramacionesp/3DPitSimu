@@ -229,12 +229,25 @@ class ReplPanel {
             // ventana quedaría trabada en "🔴 Desconectado" para
             // siempre, sin jamás ver el banner ni habilitar "Ejecutar".
             if (this.bridge?.connected) {
-                this.statusEl.textContent = "✅ Simulando";
-                this.statusEl.style.color = "#00ff88";
+                this._setFloatingStatusDot("connected");
                 this._activateWasmDeviceReady();
             }
         }
 
+    }
+
+    // Badge de estado de la ventana flotante -- solo un punto de color
+    // (verde/rojo), sin texto. Pedido explícito del usuario: con el
+    // texto ("✅ Simulando"/"🔴 Desconectado") el header quedaba muy
+    // apretado -- el color solo ya alcanza para la misma información,
+    // con el detalle completo disponible al pasar el mouse (title).
+    // Solo tiene sentido en modo flotante -- el panel de siempre sigue
+    // usando texto (WasmBridge.updateStatus() le escribe directo al
+    // DOM, #qemuStatus, sin cambios acá).
+    _setFloatingStatusDot(status) {
+        const LABELS = { connected: "Simulando", disconnected: "Desconectado" };
+        this.statusEl.classList.toggle("status-connected", status === "connected");
+        this.statusEl.title = LABELS[status] || status;
     }
 
     // Bridge real de ESTE panel -- en modo flotante, SIEMPRE el del
@@ -279,8 +292,7 @@ class ReplPanel {
         this.header.innerHTML = this._fixedEsp32Id ? `
             <div class="repl-header-left">
                 <span class="repl-icon">⚡</span>
-                <span class="repl-title"></span>
-                <span class="repl-status">🔴 Desconectado</span>
+                <span class="repl-status" title="Desconectado"></span>
                 <button class="repl-btn repl-btn-locate" title="¿Cuál placa es esta? Resaltarla en el lienzo">📍</button>
             </div>
             <div class="repl-header-right">
@@ -332,11 +344,14 @@ class ReplPanel {
         this.locateBtn    = this.header.querySelector(".repl-btn-locate");
 
         if (this._fixedEsp32Id) {
-            const titleEl = this.header.querySelector(".repl-title");
-            const label = this.simulator.componentManager.getEsp32DisplayLabel(this._fixedEsp32Id)
+            // El nombre/número de la placa se muestra en this.tabBar
+            // (ver más abajo), no acá -- pedido explícito del usuario:
+            // el header quedaba muy apretado (título largo recortado
+            // con "...", botones de tamaño empujados) para lo poco que
+            // aporta repetir el nombre ahí, mientras la fila de tabs
+            // (REPL/Editor) tiene mucho espacio libre sin usar.
+            this._esp32Label = this.simulator.componentManager.getEsp32DisplayLabel(this._fixedEsp32Id)
                 || esp32?.name || esp32?.type || "ESP32";
-            titleEl.textContent = label;
-            titleEl.title = label; // tooltip completo si el ancho lo recorta con "..."
             this.closeBtn = this.header.querySelector(".repl-btn-close");
             // Siempre visible acá (el dispositivo ya es fijo) -- resalta
             // ESTA placa. Ver el botón equivalente del panel de siempre
@@ -358,7 +373,14 @@ class ReplPanel {
         this.tabBar.innerHTML = `
             <button class="repl-tab repl-tab-active" data-tab="repl">REPL</button>
             <button class="repl-tab" data-tab="editor">Editor</button>
+            ${this._fixedEsp32Id ? '<span class="repl-window-device-label"></span>' : ""}
         `;
+
+        if (this._fixedEsp32Id) {
+            const labelEl = this.tabBar.querySelector(".repl-window-device-label");
+            labelEl.textContent = this._esp32Label;
+            labelEl.title = this._esp32Label; // tooltip completo si el ancho lo recorta con "..."
+        }
 
         // ---- Cuerpo ----
         this.body = document.createElement("div");
@@ -4241,14 +4263,11 @@ class ReplPanel {
         // (#qemuStatus, sin cambios); en modo flotante no existe ese id
         // (ver buildDOM()), así que este panel se actualiza solo con
         // "device:status" (ver WasmBridge.js, emitido junto a cada
-        // llamado a updateStatus()).
+        // llamado a updateStatus()) -- ver _setFloatingStatusDot().
         if (this._fixedEsp32Id) {
-            const STATUS_LABELS = { connected: "✅ Simulando", disconnected: "🔴 Desconectado" };
-            const STATUS_COLORS = { connected: "#00ff88", disconnected: "#666" };
             this._onDeviceStatus = (data) => {
                 if (data.esp32Id !== this._fixedEsp32Id) return;
-                this.statusEl.textContent = STATUS_LABELS[data.status] || data.status;
-                this.statusEl.style.color = STATUS_COLORS[data.status] || "#eee";
+                this._setFloatingStatusDot(data.status);
             };
             this.simulator.eventBus.on("device:status", this._onDeviceStatus);
         }
