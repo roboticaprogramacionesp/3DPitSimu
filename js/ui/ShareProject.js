@@ -59,7 +59,7 @@ class ShareProject {
     // directo al link autocontenido (#compartir=) sin siquiera
     // intentar la llamada de red, así que el botón funciona igual
     // aunque nadie despliegue nunca el backend.
-    static WORKER_ENDPOINT = "";
+    static WORKER_ENDPOINT = "https://pitsimulator-share.jp790276.workers.dev";
 
     // Prefijos de hash -- "#p=<id>" (link corto, vía Worker) y
     // "#compartir=<comprimido>" (autocontenido, sin backend). Dos
