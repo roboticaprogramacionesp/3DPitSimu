@@ -31,6 +31,15 @@
     const sim = new Simulator();
     await sim.start();
 
+    // 1b. Si se entró con un link compartido (botón 🔗, ver
+    //     ShareProject.js), reemplaza lo que acaba de restaurar
+    //     sim.start() desde localStorage por el proyecto que viajó en
+    //     el hash -- TIENE que pasar antes de crear ReplPanel: éste
+    //     busca el código guardado del ESP32 activo apenas arranca, y
+    //     ese código tiene que ser ya el del proyecto compartido, no
+    //     el viejo de localStorage.
+    await ShareProject.tryLoadFromHash(sim);
+
     // 2. Panel REPL (parte inferior — MicroPython / QEMU)
     //    QemuBridge se crea dentro de Simulator.start() → initializeManagers()
     //    ReplPanel se suscribe al EventBus para recibir output del bridge
@@ -110,6 +119,12 @@
     //    replPanel (código del editor), por eso se crea después de ambos.
     const reportGenerator = new ReportGenerator(sim, replPanel, toolbar);
 
+    // 8b. Compartir proyecto (botón 🔗, junto al 📄 de arriba) -- link +
+    //     QR autocontenidos, sin backend (ver ShareProject.js). Necesita
+    //     replPanel para volcar el código del editor al ESP32 activo
+    //     justo antes de armar el link (_persistActiveDeviceCode()).
+    const shareProject = new ShareProject(sim, replPanel);
+
     // 9. Editor de bloques (botón 🧩 junto al nombre del proyecto) --
     //    overlay a pantalla completa, portado de AppBlock3 (ver plan
     //    de este cambio). Necesita replPanel para meter el Python
@@ -125,6 +140,7 @@
     window.tutorialManager = tutorialManager;
     window.toolbar         = toolbar;
     window.reportGenerator = reportGenerator;
+    window.shareProject    = shareProject;
     window.blocklyPanel    = blocklyPanel;
     window.propertyPanel   = propertyPanel;
 

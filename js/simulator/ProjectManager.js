@@ -569,6 +569,37 @@ class ProjectManager {
     }
 
     //------------------------------------------------------
+    // Cargar un proyecto "compartido" (botón 🔗, ver ShareProject.js) --
+    // mismo post-procesamiento que openProject() tras un deserialize()
+    // exitoso (undo/redo limpios, sin archivo vinculado, sin "sucio"),
+    // pero sin pasar por ningún selector de archivos: el JSON ya viene
+    // decodificado desde el link compartido (DEFLATE + el fragmento
+    // "#compartir=" de la URL, ver ShareProject._decompress()), no de
+    // un File del disco.
+    //------------------------------------------------------
+
+    async loadFromSharedData(data) {
+
+        if (!(await this.deserialize(data))) return false;
+
+        // Mismo criterio que abrir/empezar un proyecto nuevo: un link
+        // compartido corta cualquier simulación en curso.
+        if (this.simulator.isRunning) {
+            this.simulator.stopSimulation();
+        }
+
+        this.simulator.history.undoStack = [];
+        this.simulator.history.redoStack = [];
+
+        this.fileHandle = null; // nada que sobreescribir en "Guardar" -- el próximo guardado es "Guardar como"
+        this._setCurrentFile(null);
+        this._setDirty(false);
+
+        return true;
+
+    }
+
+    //------------------------------------------------------
     // Guardar (Ctrl+S / botón "Guardar"): siempre actualiza
     // localStorage (red de seguridad silenciosa) y además, si hay un
     // archivo vinculado (por haber abierto o guardado uno antes),

@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="css/project-drawer.css">
     <link rel="stylesheet" href="css/tutorial.css">
     <link rel="stylesheet" href="css/report-generator.css">
+    <link rel="stylesheet" href="css/share-project.css">
     <link rel="stylesheet" href="css/annotations.css">
     <link rel="stylesheet" href="css/blockly-panel.css">
 
@@ -52,6 +53,7 @@
             <span id="currentFileLabelDirty" class="current-file-label-dirty" title="Cambios sin guardar">•</span>
             <button id="btnBlockly" class="btn-project-toggle" title="Editor de bloques (armar el código arrastrando bloques)">🧩</button>
             <button id="btnGenerateReport" class="btn-project-toggle" title="Generar reporte de la práctica (SVG)">📄</button>
+            <button id="btnShareProject" class="btn-project-toggle" title="Compartir proyecto (link + QR)">🔗</button>
 
             <div id="projectDrawer" class="project-drawer hidden">
 
@@ -225,6 +227,7 @@
     <script src="lib/codemirror/codemirror.js"></script>
     <script src="lib/codemirror/lang-python.js"></script>
     <script src="lib/jspdf/jspdf.umd.min.js"></script>
+    <script src="lib/qrcode-generator/qrcode.js"></script>
 
     <!-- Blockly (editor de bloques) -- v6.20210701.0, portado de
          AppBlock3 tal cual (generadores en el namespace global
@@ -254,6 +257,7 @@
     <script src="js/ui/ContextMenu.js"></script>
     <script src="js/ui/TutorialManager.js"></script>
     <script src="js/ui/ReportGenerator.js"></script>
+    <script src="js/ui/ShareProject.js"></script>
     <script src="js/ui/BlocklyPanel.js"></script>
 
 

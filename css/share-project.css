@@ -1,0 +1,160 @@
+/* ==========================================================
+   PitSimulator — share-project.css
+   Modal del botón 🔗 (junto al 📄 de reporte, ver ShareProject.js)
+   que muestra el link + QR para compartir el proyecto actual (sin
+   backend -- el proyecto viaja comprimido dentro del propio link).
+   Mismos tokens visuales que report-generator.css (mismo modal
+   oscuro, mismos botones) a propósito -- son dos botones vecinos en
+   la barra superior, deben sentirse como parte del mismo grupo.
+   ========================================================== */
+
+.share-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    background: rgba(0, 0, 0, .5);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.share-modal-overlay.hidden { display: none; }
+
+.share-modal {
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+
+    background: #1e1f22;
+    border: 1px solid #444;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+
+    padding: 16px 18px;
+
+    font-family: Segoe UI, Arial, sans-serif;
+    color: #e6e6e6;
+}
+
+.share-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.share-modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.share-modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.share-modal-close:hover { color: #fff; background: #333; }
+
+.share-modal-hint {
+    font-size: 11.5px;
+    color: #999;
+    line-height: 1.4;
+    margin: 0 0 14px;
+}
+
+.share-modal-qr-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+/* El SVG lo arma qrcode-generator (ver ShareProject._renderQr) con
+   scalable:true -- sin tamaño propio, por eso el tamaño real lo
+   fija este contenedor (igual en cualquier proyecto, chico o
+   grande: más denso el QR, pero nunca más grande en pantalla). */
+.share-modal-qr {
+    width: 200px;
+    height: 200px;
+    background: #fff;
+    border-radius: 6px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.share-modal-qr svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.share-modal-field { margin-bottom: 10px; }
+
+.share-modal-field label {
+    display: block;
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 4px;
+}
+
+.share-modal-field input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    background: #2b2d31;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #e6e6e6;
+    font-size: 12px;
+    font-family: Consolas, "Courier New", monospace;
+    padding: 7px 9px;
+    cursor: text;
+}
+
+.share-modal-field input[type="text"]:focus {
+    outline: none;
+    border-color: #4da3ff;
+}
+
+.share-modal-warning {
+    font-size: 11.5px;
+    color: #e0a93a;
+    line-height: 1.4;
+    margin: 0 0 10px;
+}
+
+.share-modal-warning.hidden { display: none; }
+
+.share-modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.share-modal-actions button {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #2b2d31;
+    color: #e6e6e6;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.share-modal-actions button:hover { background: #3a3c42; }
+
+.share-modal-copy {
+    background: #2e7d32 !important;
+    border-color: #2e7d32 !important;
+    color: #fff;
+    font-weight: 600;
+}
+
+.share-modal-copy:hover { background: #37944b !important; }
