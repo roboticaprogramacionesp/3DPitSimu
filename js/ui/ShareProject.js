@@ -3,33 +3,46 @@
  PitSimulator — ShareProject.js
  Botón 🔗 (junto al 📄 de ReportGenerator, ver index.html) para
  compartir el proyecto actual (circuito + código de cada ESP32) como
- un link + código QR, sin backend -- mismo espíritu que la app
- hermana (3DPitBlockly, static/main.js: función compartir()): el
- proyecto entero viaja dentro del fragmento "#..." de la propia URL,
- nada se guarda en ningún servidor -- la URL ES el proyecto.
+ un link + código QR.
 
- Por qué no es una URL "corta" de verdad (tipo bit.ly): se probaron
- los shorteners públicos de siempre (TinyURL, is.gd, v.gd, cleanuri,
- spoo.me) y NINGUNO deja llamarlos directo desde el navegador (no
- mandan Access-Control-Allow-Origin, el fetch() muere por CORS) --
- armar una URL realmente corta exigiría un backend propio que
- guarde el proyecto y resuelva un código corto, infraestructura que
- hoy no existe (decidido con el usuario: se prioriza "sin backend",
- igual que 3DPitBlockly).
+ Dos caminos, con fallback automático del primero al segundo:
 
- Por qué DEFLATE nativo (CompressionStream) y NO lz-string (que es
- lo que usa 3DPitBlockly): se probó primero con lz-string y el QR
- fallaba ("no entra ni en la versión 40") con CUALQUIER proyecto
- real -- hasta el ejemplo más chico del repo (examples/lcd/lcd.json,
- 4 componentes, sin código) ya comprimía a ~3000 caracteres, por
- encima del tope de un QR (~2950 bytes en modo byte, versión 40).
- CompressionStream('deflate-raw') (soportado nativo en todos los
- navegadores modernos, sin vendorizar nada) comprime MUCHO mejor en
- este tipo de JSON repetitivo -- el mismo lcd.json queda en ~1450
- caracteres, y hasta un proyecto sintético de 16 ESP32 con código
- largo en cada uno (85KB de JSON) entra cómodo en ~2200. Con eso el
- QR deja de ser "solo para proyectos vacíos" y pasa a funcionar para
- cualquier práctica real -- que es el punto de pedirlo.
+ 1) LINK CORTO DE VERDAD, vía el backend chiquito de worker/ (Cloudflare
+    Workers + KV, mismo mecanismo que usa MakeCode/micro:bit para
+    "Compartir" -- NO es un acortador tipo bit.ly, es un guardado propio:
+    el proyecto comprimido se sube a WORKER_ENDPOINT, que devuelve un ID
+    corto random, y el link queda "#p=<id>" -- siempre chico (~8
+    caracteres) sin importar qué tan grande sea el proyecto, así que el
+    QR también queda siempre chico/legible. Requiere desplegar ese
+    Worker una sola vez (ver worker/README.md) y pegar su URL acá abajo.
+
+ 2) LINK AUTOCONTENIDO (el original, sin backend) -- si WORKER_ENDPOINT
+    no está configurado, o el Worker no responde (sin red, caído, etc.),
+    se cae automáticamente a este camino: el proyecto entero viaja
+    comprimido dentro del propio link ("#compartir=<comprimido>"), nada
+    se guarda en ningún servidor -- la URL ES el proyecto. Mismo
+    espíritu que la app hermana (3DPitBlockly, static/main.js: función
+    compartir()), pero con DEFLATE nativo en vez de lz-string (ver más
+    abajo el por qué) para que el QR entre en proyectos reales, no solo
+    en los vacíos.
+
+ Por qué no un acortador público (TinyURL/is.gd/etc.) para el camino 1:
+ se probaron todos los de siempre y NINGUNO deja llamarlos directo
+ desde el navegador (no mandan Access-Control-Allow-Origin, el fetch()
+ muere por CORS) -- de ahí el Worker propio en vez de "pagar un
+ servicio de acortar".
+
+ Por qué DEFLATE nativo (CompressionStream) y NO lz-string para el
+ camino 2: se probó primero con lz-string y el QR fallaba ("no entra
+ ni en la versión 40") con CUALQUIER proyecto real -- hasta el ejemplo
+ más chico del repo (examples/lcd/lcd.json, 4 componentes, sin código)
+ ya comprimía a ~3000 caracteres, por encima del tope de un QR (~2950
+ bytes en modo byte, versión 40). CompressionStream('deflate-raw')
+ (soportado nativo en todos los navegadores modernos, sin vendorizar
+ nada) comprime MUCHO mejor en este tipo de JSON repetitivo -- el mismo
+ lcd.json queda en ~1450 caracteres, y hasta un proyecto sintético de
+ 16 ESP32 con código largo en cada uno (85KB de JSON) entra cómodo en
+ ~2200.
 
  Carga del lado de quien recibe el link: ver ShareProject.tryLoadFromHash()
  (método estático, se llama una sola vez al arrancar la app -- ver
@@ -41,9 +54,18 @@
 
 class ShareProject {
 
-    // Prefijo del hash dedicado a esto -- "#compartir=<comprimido>".
-    // Un prefijo propio (no solo "#") para no pisar "#modo=qemu" (ver
+    // URL del Worker (ver worker/README.md para desplegarlo) -- vacío
+    // por default a propósito: sin esto configurado, share() cae
+    // directo al link autocontenido (#compartir=) sin siquiera
+    // intentar la llamada de red, así que el botón funciona igual
+    // aunque nadie despliegue nunca el backend.
+    static WORKER_ENDPOINT = "";
+
+    // Prefijos de hash -- "#p=<id>" (link corto, vía Worker) y
+    // "#compartir=<comprimido>" (autocontenido, sin backend). Dos
+    // prefijos propios (no solo "#") para no pisar "#modo=qemu" (ver
     // app.js) ni cualquier otro hash que la app use o llegue a usar.
+    static SHORT_HASH_PREFIX = "#p=";
     static HASH_PREFIX = "#compartir=";
 
     // Tope real de qrcode-generator (ver lib/qrcode-generator/qrcode.js):
@@ -83,10 +105,8 @@ class ShareProject {
                 </div>
 
                 <p class="share-modal-hint">
-                    Cualquiera que abra este link (o escanee el QR) recibe
-                    una COPIA del circuito y el código de cada ESP32, tal
-                    como están ahora mismo. No se sube a ningún servidor
-                    -- todo viaja comprimido dentro del link mismo.
+                    Quien abra este link (o escanee el QR) ve una copia
+                    de este circuito con su código.
                 </p>
 
                 <div class="share-modal-qr-wrap">
@@ -158,7 +178,11 @@ class ShareProject {
             return;
         }
 
-        const url = location.origin + location.pathname + ShareProject.HASH_PREFIX + encoded;
+        const shortId = await ShareProject._tryShorten(encoded);
+
+        const url = shortId
+            ? location.origin + location.pathname + ShareProject.SHORT_HASH_PREFIX + shortId
+            : location.origin + location.pathname + ShareProject.HASH_PREFIX + encoded;
 
         this._els.urlBox.value = url;
         this._renderQr(url);
@@ -166,6 +190,40 @@ class ShareProject {
         this.overlay.classList.remove("hidden");
         this._els.urlBox.focus();
         this._els.urlBox.select();
+
+    }
+
+    // Sube el proyecto comprimido al Worker (ver worker/src/index.js)
+    // y devuelve el ID corto que asignó, o null si no hay Worker
+    // configurado o la llamada falla por cualquier motivo (sin red,
+    // Worker caído, CORS, lo que sea) -- CUALQUIER falla acá cae en
+    // silencio al link autocontenido en share() arriba, nunca bloquea
+    // "Compartir" por completo. No se avisa con un alert() de este
+    // fallback a propósito: para el usuario el resultado final (un
+    // link que funciona) es el mismo, solo cambia si es corto o largo.
+    static async _tryShorten(encoded) {
+
+        if (!ShareProject.WORKER_ENDPOINT) return null;
+
+        try {
+
+            const res = await fetch(ShareProject.WORKER_ENDPOINT + "/share", {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: encoded,
+            });
+
+            if (!res.ok) throw new Error("HTTP " + res.status);
+
+            const { id } = await res.json();
+            return id || null;
+
+        } catch (err) {
+
+            console.warn("[ShareProject] No se pudo armar un link corto (se usa el autocontenido):", err);
+            return null;
+
+        }
 
     }
 
@@ -301,17 +359,27 @@ class ShareProject {
     static async tryLoadFromHash(simulator) {
 
         const hash = location.hash;
-        if (!hash.startsWith(ShareProject.HASH_PREFIX)) return false;
+
+        const isShort = hash.startsWith(ShareProject.SHORT_HASH_PREFIX);
+        const isSelfContained = hash.startsWith(ShareProject.HASH_PREFIX);
+        if (!isShort && !isSelfContained) return false;
 
         // Se borra ANTES de intentar decodificar -- un link roto
         // (copiado a medias, truncado por el cliente de chat/email
-        // que lo mandó) no debe dejar a la app reintentando el mismo
-        // hash inválido en cada F5.
+        // que lo mandó, o un ID de Worker vencido/inexistente) no debe
+        // dejar a la app reintentando el mismo hash inválido en cada F5.
         history.replaceState(null, "", location.pathname + location.search);
 
-        const encoded = hash.slice(ShareProject.HASH_PREFIX.length);
-
         try {
+
+            // Link corto (#p=<id>): hay que resolverlo contra el Worker
+            // ANTES de poder descomprimir -- lo que viajó en la URL es
+            // solo el ID, no el proyecto. Link autocontenido
+            // (#compartir=<comprimido>): el fragmento YA es el
+            // proyecto comprimido, directo a _decompress().
+            const encoded = isShort
+                ? await ShareProject._resolveShortId(hash.slice(ShareProject.SHORT_HASH_PREFIX.length))
+                : hash.slice(ShareProject.HASH_PREFIX.length);
 
             const json = await ShareProject._decompress(encoded);
             const data = JSON.parse(json);
@@ -325,10 +393,29 @@ class ShareProject {
         } catch (err) {
 
             console.error("[ShareProject] No se pudo cargar el proyecto del link:", err);
-            alert("❌ No se pudo cargar el proyecto del link compartido: " + err.message + " (¿se cortó al copiarlo, o el navegador es muy viejo?)");
+            alert("❌ No se pudo cargar el proyecto del link compartido: " + err.message + " (¿se cortó al copiarlo, venció, o el navegador es muy viejo?)");
             return false;
 
         }
+
+    }
+
+    // Trae el proyecto comprimido guardado bajo ese ID en el Worker
+    // (ver worker/src/index.js, GET /share/:id) -- tira si no hay
+    // WORKER_ENDPOINT configurado (un link "#p=" solo puede existir si
+    // en algún momento SÍ hubo un Worker funcionando) o si el ID ya no
+    // existe (vencido a los 180 días, ver TTL_SECONDS del Worker, o
+    // nunca existió).
+    static async _resolveShortId(id) {
+
+        if (!ShareProject.WORKER_ENDPOINT) {
+            throw new Error("este link corto necesita un backend que no está configurado");
+        }
+
+        const res = await fetch(ShareProject.WORKER_ENDPOINT + "/share/" + id);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+
+        return res.text();
 
     }
 

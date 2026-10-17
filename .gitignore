@@ -2,6 +2,12 @@
 node_modules/
 __pycache__/
 
+# worker/: estado local de "wrangler dev" (KV simulada, logs) y
+# credenciales -- nunca hace falta versionarlos, cada quien que
+# despliega genera los suyos (ver worker/README.md).
+worker/.wrangler/
+worker/.dev.vars
+
 # Archivos sueltos de una etapa anterior del proyecto (patch manual de
 # machine.Pin vía REPL, notas de prueba) -- no los usa ningún componente
 # ni pantalla actual (confirmado, sin referencias en el código), no

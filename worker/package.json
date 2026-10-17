@@ -1,0 +1,14 @@
+{
+  "name": "pitsimulator-share-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend chiquito (Cloudflare Workers + KV) para links cortos del botón 🔗 Compartir proyecto -- ver README.md para los pasos de deploy.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "kv:create": "wrangler kv namespace create pitsimulator_share"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

@@ -1,0 +1,10 @@
+name = "pitsimulator-share"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Se crea con: npx wrangler kv namespace create pitsimulator_share
+# Ese comando imprime el "id" real -- reemplazar el de abajo (ver
+# worker/README.md, paso 3) antes de hacer "wrangler deploy".
+[[kv_namespaces]]
+binding = "PROJECTS"
+id = "REEMPLAZAR_CON_EL_ID_REAL"
