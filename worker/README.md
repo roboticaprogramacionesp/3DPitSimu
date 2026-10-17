@@ -79,14 +79,22 @@ ya está escrito; estos son los únicos pasos manuales que faltan.
   funcionar (igual que si nunca hubiera existido). Pensado para no
   dejar crecer el storage para siempre con links que nadie vuelve a
   abrir; se puede estirar ese número si hace falta.
-- **No hay límite de velocidad/abuso todavía** (cualquiera puede llamar
-  a `POST /share` tantas veces como quiera) -- para el uso normal de un
-  salón esto no es problema, pero si en algún momento alguien empieza a
-  llenar el KV con basura a propósito, la forma de frenarlo es agregar
-  [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) o
-  un rate-limit por IP delante de `POST /share` (no implementado todavía,
-  queda como mejora futura si hace falta).
+- **Rate limit: 20 `POST /share` por IP por hora** (`RATE_LIMIT_MAX` en
+  `src/index.js`) -- de sobra para cualquier uso real de un salón, pero
+  frena un script en loop antes de que llegue a gastar las 1,000
+  escrituras/día gratis de KV. Contador por IP guardado en el mismo KV
+  (ventana fija de 1 hora) -- frena abuso casual, no a un atacante
+  dedicado con muchas IPs (para eso existe
+  [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/),
+  no implementado todavía, mejora futura si hace falta).
+- **Validación de contenido en `POST /share`**: se rechaza (400) todo lo
+  que no descomprima a un proyecto de PitSimulator real (mismo formato
+  que `ProjectManager.serialize()`) -- así este endpoint no sirve como
+  hosting gratis de cualquier otra cosa.
 - El contenido guardado **es público para quien tenga el ID/link** --
   mismo modelo que un link de MakeCode o Pastebin. No hay autenticación
   ni borrado manual todavía (si hace falta borrar algo puntual, se puede
   hacer a mano con `npx wrangler kv key delete --binding=PROJECTS <id>`).
+- El comodín en `Access-Control-Allow-Origin` (`*`) es intencional, no
+  un descuido -- ver el comentario grande al principio de
+  `src/index.js` para el porqué (CORS no es lo que frena el abuso acá).
