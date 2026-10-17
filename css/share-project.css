@@ -70,11 +70,26 @@
     margin: 0 0 14px;
 }
 
+/* Estado de carga mientras share() sube el proyecto al Worker (ver
+   ShareProject._setLoading) -- ocupa el lugar del QR/link mientras
+   tanto, para que abrir el modal no se sienta "trabado" con una
+   conexión lenta. */
+.share-modal-loading {
+    text-align: center;
+    padding: 36px 0;
+    color: #9ecbff;
+    font-size: 13px;
+}
+
+.share-modal-loading.hidden { display: none; }
+
 .share-modal-qr-wrap {
     display: flex;
     justify-content: center;
     margin-bottom: 14px;
 }
+
+.share-modal-qr-wrap.hidden { display: none; }
 
 /* El SVG lo arma qrcode-generator (ver ShareProject._renderQr) con
    scalable:true -- sin tamaño propio, por eso el tamaño real lo
@@ -96,6 +111,8 @@
 }
 
 .share-modal-field { margin-bottom: 10px; }
+
+.share-modal-field.hidden { display: none; }
 
 .share-modal-field label {
     display: block;

@@ -109,6 +109,8 @@ class ShareProject {
                     de este circuito con su código.
                 </p>
 
+                <p class="share-modal-loading hidden">⏳ Generando link…</p>
+
                 <div class="share-modal-qr-wrap">
                     <div class="share-modal-qr"></div>
                 </div>
@@ -130,8 +132,11 @@ class ShareProject {
 
         this._els = {
             qrWrap:  this.overlay.querySelector(".share-modal-qr"),
+            qrField: this.overlay.querySelector(".share-modal-qr-wrap"),
+            urlField: this.overlay.querySelector(".share-modal-field"),
             urlBox:  this.overlay.querySelector("#shareProjectUrl"),
             warning: this.overlay.querySelector(".share-modal-warning"),
+            loading: this.overlay.querySelector(".share-modal-loading"),
             copyBtn: this.overlay.querySelector(".share-modal-copy"),
         };
 
@@ -166,30 +171,58 @@ class ShareProject {
         // último cambio.
         this.replPanel?._persistActiveDeviceCode?.();
 
-        const data = this.simulator.projectManager.serialize();
-        const json = JSON.stringify(data);
+        // El modal se abre YA, con el QR/link ocultos y un
+        // "Generando..." en su lugar -- el paso que sigue (subir al
+        // Worker, ver _tryShorten) es una llamada de red, no instantánea:
+        // sin este estado de carga, con conexión lenta el botón 🔗 no
+        // mostraba nada hasta que todo terminaba, se sentía trabado.
+        // this.btn también se deshabilita mientras tanto para que un
+        // doble click no dispare dos subidas en paralelo.
+        this._setLoading(true);
+        this.overlay.classList.remove("hidden");
 
-        let encoded;
         try {
-            encoded = await ShareProject._compress(json);
-        } catch (err) {
-            console.error("[ShareProject] No se pudo comprimir el proyecto:", err);
-            alert("❌ No se pudo armar el link (" + err.message + "). ¿El navegador es muy viejo? Probá con una versión reciente de Chrome/Edge.");
-            return;
+
+            const data = this.simulator.projectManager.serialize();
+            const json = JSON.stringify(data);
+
+            let encoded;
+            try {
+                encoded = await ShareProject._compress(json);
+            } catch (err) {
+                console.error("[ShareProject] No se pudo comprimir el proyecto:", err);
+                alert("❌ No se pudo armar el link (" + err.message + "). ¿El navegador es muy viejo? Probá con una versión reciente de Chrome/Edge.");
+                this.closeModal();
+                return;
+            }
+
+            const shortId = await ShareProject._tryShorten(encoded);
+
+            const url = shortId
+                ? location.origin + location.pathname + ShareProject.SHORT_HASH_PREFIX + shortId
+                : location.origin + location.pathname + ShareProject.HASH_PREFIX + encoded;
+
+            this._els.urlBox.value = url;
+            this._renderQr(url);
+
+            this._setLoading(false);
+            this._els.urlBox.focus();
+            this._els.urlBox.select();
+
+        } finally {
+            this.btn.disabled = false;
         }
 
-        const shortId = await ShareProject._tryShorten(encoded);
+    }
 
-        const url = shortId
-            ? location.origin + location.pathname + ShareProject.SHORT_HASH_PREFIX + shortId
-            : location.origin + location.pathname + ShareProject.HASH_PREFIX + encoded;
+    _setLoading(isLoading) {
 
-        this._els.urlBox.value = url;
-        this._renderQr(url);
+        this.btn.disabled = isLoading;
 
-        this.overlay.classList.remove("hidden");
-        this._els.urlBox.focus();
-        this._els.urlBox.select();
+        this._els.loading.classList.toggle("hidden", !isLoading);
+        this._els.qrField.classList.toggle("hidden", isLoading);
+        this._els.urlField.classList.toggle("hidden", isLoading);
+        this._els.copyBtn.disabled = isLoading;
 
     }
 
