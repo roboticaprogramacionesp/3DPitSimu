@@ -60,6 +60,7 @@
     font-weight: 600;
 }
 
+.blockly-panel-refresh,
 .blockly-panel-insert,
 .blockly-panel-close {
     cursor: pointer;
@@ -71,6 +72,7 @@
     padding: 6px 12px;
 }
 
+.blockly-panel-refresh:hover,
 .blockly-panel-insert:hover,
 .blockly-panel-close:hover {
     background: #3d4046;

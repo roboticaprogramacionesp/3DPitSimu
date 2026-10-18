@@ -60,6 +60,7 @@ class BlocklyPanel {
                     </div>
                 </div>
                 <span class="blockly-panel-title">🧩 Editor de bloques</span>
+                <button type="button" class="blockly-panel-refresh" title="Refrescar el editor (si el área de bloques se queda en negro/no responde)">🔄 Refrescar</button>
                 <button type="button" class="blockly-panel-insert">⬇ Insertar en el editor</button>
                 <button type="button" class="blockly-panel-close" title="Cerrar">✕</button>
             </div>
@@ -82,6 +83,8 @@ class BlocklyPanel {
             .addEventListener("click", () => this.close());
         this.overlay.querySelector(".blockly-panel-insert")
             .addEventListener("click", () => this.insertIntoEditor());
+        this.overlay.querySelector(".blockly-panel-refresh")
+            .addEventListener("click", () => this._refreshWorkspace());
 
         // Sin "cerrar al click afuera" a propósito -- a diferencia de
         // un modal chico (ReportGenerator), acá el overlay ocupa toda
@@ -288,6 +291,71 @@ class BlocklyPanel {
 
     close() {
         this.overlay.classList.add("hidden");
+    }
+
+    // ====================================================
+    // Botón "🔄 Refrescar" -- pedido real del usuario: "a veces [el
+    // área de bloques] se queda oscura como si algo fallase". Blockly
+    // mantiene su propio SVG/estado interno que, en algún glitch de
+    // render (zoom roto, un resize a mitad de camino, etc.), puede
+    // quedar en un estado visualmente roto sin que haya ningún error
+    // de JS que lo delate -- hasta ahora la única salida era recargar
+    // TODA la página (perdiendo el circuito armado en el lienzo
+    // principal, no solo los bloques).
+    //
+    // Reinyecta Blockly DE CERO en #blocklyDiv en vez de intentar
+    // "reparar" el workspace roto (no hay una API de Blockly para
+    // eso) -- preservando los bloques actuales vía el mismo viaje
+    // XML que ya usan _saveWorkspaceXml()/_openWorkspaceXml()
+    // (workspaceToDom → domToWorkspace), así que esto no es
+    // equivalente a "Nuevo" (que si vacía todo): el alumno no pierde
+    // lo que tenía armado.
+    // ====================================================
+    _refreshWorkspace() {
+
+        if (!this.workspace) return;
+
+        let dom = null;
+        try {
+            dom = Blockly.Xml.workspaceToDom(this.workspace);
+        } catch (err) {
+            // Si el workspace está TAN roto que ni esto funciona, no
+            // hay bloques que rescatar -- se sigue igual con dom=null
+            // (reinyección limpia, vacía) en vez de dejar al usuario
+            // sin ninguna salida.
+            console.warn("[BlocklyPanel] No se pudo leer el workspace actual antes de refrescar:", err);
+        }
+
+        try {
+            this.workspace.dispose();
+        } catch (err) {
+            console.warn("[BlocklyPanel] El workspace anterior no se pudo limpiar del todo (se sigue igual):", err);
+        }
+
+        this.workspace = Blockly.inject("blocklyDiv", {
+            toolbox: this.toolboxEl,
+            media: "assets/blockly-media/",
+            trashcan: true,
+            undo: true,
+            oneBasedIndex: false,
+            grid: { spacing: 20, length: 3, colour: "#ccc", snap: true },
+            zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
+        });
+
+        pitAddScreenshotButton(this.workspace, () => this._downloadScreenshot());
+        pitAddUndoRedoButtons(this.workspace);
+
+        if (dom) {
+            try {
+                Blockly.Xml.domToWorkspace(dom, this.workspace);
+            } catch (err) {
+                console.warn("[BlocklyPanel] No se pudieron restaurar los bloques tras refrescar:", err);
+                alert("⚠️ El editor se refrescó, pero no se pudieron recuperar los bloques que tenías armados.");
+            }
+        }
+
+        Blockly.svgResize(this.workspace);
+
     }
 
     // Blockly.Python declara TODAS las variables del workspace como

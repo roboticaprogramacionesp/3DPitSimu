@@ -113,13 +113,80 @@ const LIBS_BUNDLE_URL    = new URL("../../components_wasm/libs/bundle.json", imp
 // generado una vez al copiar la carpeta (ver el script que lo generó)
 // -- un solo fetch() en vez de 62, mismo resultado final (los mismos
 // archivos terminan escritos en /libs).
+// BUG REAL reportado en vivo (GitHub Pages, justo después de un
+// deploy): "SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not
+// valid JSON" -- el fetch de bundle.json devolvió la página de error
+// HTML de GitHub Pages en vez del JSON real (CDN todavía sirviendo un
+// 404 viejo mientras el deploy nuevo termina de propagarse a todos
+// los edge nodes, ventana de uno a un par de minutos). Antes, esto
+// quedaba en un console.warn() silencioso y el Worker seguía como si
+// nada -- "ready" se mandaba igual, el alumno recién se enteraba
+// mucho después con un ImportError confuso al intentar usar CUALQUIER
+// librería (np.py, dht, sensores I2C, etc.), sin ninguna pista de que
+// el problema real fue este fetch. Ahora se reintenta unas pocas
+// veces (un hiccup de CDN/red se resuelve solo en segundos) y, si
+// sigue fallando, se avisa claro por el mismo canal que ya usa
+// cualquier otro error de carga ("type:error", ver el catch grande
+// más abajo en el handler de "init") en vez de quedar en silencio.
+async function _fetchLibsBundleWithRetry(maxAttempts = 3) {
+
+    let lastErr = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+
+        try {
+
+            const res = await fetch(LIBS_BUNDLE_URL, { cache: "no-store" });
+
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status} ${res.statusText}`);
+            }
+
+            // Chequeo explícito ANTES de .json() -- un 404/50x de
+            // GitHub Pages responde 200 con una página HTML en algunos
+            // casos de CDN (visto en vivo), así que confiar solo en
+            // res.ok no alcanza. Esto convierte el mismo
+            // "Unexpected token '<'" de siempre en un mensaje que dice
+            // QUÉ pasó de verdad, en vez de un SyntaxError críptico.
+            const contentType = res.headers.get("content-type") || "";
+            const text = await res.text();
+
+            if (!contentType.includes("json") && text.trim().startsWith("<")) {
+                throw new Error("el servidor devolvió HTML en vez de JSON (¿deploy a medio propagar?)");
+            }
+
+            return JSON.parse(text);
+
+        } catch (err) {
+
+            lastErr = err;
+            console.warn(`[wasmWorker] Intento ${attempt}/${maxAttempts} de cargar el paquete de librerías falló:`, err);
+            if (attempt < maxAttempts) {
+                await new Promise((resolve) => setTimeout(resolve, attempt * 700));
+            }
+
+        }
+
+    }
+
+    throw lastErr;
+
+}
+
 async function _loadUserLibraries(mp) {
 
     let bundle;
     try {
-        bundle = await (await fetch(LIBS_BUNDLE_URL, { cache: "no-store" })).json();
+        bundle = await _fetchLibsBundleWithRetry();
     } catch (err) {
         console.warn("[wasmWorker] No se pudo cargar el paquete de librerías:", err);
+        self.postMessage({
+            type: "error",
+            data: "\n⚠️ No se pudieron cargar las librerías de componentes (" + err + "). " +
+                  "Los bloques/sensores que dependen de una librería pueden fallar con \"ImportError\". " +
+                  "Volvé a hacer clic en \"▶ Simular\" -- si la página se acaba de actualizar, puede tardar " +
+                  "un minuto en terminar de propagarse.\n",
+        });
         return;
     }
 
