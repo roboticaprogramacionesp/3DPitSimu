@@ -61,6 +61,7 @@ const I2C_BUS_WASM_URL   = new URL("../../components_wasm/_i2c_bus_wasm.py", imp
 const KEYPAD_I2C_WASM_URL = new URL("../../components_wasm/_keypad_i2c_wasm.py", import.meta.url);
 const ADC_BUS_WASM_URL   = new URL("../../components_wasm/_adc_bus_wasm.py", import.meta.url);
 const NEOPIXEL_WASM_URL  = new URL("../../components_wasm/_neopixel_wasm.py", import.meta.url);
+const DHT_WASM_URL       = new URL("../../components_wasm/_dht_wasm.py", import.meta.url);
 const ESPNOW_WASM_URL    = new URL("../../components_wasm/_espnow_wasm.py", import.meta.url);
 const REQUESTS_WASM_URL  = new URL("../../components_wasm/_requests_wasm.py", import.meta.url);
 const BLUETOOTH_WASM_URL = new URL("../../components_wasm/_bluetooth_wasm.py", import.meta.url);
@@ -198,6 +199,9 @@ self.onmessage = async (e) => {
 
             const neopixelCode = await (await fetch(NEOPIXEL_WASM_URL, NO_CACHE)).text();
             await mp.runPython(neopixelCode);
+
+            const dhtCode = await (await fetch(DHT_WASM_URL, NO_CACHE)).text();
+            await mp.runPython(dhtCode);
 
             // MAC de ESTE ESP32 (ver plan ESP-NOW/Simulator multi-
             // dispositivo) -- inyectada ANTES de correr _espnow_wasm.py

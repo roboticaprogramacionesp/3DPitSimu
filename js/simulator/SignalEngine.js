@@ -107,8 +107,6 @@ class SignalEngine {
   }
 
   _notifyTempToFirmware(componentId, celsius) {
-    if (!this.simulator.qemuBridge?.connected) return;
-
     const component = this.simulator.componentManager.get(componentId);
     if (!component) return;
 
@@ -129,6 +127,9 @@ class SignalEngine {
       .find((c) => c.type.startsWith("esp32"));
     if (!esp32) return;
 
+    const bridge = this._bridgeFor(esp32);
+    if (!bridge?.connected) return;
+
     for (const key of net) {
       const [cId, pId] = key.split(":");
       if (cId !== esp32.id) continue;
@@ -139,12 +140,12 @@ class SignalEngine {
       const humidity = this.humidityStates[componentId];
       if (humidity !== undefined) {
         //console.log(`[SignalEngine] TEMP → GPIO${gpioNumber} = ${celsius}°C ${humidity}%`,);
-        this.simulator.qemuBridge.sendData(
+        bridge.sendData(
           `TEMP:${gpioNumber}:${celsius}:${humidity}`,
         );
       } else {
         //console.log(`[SignalEngine] TEMP → GPIO${gpioNumber} = ${celsius}`);
-        this.simulator.qemuBridge.sendData(`TEMP:${gpioNumber}:${celsius}`);
+        bridge.sendData(`TEMP:${gpioNumber}:${celsius}`);
       }
       return;
     }
@@ -202,6 +203,35 @@ class SignalEngine {
   // nunca pasa por ahí) así que cae al alias de siempre, sim.qemuBridge.
   _bridgeFor(esp32) {
     return this.simulator.bridges?.get(esp32.id) || this.simulator.qemuBridge;
+  }
+
+  // BUG REAL (reportado: un alumno movía el slider de un sensor --
+  // DHT11, BH1750, MPU6050, etc. -- con la simulación corriendo en
+  // modo navegador, y el valor nunca llegaba al código Python, se
+  // quedaba pegado en el default). Causa: once funciones de este
+  // archivo (_notify*ToFirmware) mandaban el dato SOLO a
+  // this.simulator.qemuBridge, sin pasar por _bridgeFor() -- en modo
+  // QEMU no se nota (qemuBridge siempre existe), pero en modo
+  // navegador sim.qemuBridge es null (ver app.js, "ya no se arranca
+  // QEMU por default") y esas once funciones no tenían ningún otro
+  // camino hacia el WasmBridge de cada ESP32.
+  //
+  // Este helper es el mismo _bridgeFor() de arriba pero para
+  // protocolos que se resuelven por DIRECCIÓN I2C o que simplemente
+  // nunca necesitaron resolver topología de cables (RC522 -- "detecta
+  // por proximidad", ver setRc522PresentedCard) -- no hay ningún
+  // getNet() que caminar para encontrar "el" ESP32, así que se toma
+  // el primer ESP32 del canvas. Mismo criterio (imperfecto para
+  // multi-ESP32 real, pero es el que esto YA tenía de fábrica vía
+  // QemuBridge -- una sola instancia global, sin noción de "a cuál
+  // ESP32") que ya usaban _notifyAdcToFirmware/_notifyTempToFirmware
+  // antes de este fix -- no es una regresión nueva, solo no se
+  // resuelve mejor de lo que ya se resolvía.
+  _bridgeForFirstEsp32() {
+    const esp32 = this.simulator.componentManager
+      .getAll()
+      .find((c) => c.type.startsWith("esp32"));
+    return esp32 ? this._bridgeFor(esp32) : null;
   }
 
   _notifyButtonToFirmware(component, value) {
@@ -327,9 +357,11 @@ class SignalEngine {
     component._rc522PresentedUid = uidHex || null;
 
     if (!this.isComponentPowered(component)) return;
-    if (!this.simulator.qemuBridge?.connected) return;
 
-    this.simulator.qemuBridge.sendData(uidHex ? `RFID:${uidHex}` : `RFID:NONE`);
+    const bridge = this._bridgeForFirstEsp32();
+    if (!bridge?.connected) return;
+
+    bridge.sendData(uidHex ? `RFID:${uidHex}` : `RFID:NONE`);
   }
 
   // TAP: presenta la tarjeta un instante y la retira sola (mismo
@@ -400,8 +432,9 @@ class SignalEngine {
       const match = pId.match(/^io(\d+)$/);
       if (!match) continue;
       const gpioNumber = parseInt(match[1], 10);
-      if (this.simulator.qemuBridge?.connected) {
-        this.simulator.qemuBridge.sendData(`ADC:${gpioNumber}:${value}`);
+      const bridge = this._bridgeFor(esp32);
+      if (bridge?.connected) {
+        bridge.sendData(`ADC:${gpioNumber}:${value}`);
       }
       return;
     }
@@ -496,8 +529,6 @@ class SignalEngine {
   }
 
   _notifyDistanceToFirmware(componentId, cm) {
-    if (!this.simulator.qemuBridge?.connected) return;
-
     const component = this.simulator.componentManager.get(componentId);
     if (!component) return;
 
@@ -519,6 +550,9 @@ class SignalEngine {
       .find((c) => c.type.startsWith("esp32"));
     if (!esp32) return;
 
+    const bridge = this._bridgeFor(esp32);
+    if (!bridge?.connected) return;
+
     for (const key of net) {
       const [cId, pId] = key.split(":");
       if (cId !== esp32.id) continue;
@@ -526,7 +560,7 @@ class SignalEngine {
       if (!match) continue;
       const gpioNumber = parseInt(match[1], 10);
       //console.log(`[SignalEngine] DIST → GPIO${gpioNumber} = ${cm}cm`);
-      this.simulator.qemuBridge.sendData(`DIST:${gpioNumber}:${cm}`);
+      bridge.sendData(`DIST:${gpioNumber}:${cm}`);
       return;
     }
 
@@ -1378,13 +1412,15 @@ class SignalEngine {
   }
 
   _notifyMpuToFirmware(component) {
-    if (!this.simulator.qemuBridge?.connected) return;
     if (!this.isComponentPowered(component)) return;
 
     // Mismo motivo que el comentario grande de arriba (evaluateAll,
     // OJO I2C sin SDA/SCL): un MPU6050 con el bus mal cableado no
     // tiene que seguir reportando datos como si nada.
     if (!this.isFullyConnected(component, "i2c")) return;
+
+    const bridge = this._bridgeForFirstEsp32();
+    if (!bridge?.connected) return;
 
     const address = this._getMpuAddress(component);
     const p = component.properties || {};
@@ -1397,7 +1433,7 @@ class SignalEngine {
     const gy = p.gyroY ?? 0;
     const gz = p.gyroZ ?? 0;
 
-    this.simulator.qemuBridge.sendData(
+    bridge.sendData(
       `MPU:${address}:${ax}:${ay}:${az}:${temp}:${gx}:${gy}:${gz}`,
     );
   }
@@ -1435,14 +1471,16 @@ class SignalEngine {
   }
 
   _notifyBh1750ToFirmware(component) {
-    if (!this.simulator.qemuBridge?.connected) return;
     if (!this.isComponentPowered(component)) return;
     if (!this.isFullyConnected(component, "i2c")) return;
+
+    const bridge = this._bridgeForFirstEsp32();
+    if (!bridge?.connected) return;
 
     const address = this._getBh1750Address(component);
     const lux = component.properties?.lux ?? 200;
 
-    this.simulator.qemuBridge.sendData(`BH1750:${address}:${lux}`);
+    bridge.sendData(`BH1750:${address}:${lux}`);
   }
 
   // ====================================================
@@ -1492,14 +1530,16 @@ class SignalEngine {
   }
 
   _notifyTcs34725ToFirmware(component) {
-    if (!this.simulator.qemuBridge?.connected) return;
     if (!this.isComponentPowered(component)) return;
     if (!this.isFullyConnected(component, "i2c")) return;
+
+    const bridge = this._bridgeForFirstEsp32();
+    if (!bridge?.connected) return;
 
     const { r, g, b, c } = this._hexToU16Channels(component.properties?.color);
     const address = 0x29;
 
-    this.simulator.qemuBridge.sendData(`TCS:${address}:${r}:${g}:${b}:${c}`);
+    bridge.sendData(`TCS:${address}:${r}:${g}:${b}:${c}`);
   }
 
   // ====================================================
@@ -1524,14 +1564,16 @@ class SignalEngine {
   }
 
   _notifyDs3231ToFirmware(component) {
-    if (!this.simulator.qemuBridge?.connected) return;
     if (!this.isComponentPowered(component)) return;
     if (!this.isFullyConnected(component, "i2c")) return;
+
+    const bridge = this._bridgeForFirstEsp32();
+    if (!bridge?.connected) return;
 
     const offsetMs = component.properties?.rtcOffsetMs || 0;
     const epochSeconds = Math.floor((Date.now() + offsetMs) / 1000);
 
-    this.simulator.qemuBridge.sendData(`RTC:104:${epochSeconds}`);
+    bridge.sendData(`RTC:104:${epochSeconds}`);
   }
 
   // ====================================================
@@ -1556,15 +1598,17 @@ class SignalEngine {
   }
 
   _notifyBmp180ToFirmware(component) {
-    if (!this.simulator.qemuBridge?.connected) return;
     if (!this.isComponentPowered(component)) return;
     if (!this.isFullyConnected(component, "i2c")) return;
+
+    const bridge = this._bridgeForFirstEsp32();
+    if (!bridge?.connected) return;
 
     const p = component.properties || {};
     const temp = p.temperature ?? 22;
     const pressure = p.pressure ?? 101325;
 
-    this.simulator.qemuBridge.sendData(`BMP180:119:${temp}:${pressure}`);
+    bridge.sendData(`BMP180:119:${temp}:${pressure}`);
   }
 
   // ====================================================
@@ -1600,16 +1644,18 @@ class SignalEngine {
   }
 
   _notifyBmp280ToFirmware(component) {
-    if (!this.simulator.qemuBridge?.connected) return;
     if (!this.isComponentPowered(component)) return;
     if (!this.isFullyConnected(component, "i2c")) return;
+
+    const bridge = this._bridgeForFirstEsp32();
+    if (!bridge?.connected) return;
 
     const address = this._getBmp280Address(component);
     const p = component.properties || {};
     const temp = p.temperature ?? 22;
     const pressure = p.pressure ?? 101325;
 
-    this.simulator.qemuBridge.sendData(`BMP280:${address}:${temp}:${pressure}`);
+    bridge.sendData(`BMP280:${address}:${temp}:${pressure}`);
   }
 
   // ====================================================
@@ -1640,9 +1686,11 @@ class SignalEngine {
   }
 
   _notifyQmc5883ToFirmware(component) {
-    if (!this.simulator.qemuBridge?.connected) return;
     if (!this.isComponentPowered(component)) return;
     if (!this.isFullyConnected(component, "i2c")) return;
+
+    const bridge = this._bridgeForFirstEsp32();
+    if (!bridge?.connected) return;
 
     const headingDeg = component.properties?.heading ?? 0;
     const rad = (headingDeg * Math.PI) / 180;
@@ -1654,7 +1702,7 @@ class SignalEngine {
 
     const address = 0x2c;
 
-    this.simulator.qemuBridge.sendData(`MAG:${address}:${x}:${y}:${z}`);
+    bridge.sendData(`MAG:${address}:${x}:${y}:${z}`);
   }
 
   // ====================================================
@@ -1774,14 +1822,16 @@ class SignalEngine {
   }
 
   _notifyGpsToFirmware(component) {
-    if (!this.simulator.qemuBridge?.connected) return;
     if (!this.isComponentPowered(component)) return;
+
+    const bridge = this._bridgeForFirstEsp32();
+    if (!bridge?.connected) return;
 
     const uartId = this._findGpsUartId(component);
     if (uartId === null) return; // el firmware todavía no construyó su UART
 
-    this.simulator.qemuBridge.sendData(`UART:${uartId}:${this._buildGprmc(component)}`);
-    this.simulator.qemuBridge.sendData(`UART:${uartId}:${this._buildGpgga(component)}`);
+    bridge.sendData(`UART:${uartId}:${this._buildGprmc(component)}`);
+    bridge.sendData(`UART:${uartId}:${this._buildGpgga(component)}`);
   }
 
    // ====================================================

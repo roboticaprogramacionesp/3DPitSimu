@@ -49,8 +49,15 @@ const BUNDLE_FILE = path.join(ROOT, 'components_wasm', 'libs', 'bundle.json');
 // dentro de cada components_wasm/_*_wasm.py) -- "import X" para
 // estos funciona aunque NO exista ningún X.py en components_wasm/libs/.
 // Si se agrega un shim nuevo ahí, sumar su nombre acá.
+// "dht" se sumó acá (y dejó de estar en WASM_KNOWN_GAPS) el mismo día
+// que se agregó components_wasm/_dht_wasm.py -- port directo de
+// components/dht11/dht11.hal.py, confirmado funcionando de punta a
+// punta en un navegador real (Playwright: import dht, DHT11(Pin(22)),
+// measure()/temperature()/humidity(), y el valor puesto EN VIVO desde
+// SignalEngine.setTemperature() mientras el script seguía corriendo
+// con un sleep() de por medio -- ver el commit que agregó esto).
 const WASM_SHIMMED_MODULES = new Set([
-    'machine', 'neopixel', 'network', 'espnow',
+    'machine', 'neopixel', 'network', 'espnow', 'dht',
     'bluetooth', 'ubluetooth', 'requests', 'urequests',
 ]);
 
@@ -62,8 +69,8 @@ const WASM_SHIMMED_MODULES = new Set([
 // confirmarlo corriendo de verdad antes de agregarlo acá. Esta
 // lista entera está confirmada así: probada en vivo contra
 // assets/wasm/micropython.wasm con loadMicroPython() + "import X"
-// real (no supuesta) -- "os" y "ujson" sí están; "dht", "onewire",
-// "socket" y "uasyncio" NO (ver WASM_KNOWN_GAPS más abajo).
+// real (no supuesta) -- "os" y "ujson" sí están; "onewire", "socket"
+// y "uasyncio" NO (ver WASM_KNOWN_GAPS más abajo).
 const KNOWN_BUILTIN_MODULES = new Set([
     'sys', 'time', 'utime', 'gc', 'math', 'random', 'json', 'ujson', 'os',
     'struct', 'array', 'micropython', 'framebuf', 'io', 'binascii',
@@ -80,27 +87,26 @@ const KNOWN_BUILTIN_MODULES = new Set([
 // confirmados -- que este test los deje pasar es SOLO para no repetir
 // un hallazgo ya conocido en cada corrida, no una garantía de que
 // esos bloques andan.
-//   - 'dht'/'onewire': el bloque "DHT" y el de sensores OneWire
-//     (ds18x20) de Blockly generan estos imports, pero no existe
-//     ningún _dht_wasm.py/_onewire_wasm.py (comparar con los shims de
-//     WASM_SHIMMED_MODULES de arriba) -- nunca se portó este driver al
-//     modo navegador. El tutorial "dht11" (ver TutorialManager.js)
-//     enseña el CABLEADO nada más, no fuerza a usar este bloque
-//     puntual, pero si un alumno sí lo usa, revienta en ▶ Ejecutar.
+//   - 'onewire': el bloque de sensores OneWire (ds18x20) de Blockly
+//     genera este import, pero no existe NINGÚN componente DS18B20/
+//     OneWire en el catálogo de PitSimulator (ni QEMU ni navegador) --
+//     bloque huérfano heredado de AppBlock3, nunca tuvo equivalente
+//     simulado acá. Arreglarlo de verdad implica armar un componente
+//     nuevo entero (svg/.json/.hal.py/.behavior.js), no solo un shim.
 //   - 'socket'/'uasyncio': confirmado también en _requests_wasm.py
 //     ("este build no tiene socket compilado") -- bloques de servidor
 //     web/sockets crudos no andan en navegador, por diseño (WiFi real
 //     no existe acá, ver _espnow_wasm.py).
 //   - 'bts', 'st7789', 'camera', 'cam_config': funciones de HARDWARE
 //     REAL sin equivalente simulado -- Bluetooth Clásico (SPP),
-//     driver C nativo de la TFT ST7789 (ver worker/... no, ver el
-//     comentario de "Requiere firmware Carpeta 3 Firmware ESP32 Cam"
-//     en generators.js) y la cámara ESP32-CAM. Estos bloques están
-//     pensados para cuando el código se flashea a una placa real, no
-//     para correr en el simulador -- no es un bug, es simplemente algo
-//     que el navegador no puede simular.
+//     driver C nativo de la TFT ST7789 (ver el comentario de "Requiere
+//     firmware Carpeta 3 Firmware ESP32 Cam" en generators.js) y la
+//     cámara ESP32-CAM. Estos bloques están pensados para cuando el
+//     código se flashea a una placa real, no para correr en el
+//     simulador -- no es un bug, es simplemente algo que el navegador
+//     no puede simular.
 const WASM_KNOWN_GAPS = new Set([
-    'dht', 'onewire', 'socket', 'uasyncio', 'bts', 'btm', 'st7789', 'camera', 'cam_config',
+    'onewire', 'socket', 'uasyncio', 'bts', 'btm', 'st7789', 'camera', 'cam_config',
 ]);
 
 function loadBundleModuleNames() {
