@@ -209,13 +209,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 5 — Simula el circuito",
+                    title: "Paso 5 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 6 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 6 — Escribe o carga tu código",
+                    title: "Paso 7 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     // A diferencia de los pasos anteriores (que solo resaltan
                     // algo que el usuario tiene que hacer), este paso hace la
@@ -236,7 +246,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "led_resistencia",
@@ -299,13 +309,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 7 — Simula el circuito",
+                    title: "Paso 7 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 8 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 8 — Escribe o carga tu código",
+                    title: "Paso 9 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -315,7 +335,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "semaforo",
@@ -360,13 +380,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 5 — Simula el circuito",
+                    title: "Paso 5 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 6 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 6 — Escribe o carga tu código",
+                    title: "Paso 7 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -376,7 +406,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "neopixel_ring",
@@ -433,13 +463,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -449,7 +489,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "display7",
@@ -494,13 +534,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 5 — Simula el circuito",
+                    title: "Paso 5 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 6 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 6 — Escribe o carga tu código",
+                    title: "Paso 7 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -510,7 +560,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "ky_009",
@@ -555,13 +605,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 5 — Simula el circuito",
+                    title: "Paso 5 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 6 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 6 — Escribe o carga tu código",
+                    title: "Paso 7 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -571,7 +631,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "ky_011",
@@ -616,13 +676,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 5 — Simula el circuito",
+                    title: "Paso 5 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 6 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 6 — Escribe o carga tu código",
+                    title: "Paso 7 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -632,7 +702,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "ky_016",
@@ -677,13 +747,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 5 — Simula el circuito",
+                    title: "Paso 5 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 6 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 6 — Escribe o carga tu código",
+                    title: "Paso 7 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -693,7 +773,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "max7219",
@@ -750,13 +830,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -766,7 +856,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "neopixel_matrix",
@@ -823,13 +913,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -839,7 +939,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "boton",
@@ -896,13 +996,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -912,7 +1022,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "tcrt5000",
@@ -969,13 +1079,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -985,7 +1105,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "fc_51",
@@ -1042,13 +1162,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1058,7 +1188,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "buzzer",
@@ -1115,13 +1245,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1131,7 +1271,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "servo",
@@ -1188,13 +1328,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1204,7 +1354,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "motor_reductor",
@@ -1325,13 +1475,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 12 — Simula el circuito",
+                    title: "Paso 12 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 13 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 13 — Escribe o carga tu código",
+                    title: "Paso 14 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1341,7 +1501,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "28byj",
@@ -1398,13 +1558,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1414,7 +1584,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "bombillo",
@@ -1459,13 +1629,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 5 — Simula el circuito",
+                    title: "Paso 5 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 6 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 6 — Escribe o carga tu código",
+                    title: "Paso 7 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1475,7 +1655,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "ky_008",
@@ -1532,13 +1712,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1548,7 +1738,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "ky_019",
@@ -1605,13 +1795,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1621,7 +1821,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "clavija_127v",
@@ -1726,13 +1926,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 11 — Simula el circuito",
+                    title: "Paso 11 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 12 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 12 — Escribe o carga tu código",
+                    title: "Paso 13 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1742,7 +1952,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "slide_switch",
@@ -1787,13 +1997,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 5 — Simula el circuito",
+                    title: "Paso 5 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 6 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 6 — Escribe o carga tu código",
+                    title: "Paso 7 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1803,7 +2023,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "dht11",
@@ -1860,13 +2080,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1876,7 +2106,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "ky_001",
@@ -1933,13 +2163,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -1949,7 +2189,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "adkey",
@@ -2013,13 +2253,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2029,7 +2279,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "joystick",
@@ -2086,13 +2336,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2102,7 +2362,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "ky_023",
@@ -2159,13 +2419,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2175,7 +2445,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "pot_rotary",
@@ -2232,13 +2502,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2248,7 +2528,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "pot_slider",
@@ -2305,13 +2585,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2321,7 +2611,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "ky040",
@@ -2378,13 +2668,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2394,7 +2694,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "ky_018",
@@ -2451,13 +2751,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2467,7 +2777,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "hcsr04",
@@ -2524,13 +2834,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2540,7 +2860,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "gps",
@@ -2597,13 +2917,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2613,7 +2943,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "pir",
@@ -2670,13 +3000,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2686,7 +3026,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "oled",
@@ -2743,13 +3083,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2759,7 +3109,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "lcd_16x2_i2c",
@@ -2816,13 +3166,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2832,7 +3192,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "lcd16x2",
@@ -2963,13 +3323,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 11 — Simula el circuito",
+                    title: "Paso 11 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 12 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 12 — Escribe o carga tu código",
+                    title: "Paso 13 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -2979,7 +3349,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "tft_st7789",
@@ -3036,13 +3406,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3052,7 +3432,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "tm1637",
@@ -3109,13 +3489,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3125,7 +3515,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "keypad3x4",
@@ -3158,13 +3548,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 4 — Simula el circuito",
+                    title: "Paso 4 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 5 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 5 — Escribe o carga tu código",
+                    title: "Paso 6 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3174,7 +3574,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "keypad4x4",
@@ -3207,13 +3607,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 4 — Simula el circuito",
+                    title: "Paso 4 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 5 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 5 — Escribe o carga tu código",
+                    title: "Paso 6 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3223,7 +3633,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "keypad4x4_i2c",
@@ -3280,13 +3690,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3296,7 +3716,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "rc522",
@@ -3353,13 +3773,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3369,7 +3799,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "bh1750",
@@ -3426,13 +3856,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3442,7 +3882,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "bmp280",
@@ -3499,13 +3939,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3515,7 +3965,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "ds3231",
@@ -3572,13 +4022,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3588,7 +4048,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "mpu6050",
@@ -3645,13 +4105,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3661,7 +4131,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "qmc5883l",
@@ -3718,13 +4188,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3734,7 +4214,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "tcs34725",
@@ -3791,13 +4271,23 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe o carga tu código",
+                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3807,7 +4297,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "espnow_led",
@@ -3900,13 +4390,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 10 — Simula el circuito",
+                    title: "Paso 10 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 11 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para arrancar las DOS ESP32 a la vez.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 11 — Elige la ESP32 del LED y programa el receptor",
+                    title: "Paso 12 — Elige la ESP32 del LED y programa el receptor",
                     text: "Usa el selector de arriba del panel MicroPython para elegir la ESP32 que tiene el LED. Pega este código (fijate la MAC que imprime -- la vas a necesitar en el paso siguiente) y dale ▶ Ejecutar:\n\nimport network, espnow\nfrom machine import Pin\n\nled = Pin(2, Pin.OUT)  # cambia el 2 por el numero de tu GPIO\n\nsta = network.WLAN(network.WLAN.IF_STA)\nsta.active(True)\nprint('Mi MAC:', sta.config('mac').hex())\n\ne = espnow.ESPNow()\ne.active(True)\n\ndef on_recv(e):\n    mac, msg = e.recv()\n    if msg == b'on':\n        led.value(1)\n    elif msg == b'off':\n        led.value(0)\n\ne.irq(on_recv)\nprint('Esperando ordenes...')",
                     highlight: (tm) => tm.highlightElements(["#replDeviceSelect", "#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3916,13 +4416,13 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                 },
                 {
-                    title: "Paso 12 — Elige la ESP32 del botón y programa el emisor",
+                    title: "Paso 13 — Elige la ESP32 del botón y programa el emisor",
                     text: "Ahora cambia el selector a la OTRA ESP32 (la del botón) y pega este código -- reemplaza AABBCCDDEEFF por la MAC que te imprimió el receptor en el paso anterior (sin los \":\"):\n\nimport network, espnow\nfrom machine import Pin\nimport time\n\nboton = Pin(4, Pin.IN, Pin.PULL_DOWN)  # cambia el 4 por tu GPIO de señal\n\nsta = network.WLAN(network.WLAN.IF_STA)\nsta.active(True)\n\ne = espnow.ESPNow()\ne.active(True)\npeer = bytes.fromhex('AABBCCDDEEFF')\ne.add_peer(peer)\n\nestado = False\nwhile True:\n    if boton.value():\n        estado = not estado\n        e.send(peer, b'on' if estado else b'off')\n        print('Mandado:', 'on' if estado else 'off')\n        time.sleep(0.3)  # evita mandar muchas veces de un solo apreton\n    time.sleep(0.05)\n\nDale ▶ Ejecutar, apreta el botón del lienzo, y volvé a elegir la otra ESP32 en el selector para ver el LED prendido.",
                     highlight: (tm) => tm.highlightElements(["#replDeviceSelect", "#replPanel .repl-header", "#replBtnRun"]),
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "wifi_led",
@@ -3967,13 +4467,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 5 — Simula el circuito",
+                    title: "Paso 5 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 6 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 6 — Escribe tu código",
+                    title: "Paso 7 — Escribe tu código",
                     text: "Elegí un nombre de canal único (ej. tuNombre-123) y pegá este código, cambiando CANAL por el tuyo:\n\nimport network, time, requests, json\nfrom machine import Pin\n\nled = Pin(2, Pin.OUT)  # cambia el 2 por tu GPIO\n\nwlan = network.WLAN(network.WLAN.IF_STA)\nwlan.active(True)\nwlan.connect('CualquierNombre', 'CualquierClave')\nwhile not wlan.isconnected():\n    time.sleep(0.1)\nprint('Conectado!')\n\nCANAL = 'tuNombre-123'\nvisto = set()\n\nwhile True:\n    r = requests.get('https://ntfy.sh/' + CANAL + '/json?poll=1')\n    for linea in r.text.strip().split('\\n'):\n        if not linea:\n            continue\n        msg = json.loads(linea)\n        if msg['id'] not in visto:\n            visto.add(msg['id'])\n            if msg['message'] == 'on':\n                led.value(1)\n            elif msg['message'] == 'off':\n                led.value(0)\n            print('Recibido:', msg['message'])\n    time.sleep(2)",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -3983,13 +4493,13 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                 },
                 {
-                    title: "Paso 7 — Probalo mandando un mensaje real",
+                    title: "Paso 8 — Probalo mandando un mensaje real",
                     text: "Con tu código corriendo (▶ Ejecutar), abrí https://ntfy.sh/tuNombre-123 (tu mismo canal) en OTRA pestaña del navegador -- o desde tu celular, abriendo telefono_virtual.html (está en la carpeta del proyecto). Mandá el texto \"on\" o \"off\" y mirá la terminal: el LED del lienzo tiene que prender o apagar en un par de segundos.",
                     highlight: (tm) => tm.highlightElements(["#workspace"]),
                     isDone: () => true,
                     isLast: true,
                 },
-            ],
+],
         },
         {
             id: "ble_servo",
@@ -4046,13 +4556,23 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 6 — Simula el circuito",
+                    title: "Paso 6 — Guarda tu proyecto",
+                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
+                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
+                    onEnter: () => {
+                        document.getElementById("projectDrawer")?.classList.remove("hidden");
+                        document.getElementById("btnProjectMenu")?.classList.add("active");
+                    },
+                    isDone: (tm) => !tm.simulator.projectManager.dirty,
+                },
+                {
+                    title: "Paso 7 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 7 — Escribe tu código",
+                    title: "Paso 8 — Escribe tu código",
                     text: "Pega este código (usa la librería BLEUART, la forma más simple de BLE) y dale ▶ Ejecutar:\n\nfrom BLE import BLEUART\nfrom machine import Pin, PWM\nimport bluetooth\n\nservo = PWM(Pin(13), freq=50)  # cambia el 13 por tu GPIO de señal\n\nble = bluetooth.BLE()\nuart = BLEUART(ble, 'MiServo')\n\ndef datos_recibidos():\n    msg = uart.read().decode().strip()\n    print('Recibido:', msg)\n    if msg == '0':\n        servo.duty(26)    # ~0 grados\n    elif msg == '90':\n        servo.duty(74)    # ~90 grados\n    elif msg == '180':\n        servo.duty(123)   # ~180 grados\n\nuart.irq(handler=datos_recibidos)\nprint('Esperando conexion BLE...')",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
@@ -4062,7 +4582,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                 },
                 {
-                    title: "Paso 8 — Abre el teléfono virtual y conectá",
+                    title: "Paso 9 — Abre el teléfono virtual y conectá",
                     text: "Abrí el panel 📱 (arriba a la derecha) -- tu ESP32 (\"MiServo\") debería aparecer en la lista apenas corriste el código. Elegila y dale \"Conectar\".",
                     highlight: (tm) => tm.highlightElements(["#btnBlePanelToggle"]),
                     onEnter: () => {
@@ -4074,13 +4594,13 @@ class TutorialManager {
                     isDone: () => !document.getElementById("blePanel")?.classList.contains("ble-closed"),
                 },
                 {
-                    title: "Paso 9 — Mandá \"0\", \"90\" o \"180\"",
+                    title: "Paso 10 — Mandá \"0\", \"90\" o \"180\"",
                     text: "Escribí uno de esos tres números en el teléfono virtual y dale Enviar -- el servo del lienzo tiene que girar al ángulo que mandaste. Probá los tres para confirmar que el control remoto funciona de punta a punta.",
                     highlight: (tm) => tm.highlightElements(["#blePanel"]),
                     isDone: () => true,
                     isLast: true,
                 },
-            ],
+],
         },
     ];
 
