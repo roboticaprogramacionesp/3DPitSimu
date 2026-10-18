@@ -144,6 +144,23 @@
     window.blocklyPanel    = blocklyPanel;
     window.propertyPanel   = propertyPanel;
 
+    // 11. Tutorial de bienvenida -- pedido del usuario: que se vea
+    //     "Conocé la interfaz" SIEMPRE que se abre la app (no solo la
+    //     primera vez), para que cualquiera -- alumno nuevo o
+    //     recurrente -- tenga a mano el recorrido completo de dónde
+    //     está cada cosa. Mismo tutorial que dispara el botón 🎓
+    //     (TutorialManager.start(), ver su propio archivo) -- acá se
+    //     llama solo, sin que el usuario haga clic en nada. Al final
+    //     del IIFE a propósito: necesita que TODO lo de arriba (DOM
+    //     del toolbox/projectDrawer/replPanel/etc.) ya exista, aunque
+    //     el tutorial en sí solo resalta elementos del DOM estático
+    //     (no depende de ningún otro objeto JS de los de arriba).
+    //     "pdReload" (botón Recargar del menú Archivo) hace
+    //     location.reload() -- una recarga completa de página, así
+    //     que vuelve a pasar por acá solo, sin necesitar ningún código
+    //     aparte en Toolbar.js para el caso "recargar".
+    tutorialManager.start("recorrido_interfaz");
+
     console.log("✅ 3DPitSimu listo. REPL panel activo.");
     console.log("   Atajo: Ctrl+` para abrir/cerrar el REPL");
 
