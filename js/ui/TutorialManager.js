@@ -342,6 +342,8 @@ class TutorialManager {
             title: "Semáforo con ESP32",
             icon: "🚦",
             category: "💡 LEDs · Salidas digitales",
+            demoGif: "assets/tutorial-demos/semaforo.gif",
+            demoCaption: "El semáforo cicla verde → amarillo → rojo -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Coloca la ESP32",
@@ -413,6 +415,8 @@ class TutorialManager {
             title: "Anillo NeoPixel con ESP32",
             icon: "🌈",
             category: "💡 LEDs · Salidas digitales",
+            demoGif: "assets/tutorial-demos/neopixel_ring.gif",
+            demoCaption: "Una luz roja recorre el anillo, LED por LED -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Coloca la ESP32",
@@ -1029,6 +1033,8 @@ class TutorialManager {
             title: "TCRT5000 — Infrarrojo (línea/obstáculo)",
             icon: "⬛",
             category: "🔧 Entradas · Actuadores",
+            demoGif: "assets/tutorial-demos/tcrt5000.png",
+            demoCaption: "Este sensor no tiene ningún indicador visual en el lienzo -- lee la línea/el obstáculo y manda el resultado por el pin Do, que vas a leer desde tu código (ver el checkbox \"Objeto/línea detectado\" en su panel de propiedades para simular distintos casos).",
             steps: [
                 {
                     title: "Paso 1 — Coloca la ESP32",
@@ -1195,6 +1201,8 @@ class TutorialManager {
             title: "Buzzer con ESP32",
             icon: "🔊",
             category: "🔧 Entradas · Actuadores",
+            demoGif: "assets/tutorial-demos/buzzer.png",
+            demoCaption: "El buzzer no tiene ningún indicador visual en el lienzo -- suena de verdad en tu navegador (subí el volumen) cuando el firmware le manda PWM, esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Coloca la ESP32",
@@ -1278,6 +1286,8 @@ class TutorialManager {
             title: "Servo motor con ESP32",
             icon: "⚙️",
             category: "🔧 Entradas · Actuadores",
+            demoGif: "assets/tutorial-demos/servo.gif",
+            demoCaption: "El brazo del servo gira a la posición que le mandes por PWM -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Coloca la ESP32",
