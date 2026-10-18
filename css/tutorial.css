@@ -311,6 +311,25 @@
     margin-bottom: 14px;
 }
 
+/* Demo visual (GIF) del "Paso 0" -- ver el comentario grande en el
+   constructor de TutorialManager.js. Solo aparece en ese paso
+   sintético (step.media), el resto de los pasos nunca tiene imagen. */
+.tutorial-modal-media {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid #333;
+    margin-bottom: 12px;
+}
+
+/* Mayor especificidad que ".tutorial-modal-media" a propósito -- no
+   depender del orden de aparición contra la regla genérica ".hidden"
+   de otro CSS para que esto se oculte de verdad. */
+.tutorial-modal-media.hidden {
+    display: none;
+}
+
 .tutorial-modal-actions {
     display: flex;
     justify-content: space-between;

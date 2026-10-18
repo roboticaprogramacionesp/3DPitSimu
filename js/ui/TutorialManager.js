@@ -24,6 +24,33 @@ class TutorialManager {
 
         this.tutorials = TutorialManager.TUTORIALS;
 
+        // ====================================================
+        // Demo visual (GIF) como "Paso 0" -- pedido del usuario: antes
+        // de arrancar el recorrido paso a paso, mostrar primero "esto
+        // es lo que vas a lograr" (el circuito ya armado y funcionando
+        // en el simulador), así el alumno sabe hacia dónde va antes de
+        // empezar a armar nada. Se arma UNA sola vez acá (no en cada
+        // start(), que reinsertaría el paso cada vez que se abre el
+        // mismo tutorial) insertando un step sintético al principio de
+        // tutorial.steps, en vez de tocar a mano cada tutorial.steps
+        // existente (evita renumerar "Paso 1, 2, 3..." de los que ya
+        // había). Son .gif reales del propio simulador (no fotos/video
+        // de hardware físico -- ver assets/tutorial-demos/), generados
+        // armando el circuito con Playwright y capturando el resultado
+        // -- se van sumando de a poco, no todos los tutoriales tienen
+        // demoGif todavía.
+        this.tutorials.forEach((tutorial) => {
+            if (!tutorial.demoGif || tutorial._demoStepInserted) return;
+            tutorial._demoStepInserted = true; // TUTORIALS es static (compartido) -- sin esto, una 2ª instancia de TutorialManager duplicaría el paso
+            tutorial.steps.unshift({
+                title: "🎬 Esto es lo que vas a lograr",
+                text: tutorial.demoCaption || `Así se ve "${tutorial.title}" funcionando en el simulador -- segui los pasos de abajo para armarlo vos mismo.`,
+                media: tutorial.demoGif,
+                highlight: () => {},
+                isDone: () => true,
+            });
+        });
+
         this.activeTutorial = null;
         this.stepIndex = -1;
 
@@ -142,6 +169,8 @@ class TutorialManager {
             title: "LED básico con ESP32",
             icon: "💡",
             category: "💡 LEDs · Salidas digitales",
+            demoGif: "assets/tutorial-demos/led_basico.gif",
+            demoCaption: "El LED parpadea encendiéndose y apagándose -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Coloca la ESP32",
@@ -1182,6 +1211,8 @@ class TutorialManager {
             title: "Motor reductor (pilas + interruptor + puente H)",
             icon: "🔧",
             category: "🔧 Entradas · Actuadores",
+            demoGif: "assets/tutorial-demos/motor_reductor.gif",
+            demoCaption: "Con el interruptor cerrado, el puente H hace girar el motor -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Coloca la ESP32",
@@ -4117,6 +4148,7 @@ class TutorialManager {
                 <div class="tutorial-modal-body">
                     <div class="tutorial-modal-progress"></div>
                     <div class="tutorial-modal-step-title"></div>
+                    <img class="tutorial-modal-media hidden" alt="Demostración animada del resultado esperado" />
                     <div class="tutorial-modal-text"></div>
                     <div class="tutorial-modal-actions">
                         <button class="tutorial-modal-prev">← Anterior</button>
@@ -4143,6 +4175,7 @@ class TutorialManager {
             body:        this.modal.querySelector(".tutorial-modal-body"),
             progress:    this.modal.querySelector(".tutorial-modal-progress"),
             stepTitle:   this.modal.querySelector(".tutorial-modal-step-title"),
+            media:       this.modal.querySelector(".tutorial-modal-media"),
             text:        this.modal.querySelector(".tutorial-modal-text"),
             prev:        this.modal.querySelector(".tutorial-modal-prev"),
             next:        this.modal.querySelector(".tutorial-modal-next"),
@@ -4452,6 +4485,18 @@ class TutorialManager {
         this._els.title.textContent    = `${this.activeTutorial.icon} ${this.activeTutorial.title}`;
         this._els.progress.textContent = `Paso ${index + 1} de ${steps.length}`;
         this._els.text.textContent      = step.text;
+
+        // Demo visual (GIF) -- ver el "Paso 0" sintético armado en el
+        // constructor. Solo ese paso trae "media"; el resto del modal
+        // sigue sin imagen, como siempre.
+        if (step.media) {
+            this._els.media.src = step.media;
+            this._els.media.classList.remove("hidden");
+        } else {
+            this._els.media.classList.add("hidden");
+            this._els.media.removeAttribute("src"); // no seguir descargando/mostrando el gif anterior de fondo
+        }
+
         this._els.prev.disabled = index === 0;
         this._els.next.textContent = step.isLast ? "Finalizar" : "Siguiente →";
 
