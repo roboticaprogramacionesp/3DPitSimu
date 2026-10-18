@@ -56,11 +56,11 @@ class BlocklyPanel {
                             <button class="project-drawer-item" id="blocklyFileNew">🆕 Nuevo</button>
                             <button class="project-drawer-item" id="blocklyFileSave">💾 Guardar .xml</button>
                             <button class="project-drawer-item" id="blocklyFileOpen">📂 Abrir .xml…</button>
+                            <button class="project-drawer-item" id="blocklyFileRefresh" title="Si el área de bloques se queda en negro/no responde">🔄 Refrescar</button>
                         </div>
                     </div>
                 </div>
                 <span class="blockly-panel-title">🧩 Editor de bloques</span>
-                <button type="button" class="blockly-panel-refresh" title="Refrescar el editor (si el área de bloques se queda en negro/no responde)">🔄 Refrescar</button>
                 <button type="button" class="blockly-panel-insert">⬇ Insertar en el editor</button>
                 <button type="button" class="blockly-panel-close" title="Cerrar">✕</button>
             </div>
@@ -83,8 +83,6 @@ class BlocklyPanel {
             .addEventListener("click", () => this.close());
         this.overlay.querySelector(".blockly-panel-insert")
             .addEventListener("click", () => this.insertIntoEditor());
-        this.overlay.querySelector(".blockly-panel-refresh")
-            .addEventListener("click", () => this._refreshWorkspace());
 
         // Sin "cerrar al click afuera" a propósito -- a diferencia de
         // un modal chico (ReportGenerator), acá el overlay ocupa toda
@@ -138,6 +136,8 @@ class BlocklyPanel {
             .addEventListener("click", () => { drawer.classList.add("hidden"); this._saveWorkspaceXml(); });
         this.overlay.querySelector("#blocklyFileOpen")
             .addEventListener("click", () => { drawer.classList.add("hidden"); this._openWorkspaceXml(); });
+        this.overlay.querySelector("#blocklyFileRefresh")
+            .addEventListener("click", () => { drawer.classList.add("hidden"); this._refreshWorkspace(); });
 
     }
 
