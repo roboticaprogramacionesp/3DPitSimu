@@ -1,0 +1,84 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="init_dc_motor" id="VX!D.sB^0liR-f0,Tzyt" x="150" y="210">
+    <field name="NAME">l298n</field>
+    <field name="IN1">26</field>
+    <field name="IN2">25</field>
+    <field name="IN3">17</field>
+    <field name="IN4">16</field>
+    <next>
+      <block type="move_dc_motor2" id="%U}NA(.4yUoHDgJqplbY">
+        <field name="NAME">l298n</field>
+        <field name="motorA">Adelante</field>
+        <field name="motorB">Adelante</field>
+        <next>
+          <block type="time_sleep" id="PO^kmB`,xnIT$/QvEbg7">
+            <field name="UNIT">S</field>
+            <value name="VALUE">
+              <shadow type="math_number" id="}bRPmF#4R@K%8/Fd,o[|">
+                <field name="NUM">1</field>
+              </shadow>
+            </value>
+            <next>
+              <block type="move_dc_motor2" id="~^B[I;85[{3bCiGID#Nv">
+                <field name="NAME">l298n</field>
+                <field name="motorA">Atrás</field>
+                <field name="motorB">Atrás</field>
+                <next>
+                  <block type="time_sleep" id="@Nq$u}oZjcD0m`%Equyn">
+                    <field name="UNIT">S</field>
+                    <value name="VALUE">
+                      <shadow type="math_number" id="`kqiY7ffn5D.rTZ0ua)7">
+                        <field name="NUM">1</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="move_dc_motor2" id="/YfR4KJN2;oTMNi-KELi">
+                        <field name="NAME">l298n</field>
+                        <field name="motorA">Adelante</field>
+                        <field name="motorB">Detener</field>
+                        <next>
+                          <block type="time_sleep" id="e}9E8c%PR5]f0pF-yaUf">
+                            <field name="UNIT">S</field>
+                            <value name="VALUE">
+                              <shadow type="math_number" id="=k+wMY(xy@T.`NeJ@2$k">
+                                <field name="NUM">1</field>
+                              </shadow>
+                            </value>
+                            <next>
+                              <block type="move_dc_motor2" id="B#f;Z{Fr-mfqZss(9y5f">
+                                <field name="NAME">l298n</field>
+                                <field name="motorA">Detener</field>
+                                <field name="motorB">Adelante</field>
+                                <next>
+                                  <block type="time_sleep" id="a+u?[.h596=~m3y#6eYS">
+                                    <field name="UNIT">S</field>
+                                    <value name="VALUE">
+                                      <shadow type="math_number" id="0bc,3ZjNjO0foH8$G,@,">
+                                        <field name="NUM">1</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="move_dc_motor2" id="[+e:9#;()efZ{wETZy[P">
+                                        <field name="NAME">l298n</field>
+                                        <field name="motorA">Detener</field>
+                                        <field name="motorB">Detener</field>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>

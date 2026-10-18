@@ -1,0 +1,17 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="buzzer_tone" id="!c2D1bbX9w5t:hhj}r`i" x="70" y="30">
+    <field name="PIN">12</field>
+    <field name="NOTE">31</field>
+    <value name="TIME">
+      <block type="math_number" id="2?M}%XnU?EhVe-/(bjZF">
+        <field name="NUM">1</field>
+      </block>
+    </value>
+    <next>
+      <block type="buzzer_song" id="rCt-W?425(-*AR*uX2i8">
+        <field name="PIN">12</field>
+        <field name="SONG">Super Mario - Main Theme</field>
+      </block>
+    </next>
+  </block>
+</xml>

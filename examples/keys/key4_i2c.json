@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": 1791301720843,
+  "timestamp": 1791303581085,
   "components": [
     {
       "id": "esp32_wroom_i2ckey1",
@@ -18,7 +18,8 @@
         "voltaje_operacion": 3.3,
         "flash_mb": 4,
         "isPowerSource": true,
-        "macAddress": "4A:1F:8C:92:7B:3D"
+        "macAddress": "4A:1F:8C:92:7B:3D",
+        "espnowCode": "from machine import Pin, I2C\nfrom keypad4_i2c import Keypad4x4_I2C\nfrom time import sleep\n\ni2c = I2C(1, sda=Pin(21), scl=Pin(22))\nteclado_4x4_i2c = Keypad4x4_I2C(i2c, 0x20)\nwhile True:\n  key = teclado_4x4_i2c.get_key()\n  if key:\n    print(key)\n  sleep(1)\n"
       },
       "locked": false
     },
@@ -50,7 +51,16 @@
         "componentId": "esp32_wroom_i2ckey1",
         "pinId": "io21"
       },
-      "points": [],
+      "points": [
+        {
+          "x": 512.5,
+          "y": 223.09842824598712
+        },
+        {
+          "x": 390.28,
+          "y": 223.09842824598712
+        }
+      ],
       "color": "#26c6da",
       "connectorType": "hembra-hembra"
     },
@@ -67,11 +77,11 @@
       "points": [
         {
           "x": 525.83,
-          "y": 220.61854901099775
+          "y": 217.18933960603476
         },
         {
           "x": 380.28,
-          "y": 220.61854901099775
+          "y": 217.18933960603476
         }
       ],
       "color": "#26c6da",
@@ -87,7 +97,24 @@
         "componentId": "esp32_wroom_i2ckey1",
         "pinId": "3v3"
       },
-      "points": [],
+      "points": [
+        {
+          "x": 539.17,
+          "y": 251.5307336286756
+        },
+        {
+          "x": 590.3312725857255,
+          "y": 251.5307336286756
+        },
+        {
+          "x": 590.3312725857255,
+          "y": 487.8029774484577
+        },
+        {
+          "x": 446.28,
+          "y": 487.8029774484577
+        }
+      ],
       "color": "#e53935",
       "connectorType": "hembra-hembra"
     },
@@ -104,11 +131,11 @@
       "points": [
         {
           "x": 552.5,
-          "y": 231.5037186641594
+          "y": 235.31626926671024
         },
         {
           "x": 410.28,
-          "y": 231.5037186641594
+          "y": 235.31626926671024
         }
       ],
       "color": "#333333",

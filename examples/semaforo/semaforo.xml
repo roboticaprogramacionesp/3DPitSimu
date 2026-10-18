@@ -1,0 +1,62 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="init_semaforo" id="ATd9(TyU!:aEv.x-|1tJ" x="-130" y="-30">
+    <field name="NAME">semaforo</field>
+    <field name="G">18</field>
+    <field name="Y">19</field>
+    <field name="R">23</field>
+    <next>
+      <block type="set_semaforo" id="1~`Bkax7]3Q!,0Au;@[Y">
+        <field name="NAME">semaforo</field>
+        <field name="G">1</field>
+        <field name="Y">0</field>
+        <field name="R">0</field>
+        <next>
+          <block type="time_sleep" id="[qHA(P1DF6C?1(bC~MQ6">
+            <field name="UNIT">S</field>
+            <value name="VALUE">
+              <shadow type="math_number" id=":F@(!hbhIAy_f.dv)ZA~">
+                <field name="NUM">1</field>
+              </shadow>
+            </value>
+            <next>
+              <block type="set_semaforo" id="{$/y=}FJZ#mIexlKQ%0K">
+                <field name="NAME">semaforo</field>
+                <field name="G">0</field>
+                <field name="Y">1</field>
+                <field name="R">0</field>
+                <next>
+                  <block type="time_sleep" id="cm.I8UW7}w:;:Z^JwB%Q">
+                    <field name="UNIT">S</field>
+                    <value name="VALUE">
+                      <shadow type="math_number" id="EY]/w@5]|OZgAj2eguUx">
+                        <field name="NUM">1</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="set_semaforo" id="[59M.49XSX4)/~)$fDJj">
+                        <field name="NAME">semaforo</field>
+                        <field name="G">0</field>
+                        <field name="Y">0</field>
+                        <field name="R">1</field>
+                        <next>
+                          <block type="time_sleep" id="Edc@gy6*+~uwrWkyz|~G">
+                            <field name="UNIT">S</field>
+                            <value name="VALUE">
+                              <shadow type="math_number" id="y5ue6ULy+:hv*dG()PN3">
+                                <field name="NUM">1</field>
+                              </shadow>
+                            </value>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>

@@ -1,0 +1,3450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MathQuest — Aprende Matemáticas Jugando</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #4f46e5;
+  --primary-dark: #3730a3;
+  --accent: #ec4899;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #1e293b;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(79, 70, 229, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.08) 0%, transparent 50%);
+  background-attachment: fixed;
+}
+.app { max-width: 900px; margin: 0 auto; padding: 20px; min-height: 100vh; }
+
+/* ===== HEADER ===== */
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-icon {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #4f46e5, #ec4899);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4em;
+  color: white;
+}
+.brand h1 { font-size: 1.3em; background: linear-gradient(135deg, #4f46e5, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.brand p { font-size: 0.75em; color: var(--muted); }
+.game-stats { display: flex; gap: 12px; }
+.stat-pill {
+  background: var(--bg);
+  padding: 8px 14px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9em;
+  font-weight: 600;
+}
+.stat-pill.coins { color: var(--warning); }
+.stat-pill.stars { color: var(--accent); }
+.stat-pill.lives { color: var(--danger); }
+
+/* ===== HOME / ISLAND MAP ===== */
+.islands-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+  margin-top: 20px;
+}
+.island-card {
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+  border-top: 6px solid var(--island-color, var(--primary));
+}
+.island-card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+.island-card.locked { opacity: 0.5; cursor: not-allowed; }
+.island-icon-large {
+  width: 80px; height: 80px;
+  background: var(--island-color, var(--primary));
+  border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.5em;
+  margin-bottom: 16px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  color: white;
+}
+.island-card h3 { font-size: 1.2em; margin-bottom: 6px; }
+.island-card .subtitle { color: var(--muted); font-size: 0.85em; margin-bottom: 14px; }
+.island-progress { background: var(--bg); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.island-progress-fill { height: 100%; background: var(--island-color, var(--primary)); transition: width 0.5s; }
+.island-progress-text { font-size: 0.8em; color: var(--muted); display: flex; justify-content: space-between; }
+
+/* ===== ISLAND VIEW (LEVELS) ===== */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.breadcrumb a { color: var(--primary); text-decoration: none; cursor: pointer; }
+.breadcrumb a:hover { text-decoration: underline; }
+.levels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+.level-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--shadow);
+  border: 2px solid transparent;
+  position: relative;
+}
+.level-card:hover:not(.locked) { transform: translateY(-3px); border-color: var(--island-color, var(--primary)); }
+.level-card.locked { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.5); }
+.level-card.completed { background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-color: var(--success); }
+.level-num {
+  font-size: 1.8em;
+  font-weight: 700;
+  color: var(--island-color, var(--primary));
+  margin-bottom: 4px;
+}
+.level-title { font-size: 0.85em; color: var(--text); font-weight: 500; margin-bottom: 8px; }
+.level-stars { font-size: 0.9em; letter-spacing: 2px; }
+.level-stars .star-empty { color: #d1d5db; }
+.level-stars .star-filled { color: #fbbf24; }
+.level-badge {
+  position: absolute;
+  top: 8px; right: 8px;
+  background: var(--bg);
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.7em;
+  font-weight: 600;
+  color: var(--muted);
+}
+.level-badge.basic { background: #d1fae5; color: #047857; }
+.level-badge.intermediate { background: #fef3c7; color: #b45309; }
+.level-badge.advanced { background: #fee2e2; color: #b91c1c; }
+
+/* ===== LEVEL PLAY ===== */
+.level-screen { background: white; border-radius: 20px; box-shadow: var(--shadow); padding: 30px; }
+.step-indicator {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.step-side-btn { flex-shrink: 0; white-space: nowrap; }
+.step-pills {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+}
+.step-dot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--bg);
+  font-size: 0.85em;
+  color: var(--muted);
+  font-weight: 500;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+.step-dot:hover:not(.active) { background: var(--border); }
+.step-dot.active { background: var(--primary); color: white; }
+.step-dot.completed { background: var(--success); color: white; }
+.step-dot .step-icon { font-size: 1.1em; }
+
+.step-content { min-height: 400px; }
+.step-title { font-size: 1.5em; margin-bottom: 12px; color: var(--text); }
+.step-subtitle { color: var(--muted); margin-bottom: 20px; }
+
+/* VER step */
+.visual-box {
+  background: linear-gradient(135deg, #eef2ff 0%, #fae8ff 100%);
+  border: 2px dashed var(--primary);
+  border-radius: 16px;
+  padding: 30px;
+  margin: 20px 0;
+  text-align: center;
+  font-size: 1.4em;
+  font-weight: 500;
+  color: var(--primary-dark);
+}
+.visual-highlight { color: var(--accent); font-weight: 700; }
+
+/* Diagrama de figuras (nivel insignia) */
+.fig-diagram { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin: 20px 0; }
+.fig-card { background: white; border: 2px solid var(--border); border-radius: 12px; padding: 14px 18px; text-align: center; }
+.fig-svg svg { width: 130px; height: auto; display: block; }
+.fig-svg.large svg { width: 220px; height: auto; display: block; }
+.fig-label { margin-top: 8px; font-size: 0.85em; font-weight: 600; color: var(--muted); }
+
+/* Actividad de arrastrar */
+.drag-activity { margin-top: 24px; background: var(--bg); border-radius: 16px; padding: 18px; }
+.drag-instructions { font-weight: 600; margin-bottom: 14px; text-align: center; }
+.drag-slots { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px; }
+.drag-slot {
+  width: 120px; min-height: 120px;
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  background: white;
+}
+.drag-slot.filled { border-style: solid; border-color: var(--primary); background: #eef2ff; }
+.drag-slot .slot-label {
+  position: absolute; top: 4px; left: 8px;
+  font-size: 0.7em; color: var(--muted); font-weight: 700;
+}
+.drag-pool { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; min-height: 110px; }
+.drag-item {
+  touch-action: none; cursor: grab;
+  width: 100px; height: 100px;
+  background: white;
+  border: 2px solid var(--primary);
+  border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  user-select: none;
+}
+.drag-item .fig-svg svg { width: 70px; }
+.drag-item .fig-label { font-size: 0.7em; margin-top: 4px; }
+.drag-item.dragging { opacity: 0.35; }
+.drag-ghost-el { position: fixed; z-index: 9999; pointer-events: none; }
+.drag-feedback { margin-top: 14px; text-align: center; font-weight: 700; font-size: 1.05em; }
+.drag-feedback.ok { color: var(--success); }
+
+/* ENTENDER step */
+.explanation-list { display: flex; flex-direction: column; gap: 12px; margin: 18px 0; }
+
+.explanation-step-big {
+  background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%);
+  border: 2px solid var(--primary);
+  border-radius: 18px;
+  padding: 30px 26px;
+  font-size: 1.3em;
+  line-height: 1.6;
+  min-height: 110px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  animation: slideUp 0.3s;
+}
+.explanation-step-done {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 0.92em;
+  line-height: 1.5;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideUp 0.3s;
+}
+.step-num-badge {
+  flex-shrink: 0;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  font-size: 1.15em;
+}
+.step-num-badge.small {
+  width: 26px; height: 26px;
+  font-size: 0.75em;
+  background: var(--success);
+}
+
+.step-nav-row { display: flex; justify-content: space-between; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+
+.step-arrow-btn {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: white;
+  font-size: 1.5em;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(79,70,229,0.35);
+  transition: all 0.2s;
+}
+.step-arrow-btn:hover:not(:disabled) { transform: scale(1.08); box-shadow: 0 6px 18px rgba(79,70,229,0.45); }
+.step-arrow-btn:disabled { background: var(--border); color: var(--muted); box-shadow: none; cursor: not-allowed; opacity: 0.6; }
+
+.formula-card {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid var(--warning);
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin: 16px 0;
+}
+.formula-label {
+  font-weight: 700;
+  color: #92400e;
+  text-transform: uppercase;
+  font-size: 0.78em;
+  letter-spacing: 0.04em;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.formula-expr {
+  text-align: center;
+  font-size: 1.3em;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 8px;
+  transition: background 0.2s;
+}
+.formula-expr:hover { background: rgba(255,255,255,0.35); }
+.formula-toggle-hint {
+  display: block;
+  font-size: 0.5em;
+  font-weight: 600;
+  color: #92400e;
+  text-transform: none;
+  letter-spacing: normal;
+  margin-top: 8px;
+}
+.formula-legend { list-style: none; margin-top: 14px; display: grid; gap: 8px; text-align: left; }
+.formula-legend li { background: rgba(255,255,255,0.65); border-radius: 10px; padding: 10px 16px; font-size: 0.95em; }
+.formula-legend .sym { font-weight: 700; color: var(--primary-dark); margin-right: 6px; }
+
+.robotica-card {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border: 1px solid #10b981;
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  text-align: left;
+  font-size: 0.92em;
+  color: #065f46;
+}
+.robotica-card strong { display: block; margin-bottom: 4px; font-size: 0.95em; }
+
+/* SIMULAR step */
+.sim-wrap { text-align: center; margin: 16px 0; }
+.sim-canvas { width: 100%; max-width: 600px; height: 180px; background: linear-gradient(180deg, #eef2ff, #ffffff); border-radius: 16px; border: 2px solid var(--border); }
+.sim-counter { font-size: 1.3em; font-weight: 700; margin-top: 12px; color: var(--primary-dark); }
+
+/* PRACTICAR step */
+.question-text {
+  font-size: 1.2em;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--bg);
+  border-radius: 12px;
+  border-left: 4px solid var(--primary);
+}
+.options { display: grid; gap: 12px; }
+.option {
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1.05em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+.option:hover:not(:disabled) { border-color: var(--primary); background: #f5f3ff; transform: translateX(4px); }
+.option .opt-letter {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.option.correct { background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-color: var(--success); color: #065f46; }
+.option.correct .opt-letter { background: var(--success); color: white; }
+.option.incorrect { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--danger); color: #991b1b; }
+.option.incorrect .opt-letter { background: var(--danger); color: white; }
+.option:disabled { cursor: not-allowed; }
+
+.feedback {
+  margin-top: 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  animation: slideUp 0.3s;
+}
+.feedback.correct { background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-left: 4px solid var(--success); color: #065f46; }
+.feedback.incorrect { background: linear-gradient(135deg, #fee2e2, #fecaca); border-left: 4px solid var(--danger); color: #991b1b; }
+.feedback-title { font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.lives-display {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 16px;
+  font-size: 1.5em;
+}
+.heart { transition: all 0.3s; }
+.heart.lost { opacity: 0.2; transform: scale(0.8); }
+
+.hint-area { margin-top: 20px; }
+.hint-btn {
+  background: var(--warning);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.95em;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.hint-btn:hover { background: #d97706; }
+.hint-content {
+  background: #fffbeb;
+  border: 1px solid var(--warning);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-top: 10px;
+  color: #92400e;
+  display: none;
+}
+.hint-content.show { display: block; animation: slideUp 0.3s; }
+
+.btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+.btn:disabled { background: var(--muted); cursor: not-allowed; opacity: 0.6; }
+.btn.secondary { background: var(--bg); color: var(--text); }
+.btn.secondary:hover:not(:disabled) { background: var(--border); }
+.btn.success { background: var(--success); }
+.btn.danger { background: var(--danger); }
+
+.level-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+/* ===== RESULT SCREEN ===== */
+.result-screen {
+  background: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: 40px;
+  text-align: center;
+}
+.result-emoji { font-size: 5em; margin-bottom: 16px; animation: bounce 0.6s; }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+.result-title { font-size: 2em; margin-bottom: 8px; }
+.result-stars { font-size: 3em; margin: 16px 0; letter-spacing: 6px; }
+.result-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+.result-stat {
+  background: var(--bg);
+  padding: 16px;
+  border-radius: 12px;
+}
+.result-stat-value { font-size: 1.8em; font-weight: 700; color: var(--primary); }
+.result-stat-label { font-size: 0.85em; color: var(--muted); }
+.result-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+
+/* ===== CONFETTI ===== */
+.confetti { position: fixed; width: 10px; height: 10px; pointer-events: none; animation: confetti-fall 3s linear forwards; }
+@keyframes confetti-fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  border-radius: 12px;
+  padding: 14px 20px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  z-index: 1000;
+  animation: slideIn 0.3s, slideOut 0.3s 2.7s;
+  border-left: 4px solid var(--primary);
+}
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--danger); }
+@keyframes slideIn { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideOut { to { opacity: 0; transform: translateX(100px); } }
+
+/* ===== UTIL ===== */
+.text-center { text-align: center; }
+.mt-1 { margin-top: 8px; } .mt-2 { margin-top: 16px; } .mt-3 { margin-top: 24px; }
+.mb-1 { margin-bottom: 8px; } .mb-2 { margin-bottom: 16px; } .mb-3 { margin-bottom: 24px; }
+.hidden { display: none; }
+
+.welcome-banner {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+  color: white;
+  padding: 30px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.welcome-banner h2 { font-size: 1.8em; margin-bottom: 8px; }
+.welcome-banner p { opacity: 0.95; }
+
+@media (max-width: 600px) {
+  .app { padding: 12px; }
+  .level-screen { padding: 20px; }
+  .step-dot { padding: 6px 10px; font-size: 0.75em; }
+  .game-stats .stat-pill { padding: 6px 10px; font-size: 0.8em; }
+  .brand h1 { font-size: 1.1em; }
+  .result-stats { grid-template-columns: 1fr; }
+  .explanation-step-big { font-size: 1.05em; padding: 20px 18px; }
+  .explanation-step-done { font-size: 0.85em; padding: 10px 14px; }
+  .step-side-btn { padding: 8px 14px; font-size: 0.8em; }
+  .fig-svg svg { width: 90px; }
+  .fig-svg.large svg { width: 160px; }
+  .drag-item { width: 80px; height: 80px; }
+  .drag-slot { width: 90px; min-height: 90px; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ===================== DATA: 26 NIVELES =====================
+const gameData = [
+  {
+    id: 'algebra',
+    name: 'Sentido Numérico y Algebraico',
+    icon: '🧮',
+    color: '#4f46e5',
+    description: '10 niveles — Ecuaciones, sucesiones, fracciones, sistemas',
+    levels: [
+      {
+        id: 'MAT_28',
+        title: 'Progresiones Aritméticas',
+        robotica: 'Las progresiones aritméticas son la base de la programación en Arduino, ESP32, Lego y Abilix Krypton: permiten estructurar bucles, controlar servomotores paso a paso y construir rutinas repetitivas de movimiento.',
+        difficulty: 'basic',
+        points: 100,
+        diagram: 'progresion-palillos',
+        ver: {
+          title: '👀 Observa las figuras de palillos',
+          content: 'Cada figura se construye agregando un cuadrado más, en una fila. ¿Cuántos palillos tendrá la Figura 4?',
+          description: 'Cuenta los palillos de cada figura. ¿Ves un patrón en cómo va creciendo?'
+        },
+        interactive: {
+          instructions: 'Arrastra cada tarjeta a su casillero, ordenando las figuras de la que tiene MENOS palillos a la que tiene MÁS. ¡Cuenta los cuadraditos de cada una!',
+          items: [
+            { id: 0, squares: 3 },
+            { id: 1, squares: 1 },
+            { id: 2, squares: 4 },
+            { id: 3, squares: 2 }
+          ],
+          correctOrder: [1, 3, 0, 2]
+        },
+        entender: {
+          title: '🧠 ¿Cómo se resuelve?',
+          steps: [
+            'Cuenta los palillos de cada figura y anota la sucesión: 4, 7, 10, 13, 16…',
+            'Resta cada término menos el anterior: 7−4=3, 10−7=3, 13−10=3',
+            'Como la diferencia es siempre la misma (d=3), es una progresión aritmética',
+            'La fórmula aₙ = a₁ + (n − 1)·d te permite hallar cualquier término sin contarlos uno por uno',
+            'Para hallar la Figura 10, sustituye a₁=4, n=10, d=3: a₁₀ = 4 + (10 − 1)×3',
+            'Resuelve: a₁₀ = 4 + 27 = 31 palillos'
+          ],
+          formulaLabel: 'Fórmula para encontrar el término n de una progresión aritmética',
+          formula: 'aₙ = a₁ + (n − 1) · d',
+          formulaMeaning: [
+            { symbol: 'aₙ', text: 'es el número total de elementos a buscas' },
+            { symbol: 'a₁', text: 'el primer término de la sucesión (4 palillos, Figura 1)' },
+            { symbol: 'n', text: 'la posición de la figura que quieres calcular' },
+            { symbol: 'd', text: 'la diferencia constante entre términos seguidos (3)' }
+          ]
+        },
+        simular: {
+          kind: 'progresion',
+          title: '🧩 Mira crecer la sucesión',
+          description: 'Cada figura se construye agregando 3 palillos nuevos (resaltados en naranja) a la figura anterior. Dale play y observa el patrón en vivo.'
+        },
+        practicar: {
+          question: 'Una fila de sillas se arma agregando siempre 5 sillas más: Fila 1 tiene 2 sillas, Fila 2 tiene 7, Fila 3 tiene 12. ¿Cuántas sillas tendrá la Fila 8?',
+          options: ['32', '37', '42', '35'],
+          correct: 1,
+          explanation: 'a₈ = a₁ + (n−1)·d = 2 + (8−1)×5 = 2 + 35 = 37 sillas.',
+          hint: 'Usa la fórmula aₙ = a₁ + (n−1)·d con a₁=2, d=5 y n=8.'
+        }
+      },
+      {
+        id: 'MAT_28_cuadratica',
+        title: 'Progresión Cuadrática de Figuras',
+        robotica: 'Las sucesiones cuadráticas modelan crecimientos no lineales en robótica, como el área que cubre un sensor al aumentar su radio de detección o la energía extra que necesita un motor para acelerar cada vez más rápido.',
+        difficulty: 'basic',
+        points: 100,
+        ver: {
+          title: '👀 Observa el muro escalonado',
+          content: 'Se construye un muro escalonado con bloques cuadrados: Figura 1 tiene 1 cuadrado, Figura 2 tiene 4 cuadrados, Figura 3 tiene 9 cuadrados, Figura 4 tiene 16 cuadrados. ¿Cuántos cuadrados tendrá la Figura 5?',
+          description: 'Cuenta los cuadrados de cada figura. Esta vez la diferencia entre términos NO es constante — fíjate cómo cambia.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se resuelve?',
+          steps: [
+            'Anota la cantidad de cuadrados de cada figura: 1, 4, 9, 16',
+            'Calcula la primera diferencia entre términos seguidos: 4−1=3, 9−4=5, 16−9=7',
+            'Como la primera diferencia no es constante (3, 5, 7), NO es una progresión aritmética simple',
+            'Calcula la segunda diferencia: 5−3=2, 7−5=2 → es constante, así que es una progresión CUADRÁTICA',
+            'La fórmula general es an² + bn + c. Con el método de diferencias: 2a = 2 → a=1; 3a+b = 3 → b=0; a+b+c = 1 → c=0',
+            'La regla queda: cuadrados = n² (donde n es la posición de la figura). Para la Figura 5: 5² = 25 cuadrados'
+          ],
+          formulaLabel: 'Fórmula general para una sucesión cuadrática (segunda diferencia constante)',
+          formula: 'aₙ = a·n² + b·n + c',
+          formulaMeaning: [
+            { symbol: 'aₙ', text: 'la cantidad de cuadrados de la figura n' },
+            { symbol: 'n', text: 'la posición de la figura que quieres calcular' },
+            { symbol: 'a', text: 'la mitad de la segunda diferencia constante (2a = segunda diferencia)' },
+            { symbol: 'b', text: 'se obtiene con 3a + b = primera diferencia inicial' },
+            { symbol: 'c', text: 'se obtiene con a + b + c = primer término de la sucesión' }
+          ]
+        },
+        simular: {
+          kind: 'progresionCuadratica',
+          title: '🧩 Mira crecer el muro escalonado',
+          description: 'Cada figura agrega una fila y una columna nuevas (resaltadas en naranja) para formar un cuadrado perfecto n×n. Dale play y observa el patrón en vivo.'
+        },
+        practicar: {
+          question: 'Un robot arma torres apilando piezas cuadradas más una pieza extra de seguridad: Torre 1 tiene 2 piezas, Torre 2 tiene 5, Torre 3 tiene 10, Torre 4 tiene 17. ¿Cuántas piezas tendrá la Torre 6?',
+          options: ['36', '37', '38', '40'],
+          correct: 1,
+          explanation: 'Primera diferencia: 3, 5, 7, 9… Segunda diferencia constante = 2 → es cuadrática. Con el método de diferencias: a=1, b=0, c=1 → fórmula n²+1. Torre 6: 6²+1 = 37 piezas.',
+          hint: 'Calcula las diferencias sucesivas: si la segunda diferencia es constante, usa 2a = esa diferencia para hallar a, luego b y c.'
+        }
+      },
+      {
+        id: 'MAT_45',
+        title: 'Ecuación de Primer Grado',
+        robotica: 'Los robots usan ecuaciones de primer grado en su cinemática para calcular la posición y los ángulos de sus piezas, y en su dinámica para obtener las velocidades y fuerzas necesarias en cada movimiento.',
+        difficulty: 'intermediate',
+        points: 150,
+        ver: {
+          title: '👀 Observa la ecuación',
+          content: '3(x − 2) + 5 = 2x + 11',
+          description: 'Una ecuación de primer grado tiene la incógnita elevada a la potencia 1. El objetivo es "despejar" la x.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se resuelve?',
+          steps: [
+            'Aplica la propiedad distributiva: el 3 multiplica a cada término dentro del paréntesis → 3(x) − 3(2) + 5 = 2x + 11',
+            'Resuelve las multiplicaciones: 3x − 6 + 5 = 2x + 11',
+            'Suma los números del lado izquierdo (−6 + 5 = −1): 3x − 1 = 2x + 11',
+            'Pasa el 2x al lado izquierdo restando: 3x − 2x − 1 = 11',
+            'Simplifica: x − 1 = 11',
+            'Pasa el −1 al lado derecho sumando: x = 11 + 1',
+            'Resultado: x = 12'
+          ],
+          formulaLabel: 'Fórmula general para despejar x en una ecuación de primer grado',
+          formula: 'ax + b = cx + d  →  x = (d − b) / (a − c)',
+          formulaMeaning: [
+            { symbol: 'a, c', text: 'los números que multiplican a la x en cada lado de la ecuación' },
+            { symbol: 'b, d', text: 'los números sueltos (sin x) en cada lado' },
+            { symbol: 'x', text: 'la incógnita que quieres despejar' }
+          ]
+        },
+        simular: {
+          kind: 'solveReveal',
+          title: '🧩 Mira converger la solución',
+          description: 'Un marcador se desliza por la recta numérica hasta llegar al valor de x. Dale play y observa cómo llega a x=12.',
+          data: { targets: [12] }
+        },
+        practicar: {
+          question: 'Resuelve: 4(x − 1) + 3 = 2x + 9',
+          options: ['x = 3', 'x = 5', 'x = 7', 'x = 9'],
+          correct: 1,
+          explanation: '4x−4+3 = 2x+9 → 4x−1 = 2x+9 → 2x = 10 → x = 5. Comprobación: 4(4)+3=19 = 2(5)+9=19 ✓',
+          hint: 'Aplica primero la propiedad distributiva: el 4 multiplica a AMBOS términos dentro del paréntesis.'
+        }
+      },
+      {
+        id: 'MAT_36',
+        title: 'Ecuación de Segundo Grado',
+        robotica: 'Para que un brazo robótico llegue a un punto exacto, hay que calcular el giro de sus piezas — un cálculo que depende del largo de cada sección y que requiere resolver ecuaciones cuadráticas.',
+        difficulty: 'advanced',
+        points: 200,
+        ver: {
+          title: '👀 Observa la ecuación cuadrática',
+          content: 'x² − 5x + 6 = 0',
+          description: 'Una ecuación de segundo grado tiene la incógnita elevada al cuadrado. Puede tener 0, 1 o 2 soluciones.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se resuelve?',
+          steps: [
+            'Identifica los coeficientes: a=1, b=−5, c=6',
+            'Busca dos números que multiplicados den c=+6 y sumados den b=−5',
+            'Esos números son −2 y −3, porque (−2)×(−3)=6 y (−2)+(−3)=−5',
+            'Factoriza la ecuación con esos números: (x − 2)(x − 3) = 0',
+            'Aplica la propiedad del producto cero: si A×B=0, entonces A=0 o B=0',
+            'Resuelve cada factor: x − 2 = 0 → x = 2, y x − 3 = 0 → x = 3'
+          ],
+          formulaLabel: 'Fórmula general (fórmula cuadrática) para resolver ecuaciones de segundo grado',
+          formula: 'x = (−b ± √(b² − 4ac)) / 2a',
+          formulaMeaning: [
+            { symbol: 'a', text: 'el número que multiplica a x²' },
+            { symbol: 'b', text: 'el número que multiplica a x' },
+            { symbol: 'c', text: 'el término sin x (independiente)' },
+            { symbol: '±', text: 'indica que hay dos soluciones: una sumando y otra restando la raíz' }
+          ]
+        },
+        simular: {
+          kind: 'solveReveal',
+          title: '🧩 Mira converger las dos soluciones',
+          description: 'Una ecuación cuadrática puede tener dos soluciones. Mira cómo cada marcador llega a su valor en la recta numérica.',
+          data: { targets: [2, 3] }
+        },
+        practicar: {
+          question: '¿Cuáles son las soluciones de x² − 7x + 12 = 0?',
+          options: ['x=1, x=12', 'x=3, x=4', 'x=−3, x=−4', 'x=2, x=6'],
+          correct: 1,
+          explanation: 'Buscas dos números que multiplicados den 12 y sumados den −7: son −3 y −4. Factorizando: (x−3)(x−4)=0 → x=3, x=4.',
+          hint: 'Busca dos números cuyo producto sea +12 y su suma sea −7. Pista: ambos son negativos.'
+        }
+      },
+      {
+        id: 'MAT_27',
+        title: 'Ordenar Fracciones',
+        robotica: 'Al programar el desplazamiento de un robot, las fracciones ayudan a dividir la distancia total entre el número de pasos para calcular la longitud exacta de cada avance.',
+        difficulty: 'basic',
+        points: 100,
+        ver: {
+          title: '👀 Observa las fracciones',
+          content: '3/4, 5/8, 2/3, 7/12',
+          description: 'Para comparar fracciones con distinto denominador, primero hay que igualar los denominadores.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se resuelve?',
+          steps: [
+            'Descompón cada denominador en factores primos: 4=2², 8=2³, 3=3¹, 12=2²×3',
+            'Para el mcm, toma cada factor primo con su MAYOR exponente: 2³ y 3¹',
+            'Multiplica esos factores: mcm = 2³ × 3 = 8 × 3 = 24',
+            'Convierte cada fracción a denominador 24: 3/4=18/24, 5/8=15/24, 2/3=16/24, 7/12=14/24',
+            'Compara los numeradores: 14 < 15 < 16 < 18',
+            'La fracción menor es la que tiene el numerador más chico: 7/12'
+          ],
+          formulaLabel: 'Fórmula para calcular el mínimo común múltiplo (mcm) de los denominadores',
+          formula: 'mcm = factores primos comunes y no comunes, con su mayor exponente',
+          formulaMeaning: [
+            { symbol: 'mcm', text: 'mínimo común múltiplo: el denominador común más pequeño posible' }
+          ]
+        },
+        simular: {
+          kind: 'numberlineSort',
+          title: '🧩 Mira ubicarse las fracciones en la recta',
+          description: 'Cada fracción aparece en su lugar exacto en la recta numérica, de la más pequeña a la más grande. Dale play y observa el orden en vivo.',
+          data: { values: [0.75, 0.625, 0.6667, 0.5833], labels: ['3/4', '5/8', '2/3', '7/12'] }
+        },
+        practicar: {
+          question: '¿Cuál es la fracción MENOR? 2/5, 3/8, 5/12, 1/3',
+          options: ['2/5', '3/8', '5/12', '1/3'],
+          correct: 3,
+          explanation: 'Convirtiendo a denominador 120: 2/5=48/120, 3/8=45/120, 5/12=50/120, 1/3=40/120. La menor es 1/3.',
+          hint: 'Busca el mcm de 5, 8, 12 y 3, y convierte todas las fracciones a ese denominador.'
+        }
+      },
+      {
+        id: 'MAT_48',
+        title: 'Conversión Fracción → Decimal',
+        robotica: 'Las plataformas de robótica mezclan decimales y fracciones al configurar relaciones de transmisión (por ejemplo, reducir el giro de un motor a un tercio) y al calcular las dimensiones de piezas articuladas.',
+        difficulty: 'intermediate',
+        points: 130,
+        ver: {
+          title: '👀 Mezcla de decimales y fracciones',
+          content: '0.75 + 3/5 + 1/4',
+          description: 'Para sumar cantidades mixtas, primero convertimos todo a la misma forma (decimal o fracción).'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se resuelve?',
+          steps: [
+            'Convierte cada fracción a decimal dividiendo numerador entre denominador',
+            '3/5 = 3 ÷ 5 = 0.6',
+            '1/4 = 1 ÷ 4 = 0.25',
+            'Ahora todo está en decimales: 0.75 + 0.60 + 0.25',
+            'Suma en columna, alineando el punto decimal',
+            'Resultado: 1.60'
+          ],
+          formulaLabel: 'Fórmula para convertir una fracción en decimal',
+          formula: 'a/b = a ÷ b',
+          formulaMeaning: [
+            { symbol: 'a', text: 'el numerador (arriba de la fracción)' },
+            { symbol: 'b', text: 'el denominador (abajo de la fracción)' }
+          ]
+        },
+        simular: {
+          kind: 'numberlineSort',
+          title: '🧩 Ubica cada cantidad en la recta',
+          description: 'Antes de sumar, cada cantidad aparece en su posición exacta en la recta numérica (0.75, 3/5 y 1/4 ya convertidos a decimal). Dale play y observa dónde cae cada una.',
+          data: { values: [0.75, 0.6, 0.25], labels: ['0.75', '3/5', '1/4'] }
+        },
+        practicar: {
+          question: 'Calcula: 0.4 + 3/4 + 1/5',
+          options: ['1.15', '1.35', '1.55', '1.75'],
+          correct: 1,
+          explanation: '3/4 = 0.75 y 1/5 = 0.2, entonces 0.4 + 0.75 + 0.2 = 1.35',
+          hint: 'Convierte cada fracción a decimal dividiendo numerador entre denominador, y luego suma.'
+        }
+      },
+      {
+        id: 'MAT_44',
+        title: 'Sistema 2×2 (Suma y Resta)',
+        robotica: 'Los sistemas de ecuaciones permiten calcular, por ejemplo, la velocidad de las dos ruedas de un robot diferencial a partir de su velocidad total y su velocidad de giro.',
+        difficulty: 'advanced',
+        points: 220,
+        ver: {
+          title: '👀 Sistema de ecuaciones',
+          content: '2x + 3y = 12\n4x − 3y = 6',
+          description: 'En un sistema 2×2 hay 2 ecuaciones con 2 incógnitas. El método de suma/resta elimina una variable.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se resuelve?',
+          steps: [
+            'Observa los coeficientes de "y": +3 y −3, son opuestos',
+            'Cuando los coeficientes de una variable son opuestos, puedes sumar las ecuaciones para eliminarla',
+            'Suma término a término: (2x+4x) + (3y−3y) = (12+6)',
+            'Resultado: 6x + 0 = 18',
+            'Despeja x dividiendo entre 6: x = 18/6 = 3',
+            'Sustituye x=3 en la primera ecuación: 2(3) + 3y = 12 → 6 + 3y = 12',
+            'Despeja y: 3y = 6 → y = 2'
+          ],
+          formulaLabel: 'Forma general de un sistema de 2 ecuaciones con 2 incógnitas',
+          formula: 'a₁x + b₁y = c₁\na₂x + b₂y = c₂',
+          formulaMeaning: [
+            { symbol: 'a₁, a₂', text: 'los números que multiplican a x en cada ecuación' },
+            { symbol: 'b₁, b₂', text: 'los números que multiplican a y en cada ecuación' },
+            { symbol: 'c₁, c₂', text: 'el resultado de cada ecuación' }
+          ]
+        },
+        simular: {
+          kind: 'graph',
+          title: '🧩 Mira cruzarse las dos rectas',
+          description: 'Cada ecuación es una recta. El punto donde se cruzan es la solución del sistema. Dale play y observa cómo se trazan.',
+          data: {
+            xRange: [-1, 6], yRange: [-4, 6],
+            curves: [
+              { type: 'line', m: -2 / 3, b: 4, color: '#4f46e5' },
+              { type: 'line', m: 4 / 3, b: -2, color: '#ec4899' }
+            ],
+            intersection: { x: 3, y: 2, label: '(3, 2)' },
+            finalLabel: 'Solución: x=3, y=2'
+          }
+        },
+        practicar: {
+          question: 'Resuelve el sistema:\n2x + 5y = 13\n3x − 5y = 7',
+          options: ['x=4, y=1', 'x=3, y=2', 'x=2, y=3', 'x=1, y=4'],
+          correct: 0,
+          explanation: 'Sumando: 5x = 20 → x = 4. Sustituyendo: 2(4)+5y=13 → y = 1. Comprobación: 3(4)−5(1)=7 ✓',
+          hint: 'Como los coeficientes de "y" son opuestos (+5 y −5), puedes SUMAR las dos ecuaciones directamente.'
+        }
+      },
+      {
+        id: 'MAT_47',
+        title: 'MCD por Euclides',
+        robotica: 'El algoritmo de Euclides sincroniza los relojes de distintos microcontroladores, optimiza engranajes y transmisiones al reducir fracciones de dientes, y facilita el escalado de mapas de cuadrícula en visión artificial.',
+        difficulty: 'intermediate',
+        points: 140,
+        ver: {
+          title: '👀 Encuentra el MCD',
+          content: 'MCD(48, 18) = ?',
+          description: 'El Máximo Común Divisor es el número más grande que divide a ambos. Euclides lo encuentra rápido.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se aplica el algoritmo?',
+          steps: [
+            'Divide el número mayor entre el menor: 48 ÷ 18 = 2, residuo 12 (48 = 18×2 + 12)',
+            'Toma el divisor anterior (18) y divídelo entre el residuo (12): 18 = 12×1 + 6',
+            'Toma el nuevo divisor (12) y divídelo entre el nuevo residuo (6): 12 = 6×2 + 0',
+            'Cuando el residuo llega a 0, el proceso termina',
+            'El MCD es el último residuo que NO fue cero: 6'
+          ],
+          formulaLabel: 'Fórmula del algoritmo de Euclides para encontrar el MCD',
+          formula: 'MCD(a, b) = MCD(b, a mod b)',
+          formulaMeaning: [
+            { symbol: 'a, b', text: 'los dos números a los que buscas el MCD' },
+            { symbol: 'a mod b', text: 'el residuo de dividir a entre b' }
+          ]
+        },
+        simular: {
+          kind: 'euclid',
+          title: '🧩 Mira encajar los cuadrados',
+          description: 'Un rectángulo de 48×18 se rellena con los cuadrados más grandes posibles. El último tamaño de cuadrado que cabe exacto es el MCD. Dale play y observa el proceso en vivo.',
+          data: { a: 48, b: 18 }
+        },
+        practicar: {
+          question: 'Calcula el MCD de 60 y 24',
+          options: ['6', '8', '12', '15'],
+          correct: 2,
+          explanation: '60 = 24×2 + 12; 24 = 12×2 + 0. El último residuo no cero es 12.',
+          hint: 'Divide 60 entre 24. ¿Cuál es el residuo? Luego divide 24 entre ese residuo, y sigue hasta que el residuo sea 0.'
+        }
+      },
+      {
+        id: 'MAT_33',
+        title: 'Potencias y Signos',
+        robotica: 'Los exponentes se usan al programar el escalamiento de distancias, la optimización de código con bucles iterativos, y la dosificación de la energía que reciben los motores.',
+        difficulty: 'basic',
+        points: 110,
+        ver: {
+          title: '👀 Observa la expresión',
+          content: '(−2)³ + (−3)² − (−1)⁴',
+          description: 'El signo de una potencia depende de la PARIDAD del exponente, no del signo de la base.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se resuelven los signos?',
+          steps: [
+            'Recuerda la regla: si el exponente es PAR, el resultado es positivo; si es IMPAR, conserva el signo de la base',
+            'Calcula (−2)³ = (−2)×(−2)×(−2) = −8 (exponente impar → negativo)',
+            'Calcula (−3)² = (−3)×(−3) = +9 (exponente par → positivo)',
+            'Calcula (−1)⁴ = (−1)×(−1)×(−1)×(−1) = +1 (exponente par → positivo)',
+            'Sustituye los resultados: −8 + 9 − 1',
+            'Opera de izquierda a derecha: −8 + 9 = 1, luego 1 − 1 = 0'
+          ],
+          formulaLabel: 'Regla general de los signos en una potencia',
+          formula: '(−a)ⁿ = +(aⁿ) si n es par\n(−a)ⁿ = −(aⁿ) si n es impar',
+          formulaMeaning: [
+            { symbol: 'a', text: 'la base (el número, sin el signo)' },
+            { symbol: 'n', text: 'el exponente' }
+          ]
+        },
+        simular: {
+          kind: 'signSteps',
+          title: '🧩 Mira sumarse cada término',
+          description: 'Cada potencia aparece como una tarjeta con su signo (verde = positivo, rojo = negativo) y se va sumando al total. Dale play y observa el resultado en vivo.',
+          data: { terms: [{ label: '(−2)³', value: -8 }, { label: '(−3)²', value: 9 }, { label: '−(−1)⁴', value: -1 }] }
+        },
+        practicar: {
+          question: 'Calcula: (−2)⁴ − (−3)² + (−1)³',
+          options: ['−6', '0', '6', '24'],
+          correct: 2,
+          explanation: '(−2)⁴ = 16, (−3)² = 9, (−1)³ = −1. Entonces 16 − 9 + (−1) = 6',
+          hint: 'Recuerda: exponente PAR = resultado positivo. Exponente IMPAR = el signo de la base se mantiene.'
+        }
+      },
+      {
+        id: 'MAT_42',
+        title: 'Ordenar Números con Signo',
+        robotica: 'Los números con signo representan magnitudes bidireccionales en robótica: coordenadas en el espacio, ángulos de articulaciones, y el sentido de giro de un motor (adelante/atrás).',
+        difficulty: 'basic',
+        points: 100,
+        ver: {
+          title: '👀 Observa los números',
+          content: '−3.5, 2, −1, 0, −4, 1.5',
+          description: 'En la recta numérica, los negativos van a la izquierda del 0 y los positivos a la derecha.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se ordenan?',
+          steps: [
+            'Dibuja mentalmente la recta numérica: negativos a la izquierda del 0, positivos a la derecha',
+            'Entre los negativos, el que está MÁS LEJOS del 0 es el MENOR: −4 < −3.5 < −1',
+            'El 0 va justo en el centro',
+            'Entre los positivos, el que está MÁS CERCA del 0 es el MENOR: 1.5 < 2',
+            'Uniendo todo de menor a mayor: −4, −3.5, −1, 0, 1.5, 2'
+          ],
+          formulaLabel: 'Regla para ordenar números en la recta numérica',
+          formula: 'Negativos: −4 < −3 < −2 < −1 < 0 < 1 < 2 < 3…',
+          formulaMeaning: [
+            { symbol: '−', text: 'entre dos negativos, el que tiene mayor valor absoluto (más lejos del 0) es el MENOR' }
+          ]
+        },
+        simular: {
+          kind: 'numberlineSort',
+          title: '🧩 Mira ordenarse los números en la recta',
+          description: 'Cada número aparece en su lugar exacto en la recta, del más pequeño al más grande. Dale play y observa el orden en vivo.',
+          data: { values: [-3.5, 2, -1, 0, -4, 1.5] }
+        },
+        practicar: {
+          question: '¿Cuál es el número MENOR? −2.5, 3, −5, 0, 1, −1.5',
+          options: ['−1.5', '−2.5', '−5', '0'],
+          correct: 2,
+          explanation: 'El más alejado del 0 hacia la izquierda es −5. Recuerda: cuanto más negativo, menor es.',
+          hint: 'Imagina un termómetro: ¿cuál marca la temperatura MÁS FRÍA? Entre negativos, el más negativo es el menor.'
+        }
+      }
+    ]
+  },
+  {
+    id: 'geometria',
+    name: 'Medición y Geometría',
+    icon: '📐',
+    color: '#f59e0b',
+    description: '6 niveles — Cuerpos, polígonos, perímetros, áreas',
+    levels: [
+      {
+        id: 'MAT_43',
+        title: 'Cuerpos Geométricos',
+        robotica: 'Los cuerpos geométricos como prismas, cilindros y esferas modelan la estructura física de un robot, permitiendo calcular su cinemática y planificar trayectorias seguras que lo esquiven de obstáculos.',
+        difficulty: 'basic',
+        points: 120,
+        diagram: 'prisma-triangular',
+        ver: {
+          title: '👀 Observa el prisma triangular',
+          content: '2 triángulos (bases) + 3 rectángulos (caras laterales)',
+          description: 'Un prisma triangular tiene 2 bases triangulares y 3 caras laterales rectangulares.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo contar caras, aristas y vértices?',
+          steps: [
+            'Cuenta las caras: 2 triángulos (bases) + 3 rectángulos (laterales) = 5 caras',
+            'Cuenta las aristas: 3 arriba + 3 abajo + 3 verticales que conectan = 9 aristas',
+            'Cuenta los vértices: 3 arriba + 3 abajo = 6 vértices',
+            'Verifica con la fórmula de Euler: Caras + Vértices = Aristas + 2',
+            'Sustituye: 5 + 6 = 9 + 2 → 11 = 11 ✓'
+          ],
+          formulaLabel: 'Fórmula de Euler para poliedros',
+          formula: 'C + V = A + 2',
+          formulaMeaning: [
+            { symbol: 'C', text: 'número de caras' },
+            { symbol: 'V', text: 'número de vértices' },
+            { symbol: 'A', text: 'número de aristas' }
+          ]
+        },
+        simular: {
+          kind: 'prisma',
+          title: '🤖 Explora el prisma triangular',
+          description: 'Recorre cada cara, arista y vértice del prisma para comprobar la fórmula de Euler en vivo.'
+        },
+        practicar: {
+          question: 'Un prisma de base PENTAGONAL tiene:',
+          options: ['6 caras, 10 aristas, 6 vértices', '7 caras, 15 aristas, 10 vértices', '5 caras, 10 aristas, 7 vértices', '7 caras, 12 aristas, 8 vértices'],
+          correct: 1,
+          explanation: '2 pentágonos + 5 rectángulos = 7 caras. 5+5+5 = 15 aristas. 5+5 = 10 vértices. Verifica: 7+10 = 15+2 = 17 ✓',
+          hint: 'Cuenta las caras: 2 bases pentagonales + 5 caras laterales rectangulares. Para aristas, suma las de arriba, abajo y las verticales.'
+        }
+      },
+      {
+        id: 'MAT_31',
+        title: 'Suma de Ángulos Interiores',
+        robotica: 'Sin el cálculo exacto de ángulos, un robot no podría girar sobre su propio eje ni mantener el equilibrio; Arduino y ESP32 acumulan constantemente datos en grados de giroscopios y servomotores para corregir su ruta.',
+        difficulty: 'intermediate',
+        points: 140,
+        ver: {
+          title: '👀 Polígono regular',
+          content: 'Lados iguales + ángulos iguales + suma = 540°',
+          description: 'En un polígono regular, todos los lados y todos los ángulos miden igual. La suma de ángulos interiores sigue una fórmula.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo encontrar el polígono?',
+          steps: [
+            'La fórmula de la suma de ángulos interiores es S = 180° × (n − 2), donde n es el número de lados',
+            'Iguala la fórmula al dato que te dan: 180° × (n − 2) = 540°',
+            'Divide ambos lados entre 180°: n − 2 = 3',
+            'Despeja n sumando 2 en ambos lados: n = 5',
+            'Un polígono de 5 lados es un pentágono'
+          ],
+          formulaLabel: 'Fórmula para la suma de los ángulos interiores de un polígono',
+          formula: 'S = 180° × (n − 2)',
+          formulaMeaning: [
+            { symbol: 'S', text: 'la suma de todos los ángulos interiores' },
+            { symbol: 'n', text: 'el número de lados del polígono' }
+          ]
+        },
+        simular: {
+          kind: 'polygonAngles',
+          title: '🧩 Mira triangularse el pentágono',
+          description: 'Desde un vértice se trazan diagonales que dividen el pentágono en triángulos. Cada triángulo suma 180°. Dale play y observa cómo se llega a 540°.',
+          data: { n: 5 }
+        },
+        practicar: {
+          question: 'Un polígono regular tiene sus ángulos interiores sumando 1080°. ¿Qué polígono es?',
+          options: ['Hexágono', 'Heptágono', 'Octágono', 'Eneágono'],
+          correct: 2,
+          explanation: '180(n−2) = 1080 → n−2 = 6 → n = 8. Es un octágono.',
+          hint: 'Recuerda la fórmula: S = 180° × (n − 2). Despeja n.'
+        }
+      },
+      {
+        id: 'MAT_33_perim',
+        title: 'Perímetro',
+        robotica: 'El perímetro de una rueda define exactamente qué distancia avanza un robot por cada giro completo que da.',
+        difficulty: 'basic',
+        points: 90,
+        diagram: 'triangulo-lados',
+        diagramData: ['5 cm', '7 cm', '9 cm'],
+        ver: {
+          title: '👀 Triángulo con lados conocidos',
+          content: '5 cm, 7 cm, 9 cm',
+          description: 'El perímetro es la suma de las longitudes de todos los lados de una figura.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se calcula el perímetro?',
+          steps: [
+            'Identifica cada lado de la figura: 5 cm, 7 cm y 9 cm',
+            'El perímetro es la suma de TODOS los lados, sin importar si son diferentes',
+            'Suma: 5 + 7 + 9',
+            'Resultado: 21 cm'
+          ],
+          formulaLabel: 'Fórmula general para calcular el perímetro',
+          formula: 'P = lado₁ + lado₂ + lado₃ + …',
+          formulaMeaning: [
+            { symbol: 'P', text: 'el perímetro (contorno total de la figura)' },
+            { symbol: 'lado', text: 'la longitud de cada lado, uno por uno' }
+          ]
+        },
+        simular: {
+          kind: 'perimeterTrace',
+          title: '🧩 Mira recorrerse el contorno',
+          description: 'Cada lado se resalta en naranja y se suma al total acumulado. Dale play y observa cómo se recorre el triángulo completo.',
+          data: { sides: [5, 7, 9], unit: 'cm' }
+        },
+        practicar: {
+          question: 'Calcula el perímetro de un triángulo con lados 6 cm, 8 cm y 10 cm.',
+          options: ['22 cm', '24 cm', '26 cm', '28 cm'],
+          correct: 1,
+          explanation: 'P = 6 + 8 + 10 = 24 cm. Solo se suman los lados.',
+          hint: 'Perímetro = suma de TODOS los lados. Es una suma sencilla.'
+        }
+      },
+      {
+        id: 'MAT_35_38',
+        title: 'Área y Perímetro (Rectángulo)',
+        robotica: 'El área de contacto de las llantas garantiza la tracción necesaria para evitar deslizamientos, mientras que el perímetro define cuánto avanza el robot en cada vuelta de rueda.',
+        difficulty: 'intermediate',
+        points: 130,
+        diagram: 'rectangulo-bh',
+        diagramData: { base: '12 cm', height: '5 cm' },
+        ver: {
+          title: '👀 Rectángulo',
+          content: 'base = 12 cm\naltura = 5 cm',
+          description: 'Un rectángulo tiene 2 dimensiones. Su área y perímetro se calculan con fórmulas distintas.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se calculan?',
+          steps: [
+            'Identifica los datos: base = 12 cm, altura = 5 cm',
+            'El ÁREA mide el espacio DENTRO de la figura: A = base × altura',
+            'Calcula: A = 12 × 5 = 60 cm²',
+            'El PERÍMETRO mide el contorno completo: P = 2 × (base + altura)',
+            'Calcula: P = 2 × (12 + 5) = 2 × 17 = 34 cm',
+            'OJO: el área se mide en cm² (unidades cuadradas) y el perímetro en cm'
+          ],
+          formulaLabel: 'Fórmulas para calcular el área y el perímetro del rectángulo',
+          formula: 'A = b × h\nP = 2(b + h)',
+          formulaMeaning: [
+            { symbol: 'A', text: 'área (el espacio que hay dentro de la figura)' },
+            { symbol: 'P', text: 'perímetro (el contorno de la figura)' },
+            { symbol: 'b', text: 'la base del rectángulo' },
+            { symbol: 'h', text: 'la altura del rectángulo' }
+          ]
+        },
+        simular: {
+          kind: 'rectAreaPerim',
+          title: '🧩 Mira rellenarse la cuadrícula',
+          description: 'El rectángulo se rellena fila por fila para contar el área, y al final se resalta el contorno para el perímetro. Dale play y observa el proceso en vivo.',
+          data: { base: 12, height: 5, unit: 'cm' }
+        },
+        practicar: {
+          question: 'Un rectángulo mide 9 cm de base y 6 cm de altura. ¿Cuál es su ÁREA?',
+          options: ['15 cm²', '30 cm²', '54 cm²', '108 cm²'],
+          correct: 2,
+          explanation: 'A = base × altura = 9 × 6 = 54 cm². El perímetro sería 30 cm.',
+          hint: 'Para el ÁREA multiplicas base × altura. Para el PERÍMETRO sumas todos los lados.'
+        }
+      },
+      {
+        id: 'MAT_46',
+        title: 'Sistema Métrico Decimal',
+        robotica: 'El sistema métrico decimal unifica el diseño físico, los sensores y la programación de un robot: sus piezas encajan con precisión milimétrica y sus sensores miden el entorno en centímetros exactos.',
+        difficulty: 'basic',
+        points: 100,
+        ver: {
+          title: '👀 Tabla de conversiones',
+          content: 'km  hm  dam  m  dm  cm  mm\n(cada escalón vale ×10 al bajar, ÷10 al subir)',
+          description: 'El sistema métrico es decimal. Cada unidad es 10 veces mayor o menor que la contigua.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo convertir?',
+          steps: [
+            'El sistema métrico es decimal: cada escalón vale 10 veces más o menos que el siguiente',
+            'Para BAJAR de una unidad grande a una chica (ej. km a m), MULTIPLICAS por 10 en cada escalón',
+            'Para SUBIR de una unidad chica a una grande, DIVIDES entre 10 en cada escalón',
+            'De km a m hay 3 escalones: km → hm → dam → m',
+            'Multiplica por 10 tres veces (o directo por 1000): 3.5 × 1000 = 3500',
+            'Resultado: 3.5 km = 3500 m'
+          ],
+          formulaLabel: 'Equivalencias del sistema métrico decimal',
+          formula: '1 km = 1 000 m = 10 000 dm = 100 000 cm',
+          formulaMeaning: [
+            { symbol: 'km, hm, dam, m, dm, cm, mm', text: 'unidades de longitud, cada una 10 veces más grande que la siguiente' }
+          ]
+        },
+        simular: {
+          kind: 'metricLadder',
+          title: '🧩 Mira bajar la escalera de unidades',
+          description: 'Un marcador desciende escalón por escalón (×10 cada uno) desde km hasta m. Dale play y observa la conversión en vivo.',
+          data: { fromUnit: 'km', toUnit: 'm', value: 3.5, direction: 'down' }
+        },
+        practicar: {
+          question: '¿Cuántos centímetros son 2.3 metros?',
+          options: ['23 cm', '230 cm', '2300 cm', '0.23 cm'],
+          correct: 1,
+          explanation: 'De m a cm hay 2 escalones (m → dm → cm), multiplicas por 100: 2.3 × 100 = 230 cm.',
+          hint: 'De metros a centímetros hay 2 saltos en la tabla. ¿Cuántas veces multiplicas por 10?'
+        }
+      },
+      {
+        id: 'MAT_43_triang',
+        title: 'Clasificación de Triángulos',
+        robotica: 'Los triángulos isósceles y equiláteros son rígidos, por eso los chasis de robots como Lego o Abilix Krypton los aprovechan para construir estructuras estables y programar giros precisos.',
+        difficulty: 'advanced',
+        points: 180,
+        diagram: 'triangulo-lados',
+        diagramData: ['5 cm', '5 cm', '8 cm'],
+        ver: {
+          title: '👀 Triángulo con lados',
+          content: '5 cm, 5 cm, 8 cm',
+          description: 'Los triángulos se clasifican por sus lados (equilátero, isósceles, escaleno) y por sus ángulos (acutángulo, rectángulo, obtusángulo).'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se clasifica?',
+          steps: [
+            'Compara las longitudes de los 3 lados: 5 cm, 5 cm y 8 cm',
+            'Por LADOS: tiene 2 lados iguales (5 y 5) → es ISÓSCELES',
+            'Verifica que el triángulo exista: la suma de los 2 lados menores debe ser mayor al lado mayor',
+            '5 + 5 = 10, y 10 > 8 → el triángulo sí existe',
+            'Por ÁNGULOS: el lado más largo (8 cm) siempre está frente al ángulo más grande',
+            'Con la ley de cosenos, ese ángulo mide más de 90° → es OBTUSÁNGULO',
+            'Conclusión: es un triángulo ISÓSCELES OBTUSÁNGULO'
+          ],
+          formulaLabel: 'Criterios para clasificar triángulos por lados y por ángulos',
+          formula: 'Por lados: equilátero, isósceles, escaleno\nPor ángulos: acutángulo, rectángulo, obtusángulo',
+          formulaMeaning: [
+            { symbol: 'equilátero', text: 'sus 3 lados son iguales' },
+            { symbol: 'isósceles', text: 'tiene exactamente 2 lados iguales' },
+            { symbol: 'escaleno', text: 'sus 3 lados son diferentes' },
+            { symbol: 'rectángulo', text: 'tiene un ángulo de exactamente 90°' }
+          ]
+        },
+        simular: {
+          kind: 'triangleClassify',
+          title: '🧩 Mira clasificarse el triángulo',
+          description: 'Primero se dibuja el triángulo real, luego se marcan los lados iguales, y al final se resalta el ángulo opuesto al lado más largo. Dale play y observa la clasificación en vivo.',
+          data: { sides: [5, 5, 8], unit: 'cm', classification: 'Isósceles Obtusángulo' }
+        },
+        practicar: {
+          question: 'Un triángulo tiene lados 6 cm, 8 cm y 10 cm. ¿Cómo se clasifica por sus LADOS?',
+          options: ['Equilátero', 'Isósceles', 'Escaleno', 'No se puede clasificar'],
+          correct: 2,
+          explanation: 'Los 3 lados son diferentes (6, 8 y 10) → ESCALENO. (Dato curioso: 6²+8²=10², así que además es rectángulo.)',
+          hint: 'Observa los lados: ¿cuántos son iguales? Si los 3 son diferentes, es escaleno.'
+        }
+      }
+    ]
+  },
+  {
+    id: 'datos',
+    name: 'Análisis de Datos',
+    icon: '📊',
+    color: '#10b981',
+    description: '5 niveles — Media, mediana, moda, dispersión',
+    levels: [
+      {
+        id: 'MAT_49',
+        title: 'La Moda',
+        robotica: 'La moda ayuda a un robot a tomar decisiones lógicas: si un sensor de distancia repite un mismo valor varias veces, el algoritmo elige ese valor para evitar giros falsos.',
+        difficulty: 'basic',
+        points: 100,
+        ver: {
+          title: '👀 Calificaciones de 10 alumnos',
+          content: '7, 8, 5, 9, 7, 6, 7, 10, 8, 7',
+          description: 'La moda es el valor que MÁS se repite. Viene de "lo de moda" = lo más popular.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se encuentra la moda?',
+          steps: [
+            'Cuenta cuántas veces aparece cada valor en la lista',
+            '5→1 vez, 6→1 vez, 7→4 veces, 8→2 veces, 9→1 vez, 10→1 vez',
+            'La moda es el valor con la frecuencia MÁS ALTA',
+            'El 7 aparece más veces que cualquier otro (4 veces)',
+            'Resultado: Moda = 7'
+          ],
+          formulaLabel: 'Fórmula para determinar la moda',
+          formula: 'Moda = valor con mayor frecuencia',
+          formulaMeaning: [
+            { symbol: 'frecuencia', text: 'cuántas veces se repite un valor en el conjunto de datos' }
+          ]
+        },
+        simular: {
+          kind: 'barchart',
+          title: '🧩 Mira contarse las frecuencias',
+          description: 'Cada calificación se apila en su columna a medida que se cuenta. La barra más alta (en naranja) es la moda. Dale play y observa el conteo en vivo.',
+          data: { values: [7, 8, 5, 9, 7, 6, 7, 10, 8, 7] }
+        },
+        practicar: {
+          question: 'Datos: 4, 6, 6, 8, 6, 9, 3, 6, 7. ¿Cuál es la moda?',
+          options: ['3', '6', '8', '9'],
+          correct: 1,
+          explanation: 'El 6 aparece 4 veces (más que cualquier otro). Moda = 6.',
+          hint: 'Cuenta cuántas veces aparece cada número. ¿Cuál se repite MÁS?'
+        }
+      },
+      {
+        id: 'MAT_50_mediana',
+        title: 'La Mediana (datos impares)',
+        robotica: 'La mediana filtra el ruido y los picos erróneos en las lecturas de un sensor, ignorando valores atípicos para lograr un desplazamiento más suave.',
+        difficulty: 'basic',
+        points: 100,
+        ver: {
+          title: '👀 Conjunto de datos',
+          content: '12, 5, 8, 15, 7, 10, 9',
+          description: 'La mediana es el valor del medio cuando los datos están ordenados.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se calcula?',
+          steps: [
+            'Ordena los datos de menor a mayor: 5, 7, 8, 9, 10, 12, 15',
+            'Cuenta cuántos datos hay: 7 (número impar)',
+            'Con datos impares, la mediana es el valor EXACTAMENTE en el centro',
+            'Calcula su posición: (n+1)/2 = (7+1)/2 = 4',
+            'Busca el valor en la posición 4: 9',
+            'Resultado: Mediana = 9'
+          ],
+          formulaLabel: 'Fórmula para determinar la mediana con datos impares',
+          formula: 'n impar → Mediana = valor en la posición (n+1)/2',
+          formulaMeaning: [
+            { symbol: 'n', text: 'la cantidad total de datos' }
+          ]
+        },
+        simular: {
+          kind: 'numberlineMedian',
+          title: '🧩 Mira descartarse los extremos',
+          description: 'Los datos ya están ordenados en la recta. En cada paso se descartan el menor y el mayor, hasta quedarse con el valor central. Dale play y observa cómo converge.',
+          data: { values: [12, 5, 8, 15, 7, 10, 9] }
+        },
+        practicar: {
+          question: 'Encuentra la mediana de: 20, 14, 8, 26, 11, 17, 5',
+          options: ['11', '14', '17', '20'],
+          correct: 1,
+          explanation: 'Ordenando: 5, 8, 11, 14, 17, 20, 26. El valor central (4° de 7) es 14.',
+          hint: 'Primero ordena los datos. Como hay 7 (impar), busca el valor del MEDIO.'
+        }
+      },
+      {
+        id: 'MAT_50_mediana_par',
+        title: 'La Mediana (datos pares)',
+        robotica: 'Igual que con un número impar de datos, la mediana sirve para filtrar lecturas extremas de un sensor y quedarnos con un valor central confiable, sin importar si la cantidad de datos es par.',
+        difficulty: 'intermediate',
+        points: 130,
+        ver: {
+          title: '👀 Conjunto de 6 datos',
+          content: '3, 8, 4, 10, 6, 9',
+          description: 'Cuando hay un número PAR de datos, la mediana es el promedio de los 2 valores centrales.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se calcula?',
+          steps: [
+            'Ordena los datos: 3, 4, 6, 8, 9, 10',
+            'Cuenta cuántos datos hay: 6 (número par)',
+            'Con datos pares, NO hay un único valor central, sino DOS',
+            'Encuentra los 2 valores centrales, en las posiciones n/2 y n/2+1: 6 y 8',
+            'Promedia esos dos valores: (6 + 8) / 2',
+            'Resultado: Mediana = 7'
+          ],
+          formulaLabel: 'Fórmula para determinar la mediana con datos pares',
+          formula: 'n par → Mediana = (valor en n/2 + valor en n/2+1) / 2',
+          formulaMeaning: [
+            { symbol: 'n', text: 'la cantidad total de datos' }
+          ]
+        },
+        simular: {
+          kind: 'numberlineMedian',
+          title: '🧩 Mira descartarse los extremos',
+          description: 'Con un número par de datos, el descarte deja DOS valores centrales — la mediana es su promedio. Dale play y observa cómo converge.',
+          data: { values: [3, 8, 4, 10, 6, 9] }
+        },
+        practicar: {
+          question: 'Encuentra la mediana de: 5, 11, 3, 9, 7, 13',
+          options: ['7', '8', '9', '10'],
+          correct: 1,
+          explanation: 'Ordenando: 3, 5, 7, 9, 11, 13. Los 2 centrales son 7 y 9. Mediana = (7+9)/2 = 8.',
+          hint: 'Con datos pares no hay UN solo valor central, sino DOS. Promedialos.'
+        }
+      },
+      {
+        id: 'MAT_50_media',
+        title: 'La Media (Promedio)',
+        robotica: 'La media sirve para calcular datos estables y continuos, como la distancia promedio que lee un sensor ultrasónico para evitar caídas o choques.',
+        difficulty: 'intermediate',
+        points: 120,
+        ver: {
+          title: '👀 Edades de 5 amigos',
+          content: '12, 13, 12, 14, 14',
+          description: 'La media (o promedio) es la suma de todos los valores dividida entre la cantidad de datos.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se calcula?',
+          steps: [
+            'Suma TODOS los valores: 12+13+12+14+14',
+            'El total de la suma es 65',
+            'Cuenta cuántos datos hay: 5 edades',
+            'Divide la suma entre la cantidad de datos: 65 ÷ 5',
+            'Resultado: Media = 13 años'
+          ],
+          formulaLabel: 'Fórmula para determinar la media (promedio)',
+          formula: 'x̄ = (Σxᵢ) / n',
+          formulaMeaning: [
+            { symbol: 'x̄', text: 'la media (promedio)' },
+            { symbol: 'Σxᵢ', text: 'la suma de todos los valores' },
+            { symbol: 'n', text: 'la cantidad de datos' }
+          ]
+        },
+        simular: {
+          kind: 'numberlineMean',
+          title: '🧩 Mira converger el promedio',
+          description: 'Las 5 edades aparecen en la recta y una flecha se desliza hasta la media. Dale play y observa cómo se calcula en vivo.',
+          data: { values: [12, 13, 12, 14, 14] }
+        },
+        practicar: {
+          question: '5 amigos tienen estas edades: 15, 17, 15, 19, 14. ¿Cuál es la edad promedio?',
+          options: ['14', '15', '16', '17'],
+          correct: 2,
+          explanation: 'Suma = 80, dividido entre 5 = 16. La media es 16 años.',
+          hint: 'Suma todas las edades y divide entre la cantidad de amigos (5).'
+        }
+      },
+      {
+        id: 'MAT_50_disp',
+        title: 'Comparar Dispersión',
+        robotica: 'Medir la dispersión ayuda a evaluar qué tan repetible y precisa es la trayectoria de un robot: una dispersión baja indica que sus sensores y motores están bien calibrados.',
+        difficulty: 'advanced',
+        points: 180,
+        ver: {
+          title: '👀 Dos grupos con la misma media',
+          content: 'Grupo A: 5, 6, 6, 7, 6 (rango = 2)\nGrupo B: 2, 4, 6, 8, 10 (rango = 8)',
+          description: 'Dos grupos pueden tener la MISMA media pero DISPERSIÓN muy diferente. La dispersión indica qué tan "juntos" o "separados" están los datos.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo se mide la dispersión?',
+          steps: [
+            'Busca el valor MÁXIMO y el MÍNIMO de cada grupo',
+            'Grupo A: máximo=7, mínimo=5',
+            'Calcula el rango de A: 7 − 5 = 2 (datos muy juntos → HOMOGÉNEO)',
+            'Grupo B: máximo=10, mínimo=2',
+            'Calcula el rango de B: 10 − 2 = 8 (datos muy separados → HETEROGÉNEO)',
+            'Aunque ambos grupos tienen la misma media (6), el Grupo A es más homogéneo porque su rango es menor'
+          ],
+          formulaLabel: 'Fórmula del rango, para medir la dispersión de los datos',
+          formula: 'Rango = Valor máximo − Valor mínimo',
+          formulaMeaning: [
+            { symbol: 'Rango', text: 'qué tan separados están los datos entre sí' }
+          ]
+        },
+        simular: {
+          kind: 'numberlineDispersion',
+          title: '🧩 Mira comparar los dos grupos',
+          description: 'Cada grupo aparece en su propia recta, y luego se traza el rango (máximo − mínimo) de cada uno. Dale play y compara qué tan juntos están los datos.',
+          data: {
+            groupA: { label: 'Grupo A', values: [5, 6, 6, 7, 6] },
+            groupB: { label: 'Grupo B', values: [2, 4, 6, 8, 10] }
+          }
+        },
+        practicar: {
+          question: 'Grupo C (8,9,8,10,9) y Grupo D (3,6,9,12,15). ¿Cuál es más HOMOGÉNEO?',
+          options: ['Grupo C', 'Grupo D', 'Son iguales', 'No se puede saber'],
+          correct: 0,
+          explanation: 'Grupo C tiene rango = 2 (datos juntos). Grupo D tiene rango = 12 (datos dispersos). El C es más homogéneo.',
+          hint: 'La homogeneidad se relaciona con qué tan JUNTOS están los datos. Calcula el rango (Máx − Mín) de cada grupo.'
+        }
+      }
+    ]
+  },
+  {
+    id: 'funciones',
+    name: 'Funciones',
+    icon: 'ƒ',
+    color: '#ec4899',
+    description: '5 niveles — Concepto, evaluación, aplicaciones',
+    levels: [
+      {
+        id: 'MAT_47_concepto',
+        title: '¿Qué es una función?',
+        robotica: 'Una función en robótica es un bloque de código reutilizable diseñado para ejecutar una tarea específica, como avanzar, medir distancia o girar un motor.',
+        difficulty: 'basic',
+        points: 110,
+        ver: {
+          title: '👀 Relación de pares',
+          content: '{(1,2), (2,4), (3,6), (4,8)}',
+          description: 'Una función es una relación donde a cada x le corresponde UN SOLO valor de y.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo reconocer una función?',
+          steps: [
+            'Revisa cada par ordenado (x, y) de la relación',
+            '1→2, 2→4, 3→6, 4→8',
+            'Verifica que ninguna x se repita con dos y diferentes',
+            'Todas las x (1, 2, 3, 4) son distintas y cada una tiene su propia y',
+            'Regla de las funciones: "una entrada, una sola salida"',
+            'Conclusión: SÍ es una función'
+          ],
+          formulaLabel: 'Definición general de una función',
+          formula: 'f: x ↦ y   (cada x tiene un único y)',
+          formulaMeaning: [
+            { symbol: 'x', text: 'la entrada (variable independiente)' },
+            { symbol: 'y', text: 'la salida (variable dependiente)' },
+            { symbol: '↦', text: 'se lee "le corresponde"' }
+          ]
+        },
+        simular: {
+          kind: 'mapping',
+          title: '🧩 Mira trazarse las relaciones',
+          description: 'Cada flecha conecta una x con su y. Si ninguna x tiene dos flechas, es función. Dale play y observa el trazo en vivo.',
+          data: { pairs: [[1, 2], [2, 4], [3, 6], [4, 8]], isFunction: true }
+        },
+        practicar: {
+          question: 'Relación: {(2,5), (3,7), (4,9), (5,11)}. ¿Es función?',
+          options: ['No, porque tiene 4 pares', 'No, porque los valores son impares', 'Sí, porque cada x tiene una sola y', 'No se puede saber'],
+          correct: 2,
+          explanation: 'Sí es función. Cada x (2, 3, 4, 5) tiene una ÚNICA y asociada. Es f(x) = 2x+1.',
+          hint: 'Pregúntate: ¿alguna x se repite? Si todas las x son diferentes, es función.'
+        }
+      },
+      {
+        id: 'MAT_47_no_funcion',
+        title: '¿Cuándo NO es función?',
+        robotica: 'Un robot necesita que a cada entrada le corresponda una única salida: si el mismo dato de un sensor produjera dos acciones distintas, su comportamiento sería impredecible.',
+        difficulty: 'basic',
+        points: 120,
+        ver: {
+          title: '👀 Relación sospechosa',
+          content: '{(1,2), (1,3), (2,5)}',
+          description: 'Si una x tiene DOS valores de y, la relación NO es función.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo identificar que NO es función?',
+          steps: [
+            'Revisa cada par ordenado y anota qué x se repite',
+            'En (1,2), x=1 tiene salida y=2',
+            'En (1,3), x=1 (¡otra vez!) tiene salida y=3',
+            'Una misma entrada (x=1) tiene DOS salidas diferentes (2 y 3)',
+            'Eso viola la regla "una entrada, una sola salida"',
+            'Conclusión: NO es una función'
+          ],
+          formulaLabel: 'Condición para que una relación NO sea función',
+          formula: 'Si existe una x con más de una y asociada → NO es función',
+          formulaMeaning: [
+            { symbol: '∃', text: '"existe" — si existe al menos una x repetida con distinta y, ya no es función' }
+          ]
+        },
+        simular: {
+          kind: 'mapping',
+          title: '🧩 Mira trazarse las relaciones',
+          description: 'Observa qué pasa cuando una misma x recibe dos flechas hacia dos y distintas. Dale play y descubre por qué esto rompe la regla de función.',
+          data: { pairs: [[1, 2], [1, 3], [2, 5]], isFunction: false }
+        },
+        practicar: {
+          question: 'Relación: {(3,4), (3,7), (5,2)}. ¿Es función?',
+          options: ['Sí, porque tiene 3 pares', 'Sí, porque hay números', 'No, porque x=3 tiene dos y', 'No se puede saber'],
+          correct: 2,
+          explanation: 'La x=3 aparece dos veces con y=4 y y=7. Una entrada con dos salidas NO es función.',
+          hint: 'Busca si alguna x está REPETIDA. Si lo está, mira cuántas y le corresponden.'
+        }
+      },
+      {
+        id: 'MAT_47_evaluar',
+        title: 'Evaluar Funciones',
+        robotica: 'Las funciones cuadráticas ayudan a suavizar aceleraciones y a linealizar el comportamiento físico de los servomotores en microcontroladores como ESP32 y Arduino.',
+        difficulty: 'intermediate',
+        points: 150,
+        ver: {
+          title: '👀 Función cuadrática',
+          content: 'f(x) = 3x² − 2x + 1',
+          description: 'Evaluar f(a) significa sustituir x = a en la expresión y calcular el resultado.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo evaluar?',
+          steps: [
+            'Evaluar f(a) significa sustituir x por el valor "a" en toda la expresión',
+            'Para f(2): sustituye x=2 → 3(2)² − 2(2) + 1',
+            'Calcula la potencia primero: (2)²=4 → 3(4) − 2(2) + 1',
+            'Multiplica y resuelve: 12 − 4 + 1 = 9, entonces f(2) = 9',
+            'Para f(−1): sustituye x=−1 → 3(−1)² − 2(−1) + 1',
+            'OJO: (−1)²=1, NO −1. Los paréntesis protegen el signo. Entonces 3(1) + 2 + 1 = 6, f(−1) = 6'
+          ],
+          formulaLabel: 'Fórmula para evaluar una función en un valor dado',
+          formula: 'f(a) = expresión con x reemplazada por a',
+          formulaMeaning: [
+            { symbol: 'f(a)', text: 'el resultado de la función al evaluarla en x=a' },
+            { symbol: 'a', text: 'el valor que sustituyes en lugar de x' }
+          ]
+        },
+        simular: {
+          kind: 'graph',
+          title: '🧩 Mira trazarse la parábola',
+          description: 'La curva se dibuja punto por punto y luego se marca f(2). Dale play y observa cómo se traza en vivo.',
+          data: {
+            xRange: [-2, 3], yRange: [-2, 30],
+            curves: [{ type: 'parabola', a: 3, b: -2, c: 1, color: '#4f46e5' }],
+            highlightPoint: { x: 2, y: 9, label: 'f(2)=9' },
+            finalLabel: 'f(2) = 3(2)² − 2(2) + 1 = 9'
+          }
+        },
+        practicar: {
+          question: 'Si f(x) = 3x² − 2x + 1, ¿cuánto vale f(3)?',
+          options: ['18', '20', '22', '25'],
+          correct: 2,
+          explanation: 'f(3) = 3(3)² − 2(3) + 1 = 3(9) − 6 + 1 = 27 − 6 + 1 = 22',
+          hint: 'Sustituye x = 3 en TODOS los lugares donde aparece x. Calcula paso a paso.'
+        }
+      },
+      {
+        id: 'MAT_47_aplicada',
+        title: 'Función Lineal (problema aplicado)',
+        robotica: 'Con ecuaciones y funciones lineales, plataformas como ESP32 y Arduino interpretan las señales de los sensores y calculan con precisión la velocidad, posición y cinemática de los motores.',
+        difficulty: 'intermediate',
+        points: 170,
+        ver: {
+          title: '👀 Tarifa de taxi',
+          content: 'Banderazo: $30\nPor km: $8',
+          description: 'Una función lineal modela una situación donde hay un costo fijo más un costo variable por unidad.'
+        },
+        entender: {
+          title: '🧠 ¿Cómo plantear la función?',
+          steps: [
+            'Identifica la variable independiente: x = kilómetros recorridos',
+            'Identifica la variable dependiente: C(x) = costo total del viaje',
+            'El costo fijo (banderazo) es 30: no cambia sin importar los km',
+            'El costo variable es 8 por cada km recorrido',
+            'Arma la función: C(x) = 30 + 8x',
+            'Para 12 km, sustituye x=12: C(12) = 30 + 8(12) = 30 + 96',
+            'Resultado: C(12) = $126'
+          ],
+          formulaLabel: 'Forma general de una función lineal',
+          formula: 'f(x) = mx + b',
+          formulaMeaning: [
+            { symbol: 'x', text: 'la variable independiente (kilómetros recorridos)' },
+            { symbol: 'f(x)', text: 'la variable dependiente (costo total)' },
+            { symbol: 'm', text: 'la pendiente: cuánto cambia el costo por cada km (8)' },
+            { symbol: 'b', text: 'la ordenada al origen: el costo fijo inicial (30, el banderazo)' }
+          ]
+        },
+        simular: {
+          kind: 'graph',
+          title: '🧩 Mira trazarse la tarifa',
+          description: 'La recta del costo se dibuja de izquierda a derecha y luego se marca el costo para 12 km. Dale play y observa cómo se traza en vivo.',
+          data: {
+            xRange: [0, 15], yRange: [0, 150],
+            curves: [{ type: 'line', m: 8, b: 30, color: '#4f46e5' }],
+            highlightPoint: { x: 12, y: 126, label: 'C(12)=$126' },
+            finalLabel: 'C(12) = 30 + 8(12) = $126'
+          }
+        },
+        practicar: {
+          question: 'Un taxi cobra $30 de banderazo + $8 por km. ¿Cuánto cuesta un viaje de 15 km?',
+          options: ['$126', '$140', '$150', '$160'],
+          correct: 2,
+          explanation: 'C(15) = 30 + 8(15) = 30 + 120 = $150',
+          hint: 'La función es C(x) = 30 + 8x. Sustituye x = 15.'
+        }
+      },
+      {
+        id: 'MAT_47_circulo',
+        title: 'Prueba de la Recta Vertical',
+        robotica: 'Al trazar trayectorias circulares o curvas, un robot necesita que a cada instante le corresponda una única posición, evitando así saltos o movimientos físicamente imposibles en sus servomotores.',
+        difficulty: 'advanced',
+        points: 200,
+        ver: {
+          title: '👀 Una circunferencia',
+          content: 'x² + y² = 25',
+          description: 'La circunferencia NO es una función. La "prueba de la recta vertical" lo demuestra visualmente.'
+        },
+        entender: {
+          title: '🧠 ¿Por qué no es función?',
+          steps: [
+            'Despeja y de la ecuación: y² = 25 − x²',
+            'Elige un valor de x dentro del dominio, por ejemplo x=3',
+            'Sustituye: y² = 25 − 9 = 16',
+            'Aplica raíz cuadrada a ambos lados: y = ±√16',
+            'Obtienes DOS valores: y=4 y y=−4',
+            'Una sola x (3) tiene dos salidas (4 y −4) → NO es función',
+            'Visualmente: una recta vertical x=3 corta la circunferencia en 2 puntos, (3,4) y (3,−4)'
+          ],
+          formulaLabel: 'Criterio de la prueba de la recta vertical',
+          formula: 'Prueba de la recta vertical: si una recta vertical corta la gráfica en 2+ puntos → NO es función',
+          formulaMeaning: [
+            { symbol: 'recta vertical', text: 'una línea vertical (x = constante) que se traza sobre la gráfica para probarla' }
+          ]
+        },
+        simular: {
+          kind: 'graph',
+          title: '🧩 Mira la prueba de la recta vertical',
+          description: 'La circunferencia se traza completa y luego una recta vertical x=3 revela que corta la curva en DOS puntos. Dale play y observa la prueba en vivo.',
+          data: {
+            xRange: [-6, 6], yRange: [-6, 6],
+            curves: [{ type: 'circle', r: 5, cx: 0, cy: 0, color: '#4f46e5' }],
+            verticalLine: { x: 3 },
+            highlightPoint: { x: 3, y: 4, label: '(3, 4)' },
+            intersection: { x: 3, y: -4, label: '(3, −4)' },
+            finalLabel: 'x=3 corta la circunferencia en 2 puntos → NO es función'
+          }
+        },
+        practicar: {
+          question: '¿La ecuación y² = x es una función de x? (evalúa en x=4)',
+          options: ['Sí, porque es una ecuación sencilla', 'No, porque a una x le corresponden 2 y', 'Sí, porque el resultado siempre es positivo', 'No se puede saber'],
+          correct: 1,
+          explanation: 'Para x=4: y² = 4 → y = ±2. Dos valores de y para la misma x → no es función.',
+          hint: 'Despeja y. Si aparece ±, hay DOS valores de y para la misma x.'
+        }
+      }
+    ]
+  }
+];
+
+// ===================== GAME STATE =====================
+let state = {
+  currentScreen: 'home',  // home | island | level | result
+  currentIsland: null,
+  currentLevel: null,
+  currentStep: 'ver',  // ver | entender | simular | practicar
+  entenderIdx: 0,
+  formulaLegendOpen: false,
+  lives: 3,
+  score: 0,
+  totalScore: parseInt(localStorage.getItem('mathquest-totalScore') || '0'),
+  coins: parseInt(localStorage.getItem('mathquest-coins') || '0'),
+  progress: JSON.parse(localStorage.getItem('mathquest-progress') || '{}'),
+  currentQuestionAnswered: false,
+  selectedOption: null,
+  hintsUsed: 0,
+  attempts: 0,
+  startTime: null,
+  dragPool: [],
+  dragOrder: [],
+  dragSolved: false
+};
+
+function saveState() {
+  localStorage.setItem('mathquest-totalScore', String(state.totalScore));
+  localStorage.setItem('mathquest-coins', String(state.coins));
+  localStorage.setItem('mathquest-progress', JSON.stringify(state.progress));
+}
+
+function getCurrentLevel() {
+  const island = gameData.find(i => i.id === state.currentIsland);
+  if (!island) return null;
+  return island.levels.find(l => l.id === state.currentLevel) || null;
+}
+
+function getLevelProgress(islandId, levelId) {
+  return state.progress[islandId]?.[levelId] || null;
+}
+
+function setLevelProgress(islandId, levelId, stars, points) {
+  if (!state.progress[islandId]) state.progress[islandId] = {};
+  const existing = state.progress[islandId][levelId];
+  if (!existing || stars > existing.stars) {
+    state.progress[islandId][levelId] = { stars, points, completedAt: Date.now() };
+    saveState();
+  }
+}
+
+// ===== MODO REVISIÓN =====
+// Mientras REVIEW_MODE = true: todos los niveles e islas están desbloqueados
+// para que se pueda revisar cualquier contenido sin restricción.
+// Las estrellas y el progreso SOLO se guardan cuando se responde correctamente.
+const REVIEW_MODE = true;
+
+function isLevelUnlocked(island, levelIndex) {
+  if (REVIEW_MODE) return true;
+  if (levelIndex === 0) return true;
+  const prevLevel = island.levels[levelIndex - 1];
+  return getLevelProgress(island.id, prevLevel.id) !== null;
+}
+
+function isIslandUnlocked(islandIndex) {
+  if (REVIEW_MODE) return true;
+  if (islandIndex === 0) return true;
+  const prevIsland = gameData[islandIndex - 1];
+  const completed = prevIsland.levels.filter(l => getLevelProgress(prevIsland.id, l.id)).length;
+  return completed >= Math.ceil(prevIsland.levels.length * 0.5);
+}
+
+function getIslandProgress(island) {
+  const completed = island.levels.filter(l => getLevelProgress(island.id, l.id)).length;
+  return { completed, total: island.levels.length, percent: Math.round((completed / island.levels.length) * 100) };
+}
+
+function nl2br(text) {
+  return String(text).replace(/\n/g, '<br>');
+}
+
+// ===================== RENDERERS =====================
+function render() {
+  const app = document.getElementById('app');
+  let html = renderHeader();
+  if (state.currentScreen === 'home') html += renderHome();
+  else if (state.currentScreen === 'island') html += renderIsland();
+  else if (state.currentScreen === 'level') html += renderLevel();
+  else if (state.currentScreen === 'result') html += renderResult();
+  app.innerHTML = html;
+  if (state.currentScreen === 'level' && state.currentStep === 'simular') {
+    const level = getCurrentLevel();
+    if (level && level.simular) simDraw(level, SIM_REGISTRY[level.simular.kind].initFrame);
+  }
+}
+
+function renderHeader() {
+  return `
+    <div class="game-header">
+      <div class="brand" onclick="goHome()" style="cursor: pointer;">
+        <div class="brand-icon">🎮</div>
+        <div>
+          <h1>MathQuest</h1>
+          <p>Aprende matemáticas jugando</p>
+        </div>
+      </div>
+      <div class="game-stats">
+        <div class="stat-pill coins">🪙 ${state.coins}</div>
+        <div class="stat-pill stars">⭐ ${state.totalScore}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderHome() {
+  let html = `
+    <div class="welcome-banner">
+      <h2>¡Bienvenido a MathQuest! 🎉</h2>
+      <p>Resuelve retos, gana estrellas y domina las matemáticas.</p>
+      <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.95;">🔓 <strong>Modo revisión activo</strong> — todos los niveles están desbloqueados. Las estrellas ⭐ solo se guardan al responder correctamente.</p>
+    </div>
+    <div class="islands-grid">
+  `;
+  gameData.forEach((island, idx) => {
+    const prog = getIslandProgress(island);
+    const unlocked = isIslandUnlocked(idx);
+    html += `
+      <div class="island-card ${unlocked ? '' : 'locked'}"
+           style="--island-color: ${island.color};"
+           onclick="${unlocked ? `goToIsland('${island.id}')` : ''}">
+        <div class="island-icon-large">${island.icon}</div>
+        <h3>${island.name}</h3>
+        <p class="subtitle">${island.description}</p>
+        <div class="island-progress">
+          <div class="island-progress-fill" style="width: ${prog.percent}%; background: ${island.color};"></div>
+        </div>
+        <div class="island-progress-text">
+          <span>${prog.completed} / ${prog.total} niveles</span>
+          <span>${prog.percent}%</span>
+        </div>
+        ${!unlocked && !REVIEW_MODE ? '<p class="mt-2" style="font-size: 0.8em; color: var(--muted);">🔒 Completa 50% de la isla anterior</p>' : ''}
+      </div>
+    `;
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderIsland() {
+  const island = gameData.find(i => i.id === state.currentIsland);
+  if (!island) return '<p>Isla no encontrada</p>';
+  const prog = getIslandProgress(island);
+  let html = `
+    <div class="breadcrumb">
+      <a onclick="goHome()">🏠 Inicio</a>
+      <span>›</span>
+      <span>${island.icon} ${island.name}</span>
+    </div>
+    <div class="level-screen" style="--island-color: ${island.color}; border-top: 6px solid ${island.color};">
+      <h2 style="color: ${island.color};">${island.icon} ${island.name}</h2>
+      <p class="step-subtitle">${island.description} • Progreso: ${prog.completed}/${prog.total}</p>
+      <div class="levels-grid">
+  `;
+  island.levels.forEach((level, idx) => {
+    const lvlProg = getLevelProgress(island.id, level.id);
+    const unlocked = isLevelUnlocked(island, idx);
+    const stars = lvlProg ? lvlProg.stars : 0;
+    html += `
+      <div class="level-card ${unlocked ? '' : 'locked'} ${lvlProg ? 'completed' : ''}"
+           onclick="${unlocked ? `startLevel('${island.id}', '${level.id}')` : ''}">
+        <div class="level-badge ${level.difficulty}">${level.difficulty === 'basic' ? '★' : level.difficulty === 'intermediate' ? '★★' : '★★★'}</div>
+        <div class="level-num">${idx + 1}</div>
+        <div class="level-title">${level.title}</div>
+        <div class="level-stars">
+          ${[1,2,3].map(s => `<span class="${s <= stars ? 'star-filled' : 'star-empty'}">★</span>`).join('')}
+        </div>
+        ${!unlocked && !REVIEW_MODE ? '<div style="font-size: 1.5em; margin-top: 4px;">🔒</div>' : ''}
+      </div>
+    `;
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function renderLevel() {
+  const island = gameData.find(i => i.id === state.currentIsland);
+  const level = island.levels.find(l => l.id === state.currentLevel);
+  if (!level) return '<p>Nivel no encontrado</p>';
+
+  let stepContent = '';
+  if (state.currentStep === 'ver') stepContent = renderStepVer(level);
+  else if (state.currentStep === 'entender') stepContent = renderStepEntender(level);
+  else if (state.currentStep === 'simular') stepContent = renderStepSimular(level);
+  else if (state.currentStep === 'practicar') stepContent = renderStepPracticar(level);
+
+  const hasSimular = !!level.simular;
+  const stepOrder = ['ver', 'entender'].concat(hasSimular ? ['simular'] : []).concat(['practicar']);
+  const idxCurrent = stepOrder.indexOf(state.currentStep);
+  const dotClass = (name) => {
+    const idxName = stepOrder.indexOf(name);
+    if (idxName === idxCurrent) return 'active';
+    if (idxName < idxCurrent) return 'completed';
+    return '';
+  };
+
+  const backEnabled = canGoBack();
+  return `
+    <div class="breadcrumb">
+      <a onclick="goHome()">🏠 Inicio</a>
+      <span>›</span>
+      <a onclick="goToIsland('${island.id}')">${island.icon} ${island.name}</a>
+      <span>›</span>
+      <span>${level.title}</span>
+    </div>
+    <div class="level-screen" style="--island-color: ${island.color};">
+      <div class="step-indicator">
+        <button class="btn secondary step-side-btn" onclick="goToPreviousLevel()" ${backEnabled ? '' : 'style="visibility:hidden;" disabled'}>← Nivel anterior</button>
+        <div class="step-pills">
+          <div class="step-dot ${dotClass('ver')}" onclick="goToLevelStep('ver')"><span class="step-icon">👀</span> Ver</div>
+          <div class="step-dot ${dotClass('entender')}" onclick="goToLevelStep('entender')"><span class="step-icon">🧠</span> Entender</div>
+          ${hasSimular ? `<div class="step-dot ${dotClass('simular')}" onclick="goToLevelStep('simular')"><span class="step-icon">🤖</span> Simular</div>` : ''}
+          <div class="step-dot ${dotClass('practicar')}" onclick="goToLevelStep('practicar')"><span class="step-icon">✍️</span> Practicar</div>
+        </div>
+        <button class="btn secondary step-side-btn" onclick="goToIsland('${island.id}')">🚪 Salir al mapa</button>
+      </div>
+      <div class="step-content">${stepContent}</div>
+    </div>
+  `;
+}
+
+function getPrevLevelInIsland() {
+  const island = gameData.find(i => i.id === state.currentIsland);
+  if (!island) return null;
+  const idx = island.levels.findIndex(l => l.id === state.currentLevel);
+  if (idx <= 0) return null;
+  return { island, level: island.levels[idx - 1] };
+}
+
+function canGoBack() {
+  return getPrevLevelInIsland() !== null;
+}
+
+function goToPreviousLevel() {
+  const prev = getPrevLevelInIsland();
+  if (!prev) return;
+  startLevel(prev.island.id, prev.level.id);
+}
+
+function goToLevelStep(stepName) {
+  const level = getCurrentLevel();
+  if (!level) return;
+  if (stepName === 'simular' && !level.simular) return;
+  if (stepName === state.currentStep) return;
+  state.currentStep = stepName;
+  render();
+}
+
+function renderStepVer(level) {
+  let extra = '';
+  if (level.diagram === 'progresion-palillos') {
+    extra += renderProgresionDiagram();
+  } else if (level.diagram === 'prisma-triangular') {
+    extra += `
+      <div class="fig-diagram">
+        <div class="fig-card">
+          <div class="fig-svg large">${renderPrismSVG()}</div>
+          <div class="fig-label">2 bases triangulares (rosa) + 3 caras laterales rectangulares (índigo)</div>
+        </div>
+      </div>
+    `;
+  } else if (level.diagram === 'triangulo-lados') {
+    extra += `
+      <div class="fig-diagram">
+        <div class="fig-card">
+          <div class="fig-svg large">${renderTriangleSVG(level.diagramData)}</div>
+          <div class="fig-label">Lados: ${level.diagramData.join(' · ')}</div>
+        </div>
+      </div>
+    `;
+  } else if (level.diagram === 'rectangulo-bh') {
+    extra += `
+      <div class="fig-diagram">
+        <div class="fig-card">
+          <div class="fig-svg large">${renderRectangleSVG(level.diagramData.base, level.diagramData.height)}</div>
+        </div>
+      </div>
+    `;
+  }
+  let dragBlock = '';
+  if (level.interactive) {
+    dragBlock = renderDragActivity(level.interactive);
+  }
+  return `
+    <h2 class="step-title">${level.ver.title}</h2>
+    <p class="step-subtitle">${level.ver.description}</p>
+    <div class="visual-box">${nl2br(level.ver.content)}</div>
+    ${extra}
+    ${dragBlock}
+    <div class="step-nav-row" style="justify-content:flex-end;">
+      <button class="btn" onclick="nextStep()">Continuar →</button>
+    </div>
+  `;
+}
+
+function renderMiniFigureSVG(n, maxN) {
+  const squareSize = 26;
+  const refN = Math.max(maxN || n, n);
+  const width = squareSize * refN + 10;
+  let lines = '';
+  for (let i = 0; i < n; i++) {
+    const x = 5 + i * squareSize;
+    if (i === 0) lines += `<line x1="${x}" y1="4" x2="${x}" y2="${4 + squareSize}" stroke="#4f46e5" stroke-width="2"/>`;
+    lines += `<line x1="${x + squareSize}" y1="4" x2="${x + squareSize}" y2="${4 + squareSize}" stroke="#4f46e5" stroke-width="2"/>`;
+    lines += `<line x1="${x}" y1="4" x2="${x + squareSize}" y2="4" stroke="#4f46e5" stroke-width="2"/>`;
+    lines += `<line x1="${x}" y1="${4 + squareSize}" x2="${x + squareSize}" y2="${4 + squareSize}" stroke="#4f46e5" stroke-width="2"/>`;
+  }
+  return `<svg viewBox="0 0 ${width} ${squareSize + 8}" xmlns="http://www.w3.org/2000/svg">${lines}</svg>`;
+}
+
+function renderProgresionDiagram() {
+  const figs = [1, 2, 3];
+  const maxN = Math.max(...figs);
+  return `
+    <div class="fig-diagram">
+      ${figs.map(n => `
+        <div class="fig-card">
+          <div class="fig-svg">${renderMiniFigureSVG(n, maxN)}</div>
+          <div class="fig-label">Figura ${n} (${4 + (n - 1) * 3} palillos)</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderTriangleSVG(sides) {
+  return `
+    <svg viewBox="0 0 220 170" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="20,150 200,150 110,20" fill="#fef3c7" fill-opacity="0.5" stroke="#f59e0b" stroke-width="3"/>
+      <text x="110" y="167" font-size="14" fill="#92400e" text-anchor="middle">${sides[0]}</text>
+      <text x="168" y="90" font-size="14" fill="#92400e" text-anchor="middle">${sides[1]}</text>
+      <text x="52" y="90" font-size="14" fill="#92400e" text-anchor="middle">${sides[2]}</text>
+    </svg>
+  `;
+}
+
+function renderRectangleSVG(base, height) {
+  return `
+    <svg viewBox="0 0 220 150" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="180" height="90" fill="#eef2ff" fill-opacity="0.6" stroke="#4f46e5" stroke-width="3"/>
+      <text x="110" y="130" font-size="14" fill="#3730a3" text-anchor="middle">base = ${base}</text>
+      <text x="14" y="65" font-size="14" fill="#3730a3" text-anchor="middle" transform="rotate(-90 14 65)">altura = ${height}</text>
+    </svg>
+  `;
+}
+
+const PRISM_POINTS = {
+  F1: [20, 165], F2: [140, 165], F3: [80, 85],
+  B1: [70, 115], B2: [190, 115], B3: [130, 35]
+};
+const PRISM_FACES = [
+  { name: 'Base 1 (triángulo)', pts: ['F1', 'F2', 'F3'], color: '#ec4899' },
+  { name: 'Base 2 (triángulo)', pts: ['B1', 'B2', 'B3'], color: '#ec4899' },
+  { name: 'Cara lateral 1', pts: ['F1', 'F2', 'B2', 'B1'], color: '#4f46e5' },
+  { name: 'Cara lateral 2', pts: ['F2', 'F3', 'B3', 'B2'], color: '#4f46e5' },
+  { name: 'Cara lateral 3', pts: ['F3', 'F1', 'B1', 'B3'], color: '#4f46e5' }
+];
+const PRISM_EDGES = [
+  ['F1', 'F2'], ['F2', 'F3'], ['F3', 'F1'],
+  ['B1', 'B2'], ['B2', 'B3'], ['B3', 'B1'],
+  ['F1', 'B1'], ['F2', 'B2'], ['F3', 'B3']
+];
+const PRISM_VERTICES = ['F1', 'F2', 'F3', 'B1', 'B2', 'B3'];
+
+function renderPrismSVG() {
+  const drawOrder = PRISM_FACES.slice(2).concat(PRISM_FACES.slice(0, 2));
+  const facesSvg = drawOrder.map(f => {
+    const pts = f.pts.map(n => PRISM_POINTS[n].join(',')).join(' ');
+    return `<polygon points="${pts}" fill="${f.color}" fill-opacity="0.4" stroke="${f.color}" stroke-width="2"/>`;
+  }).join('');
+  const vertsSvg = Object.values(PRISM_POINTS).map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#3730a3"/>`).join('');
+  return `<svg viewBox="0 0 210 175" xmlns="http://www.w3.org/2000/svg">${facesSvg}${vertsSvg}</svg>`;
+}
+
+function drawPrismWireframeBase(ctx) {
+  ctx.strokeStyle = '#c7d2fe';
+  ctx.lineWidth = 2;
+  PRISM_EDGES.forEach(([a, b]) => {
+    const [x1, y1] = PRISM_POINTS[a];
+    const [x2, y2] = PRISM_POINTS[b];
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  });
+  Object.values(PRISM_POINTS).forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#c7d2fe';
+    ctx.fill();
+  });
+}
+
+function drawPrismFace(ctx, ptNames, color) {
+  ctx.beginPath();
+  ptNames.forEach((name, i) => {
+    const [x, y] = PRISM_POINTS[name];
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function drawPrismEdge(ctx, edge, color) {
+  const [x1, y1] = PRISM_POINTS[edge[0]];
+  const [x2, y2] = PRISM_POINTS[edge[1]];
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 4;
+  ctx.stroke();
+}
+
+function drawPrismVertex(ctx, name, color) {
+  const [x, y] = PRISM_POINTS[name];
+  ctx.beginPath();
+  ctx.arc(x, y, 6, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawPrismFrame(ctx, w, h, step) {
+  ctx.save();
+  ctx.translate((w - 210) / 2, 10);
+  drawPrismWireframeBase(ctx);
+
+  let label = '';
+  if (step < 5) {
+    const face = PRISM_FACES[step];
+    drawPrismFace(ctx, face.pts, face.color);
+    label = 'Caras: ' + (step + 1) + ' / 5 — ' + face.name;
+  } else if (step < 14) {
+    drawPrismEdge(ctx, PRISM_EDGES[step - 5], '#f59e0b');
+    label = 'Aristas: ' + (step - 5 + 1) + ' / 9';
+  } else if (step < 20) {
+    drawPrismVertex(ctx, PRISM_VERTICES[step - 14], '#10b981');
+    label = 'Vértices: ' + (step - 14 + 1) + ' / 6';
+  } else {
+    PRISM_FACES.slice(2).concat(PRISM_FACES.slice(0, 2)).forEach(f => drawPrismFace(ctx, f.pts, f.color));
+    PRISM_EDGES.forEach(e => drawPrismEdge(ctx, e, '#f59e0b'));
+    PRISM_VERTICES.forEach(v => drawPrismVertex(ctx, v, '#10b981'));
+    label = '5 + 6 = 9 + 2 → 11 = 11 ✓';
+  }
+  ctx.restore();
+  return label;
+}
+
+function renderDragItemCard(item, maxN) {
+  return `
+    <div class="drag-item" onpointerdown="beginDrag(event, ${item.id})">
+      <div class="fig-svg">${renderMiniFigureSVG(item.squares, maxN)}</div>
+      <div class="fig-label">Figura ?</div>
+    </div>
+  `;
+}
+
+function renderDragActivity(interactive) {
+  const maxN = Math.max(...interactive.items.map(it => it.squares));
+  const slotsHtml = interactive.correctOrder.map((_, i) => {
+    const itemId = state.dragOrder[i];
+    const item = (itemId !== null && itemId !== undefined) ? interactive.items.find(it => it.id === itemId) : null;
+    return `
+      <div class="drag-slot ${item ? 'filled' : ''}" data-slot-index="${i}">
+        <span class="slot-label">${i + 1}º</span>
+        ${item ? renderDragItemCard(item, maxN) : ''}
+      </div>
+    `;
+  }).join('');
+  const poolHtml = state.dragPool.map(id => {
+    const item = interactive.items.find(it => it.id === id);
+    return item ? renderDragItemCard(item, maxN) : '';
+  }).join('');
+  return `
+    <div class="drag-activity">
+      <p class="drag-instructions">🧩 ${interactive.instructions}</p>
+      <div class="drag-slots">${slotsHtml}</div>
+      <div class="drag-pool">${poolHtml}</div>
+      ${state.dragSolved ? '<div class="drag-feedback ok">🎉 ¡Perfecto! Las ordenaste correctamente de menor a mayor.</div>' : ''}
+    </div>
+  `;
+}
+
+function checkDragComplete() {
+  const level = getCurrentLevel();
+  if (!level || !level.interactive) return;
+  const order = state.dragOrder;
+  if (order.some(v => v === null || v === undefined)) {
+    state.dragSolved = false;
+    return;
+  }
+  const correct = level.interactive.correctOrder;
+  state.dragSolved = order.length === correct.length && order.every((v, i) => v === correct[i]);
+}
+
+function placeItemInSlot(itemId, slotIndex) {
+  const order = state.dragOrder;
+  if (order[slotIndex] !== null && order[slotIndex] !== undefined && order[slotIndex] !== itemId) return;
+  const prevSlot = order.indexOf(itemId);
+  if (prevSlot !== -1) order[prevSlot] = null;
+  state.dragPool = state.dragPool.filter(id => id !== itemId);
+  order[slotIndex] = itemId;
+  checkDragComplete();
+}
+
+function returnItemToPool(itemId) {
+  const order = state.dragOrder;
+  const prevSlot = order.indexOf(itemId);
+  if (prevSlot !== -1) order[prevSlot] = null;
+  if (!state.dragPool.includes(itemId)) state.dragPool.push(itemId);
+  checkDragComplete();
+}
+
+function beginDrag(evt, itemId) {
+  evt.preventDefault();
+  const srcEl = evt.currentTarget;
+  const rect = srcEl.getBoundingClientRect();
+  const ghost = srcEl.cloneNode(true);
+  ghost.classList.add('drag-ghost-el');
+  ghost.style.position = 'fixed';
+  ghost.style.left = rect.left + 'px';
+  ghost.style.top = rect.top + 'px';
+  ghost.style.width = rect.width + 'px';
+  ghost.style.height = rect.height + 'px';
+  ghost.style.pointerEvents = 'none';
+  ghost.style.transform = 'scale(1.05) rotate(-2deg)';
+  document.body.appendChild(ghost);
+  srcEl.classList.add('dragging');
+
+  const offsetX = evt.clientX - rect.left;
+  const offsetY = evt.clientY - rect.top;
+
+  function onMove(e) {
+    ghost.style.left = (e.clientX - offsetX) + 'px';
+    ghost.style.top = (e.clientY - offsetY) + 'px';
+  }
+  function onUp(e) {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    ghost.remove();
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const slot = el ? el.closest('.drag-slot') : null;
+    if (slot) {
+      placeItemInSlot(itemId, parseInt(slot.dataset.slotIndex, 10));
+    } else {
+      returnItemToPool(itemId);
+    }
+    render();
+  }
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+}
+
+function renderStepEntender(level) {
+  const steps = level.entender.steps;
+  const idx = state.entenderIdx;
+  const totalPages = steps.length + 1;
+  const showFormula = idx >= steps.length;
+  const lastVisibleStep = Math.min(idx, steps.length - 1);
+
+  let stepsHtml = '';
+  for (let i = 0; i <= lastVisibleStep; i++) {
+    const isActive = i === idx;
+    stepsHtml += isActive ? `
+      <div class="explanation-step-big">
+        <div class="step-num-badge">${i + 1}</div>
+        <div>${steps[i]}</div>
+      </div>
+    ` : `
+      <div class="explanation-step-done">
+        <div class="step-num-badge small">${i + 1}</div>
+        <div>${steps[i]}</div>
+      </div>
+    `;
+  }
+
+  const meaning = level.entender.formulaMeaning || [];
+  const legendOpen = state.formulaLegendOpen;
+  const formulaHtml = showFormula ? `
+    <div class="formula-card">
+      ${level.entender.formulaLabel ? `<p class="formula-label">${level.entender.formulaLabel}</p>` : ''}
+      <div class="formula-expr" ${meaning.length ? 'onclick="toggleFormulaLegend()"' : ''}>
+        ${nl2br(level.entender.formula)}
+        ${meaning.length ? `<span class="formula-toggle-hint">${legendOpen ? '▲ Ocultar qué significa cada letra' : '▼ ¿Qué significa cada letra?'}</span>` : ''}
+      </div>
+      ${(meaning.length && legendOpen) ? `
+        <ul class="formula-legend">
+          ${meaning.map(m => `<li><span class="sym">${m.symbol}:</span> ${m.text}</li>`).join('')}
+        </ul>
+      ` : ''}
+    </div>
+  ` : '';
+
+  const roboticaHtml = (showFormula && level.robotica) ? `
+    <div class="robotica-card"><strong>🤖 Conexión con la robótica</strong>${level.robotica}</div>
+  ` : '';
+
+  return `
+    <h2 class="step-title">${level.entender.title}</h2>
+    <p class="step-subtitle">Paso ${Math.min(idx + 1, totalPages)} de ${totalPages}</p>
+    <div class="explanation-list">${stepsHtml}</div>
+    ${formulaHtml}
+    ${roboticaHtml}
+    <div class="step-nav-row" style="align-items:center;">
+      <button class="step-arrow-btn" onclick="entenderPrev()" aria-label="Paso anterior" ${idx === 0 ? 'disabled' : ''}>←</button>
+      <button class="step-arrow-btn" onclick="${showFormula ? 'continueFromEntender()' : 'entenderNext()'}" aria-label="Siguiente paso">→</button>
+    </div>
+  `;
+}
+
+function getPalilloLines(n) {
+  const squareSize = 46;
+  const lines = [];
+  for (let i = 0; i < n; i++) {
+    const x = i * squareSize;
+    if (i === 0) lines.push({ x1: x, y1: 0, x2: x, y2: squareSize, step: 1 });
+    lines.push({ x1: x + squareSize, y1: 0, x2: x + squareSize, y2: squareSize, step: i + 1 });
+    lines.push({ x1: x, y1: 0, x2: x + squareSize, y2: 0, step: i + 1 });
+    lines.push({ x1: x, y1: squareSize, x2: x + squareSize, y2: squareSize, step: i + 1 });
+  }
+  return lines;
+}
+
+function drawProgresionFrame(ctx, w, h, step) {
+  const squareSize = 46;
+  const lines = getPalilloLines(step);
+  const totalWidth = squareSize * step;
+  const offsetX = (w - totalWidth) / 2;
+  const offsetY = (h - squareSize) / 2 - 10;
+  ctx.lineCap = 'round';
+  lines.forEach(l => {
+    ctx.lineWidth = l.step === step ? 6 : 4;
+    ctx.strokeStyle = l.step === step ? '#f59e0b' : '#4f46e5';
+    ctx.beginPath();
+    ctx.moveTo(offsetX + l.x1, offsetY + l.y1);
+    ctx.lineTo(offsetX + l.x2, offsetY + l.y2);
+    ctx.stroke();
+  });
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillStyle = '#1e293b';
+  ctx.textAlign = 'center';
+  ctx.fillText('Figura ' + step, w / 2, offsetY + squareSize + 32);
+  return (4 + (step - 1) * 3) + ' palillos (Figura ' + step + ')';
+}
+
+// ===================== MOTOR GENÉRICO DE SIMULACIONES =====================
+// Cada "kind" define: canvasHeight, initFrame, maxStep, interval y una función
+// draw(ctx, w, h, step, level) que dibuja el frame y devuelve el texto del contador.
+const SIM_REGISTRY = {
+  progresion: { canvasHeight: 180, initFrame: 1, maxStep: 10, interval: 550, initialCounter: '4 palillos (Figura 1)', draw: drawProgresionFrame },
+  prisma: { canvasHeight: 210, initFrame: 0, maxStep: 20, interval: 500, initialCounter: 'Caras: 1 / 5 — Base 1 (triángulo)', draw: drawPrismFrame },
+  progresionCuadratica: { canvasHeight: 190, initFrame: 1, maxStep: 5, interval: 650, initialCounter: '1 cuadrado (Figura 1)', draw: drawCuadraticaFrame },
+  numberlineSort: { canvasHeight: 170, initFrame: 1, maxStepFn: level => level.simular.data.values.length, interval: 700, initialCounter: 'Ordenando...', draw: drawNumberlineSortFrame },
+  numberlineMedian: { canvasHeight: 170, initFrame: 0, maxStepFn: level => Math.floor((level.simular.data.values.length - 1) / 2), interval: 800, initialCounter: 'Descartando extremos...', draw: drawNumberlineMedianFrame },
+  numberlineDispersion: { canvasHeight: 190, initFrame: 0, maxStep: 3, interval: 800, initialCounter: 'Comparando grupos...', draw: drawNumberlineDispersionFrame },
+  numberlineMean: { canvasHeight: 170, initFrame: 0, maxStep: 12, interval: 90, initialCounter: 'Calculando el promedio...', draw: drawNumberlineMeanFrame },
+  barchart: { canvasHeight: 200, initFrame: 0, maxStepFn: level => Math.max(...Object.values(level.simular.data.values.reduce((acc, v) => { acc[v] = (acc[v] || 0) + 1; return acc; }, {}))) + 1, interval: 500, initialCounter: 'Contando frecuencias...', draw: drawBarchartFrame },
+  mapping: { canvasHeight: 210, initFrame: 1, maxStepFn: level => level.simular.data.pairs.length, interval: 700, initialCounter: 'Trazando relaciones...', draw: drawMappingFrame },
+  graph: { canvasHeight: 220, initFrame: 0, maxStepFn: level => level.simular.data.curves.length * 10 + 10, interval: 60, initialCounter: 'Trazando...', draw: drawGraphFrame },
+  solveReveal: { canvasHeight: 170, initFrame: 0, maxStepFn: level => level.simular.data.targets.length * 10, interval: 90, initialCounter: 'Resolviendo...', draw: drawSolveRevealFrame },
+  euclid: { canvasHeight: 220, initFrame: 1, maxStepFn: level => computeEuclidSquares(level.simular.data.a, level.simular.data.b).length, interval: 650, initialCounter: 'Colocando cuadrados...', draw: drawEuclidFrame },
+  signSteps: { canvasHeight: 200, initFrame: 1, maxStepFn: level => level.simular.data.terms.length, interval: 800, initialCounter: 'Sumando: 0...', draw: drawSignStepsFrame },
+  polygonAngles: { canvasHeight: 220, initFrame: 0, maxStepFn: level => level.simular.data.n - 2, interval: 700, initialCounter: 'Triangulando... 0°', draw: drawPolygonAnglesFrame },
+  perimeterTrace: { canvasHeight: 200, initFrame: 1, maxStep: 3, interval: 700, initialCounter: 'Sumando lados...', draw: drawPerimeterTraceFrame },
+  rectAreaPerim: { canvasHeight: 220, initFrame: 1, maxStepFn: level => level.simular.data.height + 1, interval: 450, initialCounter: 'Rellenando filas...', draw: drawRectAreaPerimFrame },
+  metricLadder: { canvasHeight: 260, initFrame: 0, maxStepFn: level => Math.abs(METRIC_UNITS.indexOf(level.simular.data.toUnit) - METRIC_UNITS.indexOf(level.simular.data.fromUnit)), interval: 700, initialCounter: 'Convirtiendo...', draw: drawMetricLadderFrame },
+  triangleClassify: { canvasHeight: 220, initFrame: 1, maxStep: 3, interval: 800, initialCounter: 'Dibujando el triángulo...', draw: drawTriangleClassifyFrame }
+};
+
+function simMaxStep(level) {
+  const cfg = SIM_REGISTRY[level.simular.kind];
+  return cfg.maxStepFn ? cfg.maxStepFn(level) : cfg.maxStep;
+}
+
+function simDraw(level, step) {
+  const canvas = document.getElementById('sim-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const cfg = SIM_REGISTRY[level.simular.kind];
+  const label = cfg.draw(ctx, w, h, step, level);
+  const counterEl = document.getElementById('sim-counter');
+  if (counterEl && label) counterEl.textContent = label;
+}
+
+let simInterval = null;
+function playSimulation() {
+  if (simInterval) return;
+  const level = getCurrentLevel();
+  if (!level || !level.simular) return;
+  const cfg = SIM_REGISTRY[level.simular.kind];
+  const maxStep = simMaxStep(level);
+  const btn = document.getElementById('sim-play-btn');
+  if (btn) btn.disabled = true;
+  let step = cfg.initFrame;
+  simDraw(level, step);
+  simInterval = setInterval(() => {
+    step++;
+    const canvas = document.getElementById('sim-canvas');
+    if (step > maxStep || !canvas) {
+      clearInterval(simInterval);
+      simInterval = null;
+      if (btn) btn.disabled = false;
+      return;
+    }
+    simDraw(level, step);
+  }, cfg.interval);
+}
+
+function renderStepSimular(level) {
+  const cfg = SIM_REGISTRY[level.simular.kind];
+  return `
+    <h2 class="step-title">${level.simular.title}</h2>
+    <p class="step-subtitle">${level.simular.description}</p>
+    <div class="sim-wrap">
+      <canvas id="sim-canvas" class="sim-canvas" width="600" height="${cfg.canvasHeight}"></canvas>
+      <div class="sim-counter" id="sim-counter">${cfg.initialCounter}</div>
+      <button class="btn mt-2" id="sim-play-btn" onclick="playSimulation()">▶️ Reproducir simulación</button>
+    </div>
+    <div class="step-nav-row" style="justify-content:flex-end;">
+      <button class="btn" onclick="continueFromSimular()">Continuar →</button>
+    </div>
+  `;
+}
+
+// ----- kind: progresionCuadratica -----
+function drawCuadraticaFrame(ctx, w, h, step) {
+  const n = step;
+  const cell = Math.min(28, Math.floor((Math.min(w, h) - 60) / n));
+  const totalSize = cell * n;
+  const offsetX = (w - totalSize) / 2;
+  const offsetY = (h - totalSize) / 2 - 10;
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const isNew = (r === n - 1 || c === n - 1);
+      ctx.fillStyle = isNew ? 'rgba(245,158,11,0.35)' : 'rgba(79,70,229,0.15)';
+      ctx.strokeStyle = isNew ? '#f59e0b' : '#4f46e5';
+      ctx.lineWidth = isNew ? 3 : 2;
+      const x = offsetX + c * cell, y = offsetY + r * cell;
+      ctx.fillRect(x, y, cell, cell);
+      ctx.strokeRect(x, y, cell, cell);
+    }
+  }
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillStyle = '#1e293b';
+  ctx.textAlign = 'center';
+  ctx.fillText('Figura ' + n + ' → ' + n + '×' + n + ' = ' + (n * n) + ' cuadrados', w / 2, offsetY + totalSize + 28);
+  return (n * n) + ' cuadrados (Figura ' + n + ')';
+}
+
+// ----- utilidades de recta numérica -----
+function nlMapX(value, min, max, w, margin) {
+  const span = (max - min) || 1;
+  return margin + ((value - min) / span) * (w - margin * 2);
+}
+
+function drawNumberLineBase(ctx, w, h, min, max, margin) {
+  const y = h / 2 + 10;
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(margin, y);
+  ctx.lineTo(w - margin, y);
+  ctx.stroke();
+  return y;
+}
+
+// ----- kind: numberlineSort (ordenar números/fracciones/decimales) -----
+function drawNumberlineSortFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const values = data.values;
+  const labels = data.labels || values.map(v => String(v));
+  const sortedIdx = values.map((v, i) => i).sort((a, b) => values[a] - values[b]);
+  const min = Math.min(...values), max = Math.max(...values);
+  const pad = ((max - min) || 1) * 0.15;
+  const margin = 40;
+  const y = drawNumberLineBase(ctx, w, h, min - pad, max + pad, margin);
+  const visibleCount = Math.min(step, values.length);
+  sortedIdx.forEach((origIdx, order) => {
+    if (order >= visibleCount) return;
+    const v = values[origIdx];
+    const x = nlMapX(v, min - pad, max + pad, w, margin);
+    const isLatest = order === visibleCount - 1;
+    ctx.beginPath();
+    ctx.arc(x, y, isLatest ? 9 : 7, 0, Math.PI * 2);
+    ctx.fillStyle = isLatest ? '#f59e0b' : '#4f46e5';
+    ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[origIdx], x, y - 16);
+  });
+  const orderedLabels = sortedIdx.slice(0, visibleCount).map(i => labels[i]);
+  ctx.font = '13px sans-serif';
+  ctx.fillStyle = '#334155';
+  ctx.textAlign = 'center';
+  ctx.fillText(orderedLabels.join('  <  '), w / 2, h - 14);
+  return 'Orden: ' + orderedLabels.join(' < ');
+}
+
+// ----- kind: numberlineMedian (mediana, pares e impares) -----
+function drawNumberlineMedianFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const values = [...data.values].sort((a, b) => a - b);
+  const n = values.length;
+  const min = values[0], max = values[n - 1];
+  const pad = ((max - min) || 1) * 0.15 || 1;
+  const margin = 40;
+  const y = drawNumberLineBase(ctx, w, h, min - pad, max + pad, margin);
+  const k = step;
+  for (let i = 0; i < n; i++) {
+    const v = values[i];
+    const x = nlMapX(v, min - pad, max + pad, w, margin);
+    const eliminated = i < k || i >= n - k;
+    ctx.beginPath();
+    ctx.arc(x, y, eliminated ? 6 : 9, 0, Math.PI * 2);
+    ctx.fillStyle = eliminated ? '#cbd5e1' : '#f59e0b';
+    ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = eliminated ? '#94a3b8' : '#1e293b';
+    ctx.font = (eliminated ? '' : 'bold ') + '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(v), x, y - 16);
+  }
+  const remaining = values.slice(k, n - k);
+  const median = remaining.length === 1 ? remaining[0] : (remaining[0] + remaining[1]) / 2;
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillStyle = '#92400e';
+  ctx.textAlign = 'center';
+  ctx.fillText('Mediana = ' + median, w / 2, h - 14);
+  return 'Quedan: ' + remaining.join(', ') + ' → mediana = ' + median;
+}
+
+// ----- kind: numberlineDispersion (comparar rango de 2 grupos) -----
+function drawNumberlineDispersionFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const groups = [data.groupA, data.groupB];
+  const allValues = groups.flatMap(g => g.values);
+  const min = Math.min(...allValues), max = Math.max(...allValues);
+  const pad = ((max - min) || 1) * 0.15 || 1;
+  const margin = 50;
+  const rowH = 70;
+  const showGroup = [step >= 0, step >= 2];
+  const showBracket = [step >= 1, step >= 3];
+  groups.forEach((g, gi) => {
+    if (!showGroup[gi]) return;
+    const y = 40 + gi * rowH;
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(margin, y); ctx.lineTo(w - margin, y); ctx.stroke();
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#334155'; ctx.textAlign = 'left';
+    ctx.fillText(g.label, 4, y + 4);
+    ctx.textAlign = 'center';
+    g.values.forEach(v => {
+      const x = nlMapX(v, min - pad, max + pad, w, margin);
+      ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2);
+      ctx.fillStyle = gi === 0 ? '#4f46e5' : '#ec4899';
+      ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    });
+    if (showBracket[gi]) {
+      const gmin = Math.min(...g.values), gmax = Math.max(...g.values);
+      const x1 = nlMapX(gmin, min - pad, max + pad, w, margin);
+      const x2 = nlMapX(gmax, min - pad, max + pad, w, margin);
+      ctx.strokeStyle = gi === 0 ? '#4f46e5' : '#ec4899';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x1, y + 16); ctx.lineTo(x2, y + 16); ctx.stroke();
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = '#334155';
+      ctx.fillText('rango = ' + (gmax - gmin), (x1 + x2) / 2, y + 30);
+    }
+  });
+  if (step >= 3) {
+    const rangeA = Math.max(...groups[0].values) - Math.min(...groups[0].values);
+    const rangeB = Math.max(...groups[1].values) - Math.min(...groups[1].values);
+    const more = rangeA < rangeB ? groups[0] : (rangeB < rangeA ? groups[1] : null);
+    return more ? (more.label + ' es más homogéneo (rango ' + rangeA + ' vs ' + rangeB + ')') : ('Mismo rango: ' + rangeA);
+  }
+  const labels = ['Mostrando ' + groups[0].label, 'Rango de ' + groups[0].label, 'Mostrando ' + groups[1].label];
+  return labels[Math.min(step, 2)];
+}
+
+// ----- kind: numberlineMean (la media converge en la recta) -----
+function drawNumberlineMeanFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const values = data.values;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const min = Math.min(...values, mean), max = Math.max(...values, mean);
+  const pad = ((max - min) || 1) * 0.2 || 1;
+  const margin = 40;
+  const y = drawNumberLineBase(ctx, w, h, min - pad, max + pad, margin);
+  values.forEach(v => {
+    const x = nlMapX(v, min - pad, max + pad, w, margin);
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2);
+    ctx.fillStyle = '#4f46e5'; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(String(v), x, y - 14);
+  });
+  const totalSteps = 12;
+  const progress = Math.min(step / totalSteps, 1);
+  const startX = nlMapX(values[0], min - pad, max + pad, w, margin);
+  const targetX = nlMapX(mean, min - pad, max + pad, w, margin);
+  const markerX = startX + (targetX - startX) * progress;
+  ctx.beginPath();
+  ctx.moveTo(markerX, y + 26); ctx.lineTo(markerX - 7, y + 40); ctx.lineTo(markerX + 7, y + 40); ctx.closePath();
+  ctx.fillStyle = '#f59e0b'; ctx.fill();
+  const meanText = Number.isInteger(mean) ? String(mean) : mean.toFixed(2);
+  ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#92400e'; ctx.textAlign = 'center';
+  ctx.fillText('media ≈ ' + (progress >= 1 ? meanText : '...'), markerX, y + 56);
+  return progress >= 1 ? ('Media = ' + meanText) : 'Calculando el promedio...';
+}
+
+// ----- kind: barchart (moda) -----
+function drawBarchartFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const values = data.values;
+  const counts = {};
+  values.forEach(v => counts[v] = (counts[v] || 0) + 1);
+  const keys = Object.keys(counts).map(Number).sort((a, b) => a - b);
+  const maxCount = Math.max(...Object.values(counts));
+  const modeKey = keys.reduce((best, k) => counts[k] > counts[best] ? k : best, keys[0]);
+  const margin = 40;
+  const gap = (w - margin * 2) / keys.length;
+  const barW = gap * 0.6;
+  const baseY = h - 40;
+  const maxBarH = h - 80;
+  const segH = maxBarH / maxCount;
+  keys.forEach((k, i) => {
+    const revealed = Math.min(step, counts[k]);
+    const x = margin + gap * i + (gap - barW) / 2;
+    for (let c = 0; c < counts[k]; c++) {
+      const filled = c < revealed;
+      const y = baseY - (c + 1) * segH;
+      ctx.fillStyle = filled ? (k === modeKey && step > maxCount ? '#f59e0b' : '#4f46e5') : 'rgba(79,70,229,0.12)';
+      ctx.fillRect(x, y, barW, segH - 3);
+    }
+    ctx.font = '12px sans-serif'; ctx.fillStyle = '#334155'; ctx.textAlign = 'center';
+    ctx.fillText(String(k), x + barW / 2, baseY + 16);
+  });
+  ctx.strokeStyle = '#94a3b8'; ctx.beginPath(); ctx.moveTo(margin, baseY); ctx.lineTo(w - margin, baseY); ctx.stroke();
+  if (step > maxCount) {
+    ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#92400e'; ctx.textAlign = 'center';
+    ctx.fillText('Moda = ' + modeKey + ' (se repite ' + maxCount + ' veces)', w / 2, 24);
+  }
+  return step > maxCount ? ('Moda = ' + modeKey) : 'Contando frecuencias...';
+}
+
+// ----- kind: mapping (¿es función?) -----
+function drawMappingFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const pairs = data.pairs;
+  const xVals = [...new Set(pairs.map(p => p[0]))];
+  const yVals = [...new Set(pairs.map(p => p[1]))];
+  const leftX = w * 0.28, rightX = w * 0.72;
+  const topY = 34, botY = h - 26;
+  const xSpacing = (botY - topY) / (xVals.length + 1);
+  const ySpacing = (botY - topY) / (yVals.length + 1);
+  const xPos = {}; xVals.forEach((v, i) => xPos[v] = topY + xSpacing * (i + 1));
+  const yPos = {}; yVals.forEach((v, i) => yPos[v] = topY + ySpacing * (i + 1));
+  ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#334155';
+  ctx.fillText('X', leftX, 18); ctx.fillText('Y', rightX, 18);
+  xVals.forEach(v => {
+    ctx.beginPath(); ctx.arc(leftX, xPos[v], 14, 0, Math.PI * 2);
+    ctx.fillStyle = '#eef2ff'; ctx.fill(); ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#1e293b'; ctx.fillText(String(v), leftX, xPos[v] + 4);
+  });
+  yVals.forEach(v => {
+    ctx.beginPath(); ctx.arc(rightX, yPos[v], 14, 0, Math.PI * 2);
+    ctx.fillStyle = '#fdf2f8'; ctx.fill(); ctx.strokeStyle = '#ec4899'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#1e293b'; ctx.fillText(String(v), rightX, yPos[v] + 4);
+  });
+  const revealed = Math.min(step, pairs.length);
+  let brokenX = null;
+  const seenX = {};
+  for (let i = 0; i < revealed; i++) {
+    const [x, y] = pairs[i];
+    const isDup = seenX[x];
+    seenX[x] = true;
+    if (isDup) brokenX = x;
+    ctx.strokeStyle = isDup ? '#ef4444' : '#10b981';
+    ctx.lineWidth = isDup ? 3 : 2;
+    ctx.beginPath();
+    ctx.moveTo(leftX + 14, xPos[x]); ctx.lineTo(rightX - 14, yPos[y]); ctx.stroke();
+  }
+  let label;
+  if (revealed < pairs.length) label = 'Trazando relaciones...';
+  else label = data.isFunction ? '✔ Cada x tiene una única y → SÍ es función' : ('✘ x=' + brokenX + ' tiene 2 valores de y → NO es función');
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillStyle = revealed >= pairs.length ? (data.isFunction ? '#065f46' : '#991b1b') : '#334155';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, w / 2, h - 4);
+  return label;
+}
+
+// ----- kind: graph (rectas, parábolas, circunferencias) -----
+function graphMapPt(x, y, xRange, yRange, w, h, margin) {
+  const px = margin + (x - xRange[0]) / (xRange[1] - xRange[0]) * (w - margin * 2);
+  const py = h - margin - (y - yRange[0]) / (yRange[1] - yRange[0]) * (h - margin * 2);
+  return [px, py];
+}
+
+function drawGraphAxes(ctx, w, h, xRange, yRange, margin) {
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(margin, margin, w - margin * 2, h - margin * 2);
+  ctx.strokeStyle = '#cbd5e1';
+  if (xRange[0] <= 0 && xRange[1] >= 0) {
+    const [ox] = graphMapPt(0, 0, xRange, yRange, w, h, margin);
+    ctx.beginPath(); ctx.moveTo(ox, margin); ctx.lineTo(ox, h - margin); ctx.stroke();
+  }
+  if (yRange[0] <= 0 && yRange[1] >= 0) {
+    const [, oy] = graphMapPt(0, 0, xRange, yRange, w, h, margin);
+    ctx.beginPath(); ctx.moveTo(margin, oy); ctx.lineTo(w - margin, oy); ctx.stroke();
+  }
+}
+
+function drawGraphCurve(ctx, curve, xRange, yRange, w, h, margin, progress) {
+  const steps = 60;
+  const visibleSteps = Math.round(steps * progress);
+  ctx.strokeStyle = curve.color || '#4f46e5';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  let started = false;
+  for (let i = 0; i <= visibleSteps; i++) {
+    let x, y;
+    if (curve.type === 'circle') {
+      const t = (i / steps) * Math.PI * 2;
+      x = curve.cx + curve.r * Math.cos(t);
+      y = curve.cy + curve.r * Math.sin(t);
+    } else {
+      x = xRange[0] + (xRange[1] - xRange[0]) * (i / steps);
+      y = curve.type === 'line' ? (curve.m * x + curve.b) : (curve.a * x * x + curve.b * x + curve.c);
+    }
+    const [px, py] = graphMapPt(x, y, xRange, yRange, w, h, margin);
+    if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+}
+
+function drawGraphFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const margin = 34;
+  drawGraphAxes(ctx, w, h, data.xRange, data.yRange, margin);
+  data.curves.forEach((curve, i) => {
+    const curveStep = step - i * 10;
+    const progress = Math.max(0, Math.min(curveStep / 10, 1));
+    if (progress > 0) drawGraphCurve(ctx, curve, data.xRange, data.yRange, w, h, margin, progress);
+  });
+  const extraStep = step - data.curves.length * 10;
+  let label = 'Trazando...';
+  if (extraStep >= 0) {
+    if (data.verticalLine) {
+      const x = data.verticalLine.x;
+      const [px1, py1] = graphMapPt(x, data.yRange[0], data.xRange, data.yRange, w, h, margin);
+      const [px2, py2] = graphMapPt(x, data.yRange[1], data.xRange, data.yRange, w, h, margin);
+      ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+      ctx.beginPath(); ctx.moveTo(px1, py1); ctx.lineTo(px2, py2); ctx.stroke(); ctx.setLineDash([]);
+    }
+    if (data.highlightPoint) {
+      const { x, y, label: lbl } = data.highlightPoint;
+      const [px, py] = graphMapPt(x, y, data.xRange, data.yRange, w, h, margin);
+      ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2); ctx.fillStyle = '#f59e0b'; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#92400e'; ctx.textAlign = 'center';
+      ctx.fillText(lbl, px, py - 14);
+    }
+    if (data.intersection) {
+      const { x, y, label: lbl } = data.intersection;
+      const [px, py] = graphMapPt(x, y, data.xRange, data.yRange, w, h, margin);
+      ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2); ctx.fillStyle = '#10b981'; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#065f46'; ctx.textAlign = 'center';
+      ctx.fillText(lbl, px, py - 14);
+    }
+    label = data.finalLabel || '';
+  }
+  return label;
+}
+
+// ----- kind: solveReveal (ecuaciones 1er/2do grado: marcador que llega a la solución) -----
+function drawSolveRevealFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const targets = data.targets;
+  const allMin = Math.min(0, ...targets), allMax = Math.max(0, ...targets);
+  const pad = ((allMax - allMin) || 1) * 0.3 || 2;
+  const margin = 40;
+  const y = drawNumberLineBase(ctx, w, h, allMin - pad, allMax + pad, margin);
+  const perTarget = 10;
+  let doneCount = 0;
+  targets.forEach((t, i) => {
+    const tStep = step - i * perTarget;
+    const progress = Math.max(0, Math.min(tStep / perTarget, 1));
+    if (progress <= 0) return;
+    if (progress >= 1) doneCount++;
+    const startX = nlMapX(0, allMin - pad, allMax + pad, w, margin);
+    const targetX = nlMapX(t, allMin - pad, allMax + pad, w, margin);
+    const markerX = startX + (targetX - startX) * progress;
+    const settled = progress >= 1;
+    ctx.beginPath();
+    ctx.arc(markerX, y, settled ? 9 : 7, 0, Math.PI * 2);
+    ctx.fillStyle = settled ? '#10b981' : '#f59e0b';
+    ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    if (settled) {
+      ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#065f46'; ctx.textAlign = 'center';
+      const sub = targets.length > 1 ? ('x' + (i + 1)) : 'x';
+      ctx.fillText(sub + ' = ' + t, markerX, y - 16);
+    }
+  });
+  if (doneCount === targets.length) {
+    return targets.length > 1 ? targets.map((t, i) => 'x' + (i + 1) + '=' + t).join(', ') : ('x = ' + targets[0]);
+  }
+  return 'Resolviendo...';
+}
+
+// ----- kind: euclid (MCD por cuadrados de Euclides) -----
+function computeEuclidSquares(a, b) {
+  const squares = [];
+  let x = 0, y = 0, rw = a, rh = b;
+  while (rw > 0 && rh > 0) {
+    if (rw >= rh) {
+      const count = Math.floor(rw / rh);
+      for (let i = 0; i < count; i++) squares.push({ x: x + i * rh, y, size: rh });
+      const rem = rw - count * rh;
+      x += count * rh;
+      rw = rem;
+    } else {
+      const count = Math.floor(rh / rw);
+      for (let i = 0; i < count; i++) squares.push({ x, y: y + i * rw, size: rw });
+      const rem = rh - count * rw;
+      y += count * rw;
+      rh = rem;
+    }
+  }
+  return squares;
+}
+
+const EUCLID_PALETTE = [
+  { fill: 'rgba(79,70,229,0.30)', stroke: '#4f46e5' },
+  { fill: 'rgba(236,72,153,0.30)', stroke: '#ec4899' },
+  { fill: 'rgba(245,158,11,0.30)', stroke: '#f59e0b' },
+  { fill: 'rgba(16,185,129,0.30)', stroke: '#10b981' }
+];
+
+function drawEuclidFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const squares = computeEuclidSquares(data.a, data.b);
+  const scale = Math.min((w - 60) / data.a, (h - 80) / data.b);
+  const offsetX = (w - data.a * scale) / 2;
+  const offsetY = 44;
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+  ctx.strokeRect(offsetX, offsetY, data.a * scale, data.b * scale);
+  const revealed = Math.min(step, squares.length);
+  const sizeColor = {};
+  let colorIdx = 0;
+  for (let i = 0; i < revealed; i++) {
+    const sq = squares[i];
+    if (!(sq.size in sizeColor)) { sizeColor[sq.size] = EUCLID_PALETTE[colorIdx % EUCLID_PALETTE.length]; colorIdx++; }
+    const c = sizeColor[sq.size];
+    const px = offsetX + sq.x * scale, py = offsetY + sq.y * scale, s = sq.size * scale;
+    ctx.fillStyle = c.fill;
+    ctx.fillRect(px, py, s, s);
+    ctx.strokeStyle = c.stroke; ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, s, s);
+  }
+  ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText(data.a + ' × ' + data.b, w / 2, offsetY - 12);
+  if (revealed >= squares.length) {
+    const gcd = squares[squares.length - 1].size;
+    ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#065f46';
+    ctx.fillText('MCD = ' + gcd, w / 2, offsetY + data.b * scale + 24);
+    return 'MCD(' + data.a + ', ' + data.b + ') = ' + gcd;
+  }
+  return 'Colocando cuadrados...';
+}
+
+// ----- kind: signSteps (potencias y signos: tarjetas con signo que se suman) -----
+function drawSignStepsFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const terms = data.terms;
+  const revealed = Math.min(step, terms.length);
+  const tileW = Math.min(140, (w - 40) / terms.length - 10);
+  const gap = (w - tileW * terms.length) / (terms.length + 1);
+  const y = h / 2 - 30;
+  let runningTotal = 0;
+  for (let i = 0; i < terms.length; i++) {
+    const x = gap + i * (tileW + gap);
+    const isRevealed = i < revealed;
+    const positive = terms[i].value >= 0;
+    ctx.strokeStyle = isRevealed ? (positive ? '#10b981' : '#ef4444') : '#cbd5e1';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = isRevealed ? (positive ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)') : 'rgba(148,163,184,0.08)';
+    ctx.fillRect(x, y, tileW, 60);
+    ctx.strokeRect(x, y, tileW, 60);
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = isRevealed ? '#1e293b' : '#94a3b8';
+    ctx.textAlign = 'center';
+    ctx.fillText(terms[i].label, x + tileW / 2, y + 24);
+    if (isRevealed) {
+      ctx.fillStyle = positive ? '#065f46' : '#991b1b';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText((positive ? '+' : '') + terms[i].value, x + tileW / 2, y + 46);
+      runningTotal += terms[i].value;
+    }
+  }
+  ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#334155'; ctx.textAlign = 'center';
+  ctx.fillText('Total: ' + runningTotal, w / 2, y + 90);
+  return revealed >= terms.length ? ('Resultado = ' + runningTotal) : ('Sumando: ' + runningTotal + '...');
+}
+
+// ----- kind: polygonAngles (suma de ángulos interiores por triangulación) -----
+function regularPolygonPoints(n, cx, cy, r) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const angle = -Math.PI / 2 + i * (2 * Math.PI / n);
+    pts.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+  }
+  return pts;
+}
+
+function drawPolygonAnglesFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const n = data.n;
+  const cx = w / 2, cy = h / 2 + 6, r = Math.min(w, h) / 2 - 40;
+  const pts = regularPolygonPoints(n, cx, cy, r);
+  ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 3;
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+  ctx.closePath(); ctx.stroke();
+  pts.forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fillStyle = '#4f46e5'; ctx.fill(); });
+  const triangleCount = n - 2;
+  const revealed = Math.min(step, triangleCount);
+  ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+  for (let i = 0; i < revealed; i++) {
+    const [x1, y1] = pts[0];
+    const [x2, y2] = pts[i + 2];
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText(revealed + ' triángulo' + (revealed === 1 ? '' : 's') + ' × 180° = ' + (revealed * 180) + '°', w / 2, h - 14);
+  return revealed >= triangleCount ? ('Suma = ' + (triangleCount * 180) + '°') : ('Triangulando... ' + (revealed * 180) + '°');
+}
+
+// ----- utilidad compartida: construir un triángulo a partir de sus 3 lados -----
+function triangleFromSides(a, b, c) {
+  const P0 = [0, 0];
+  const P1 = [a, 0];
+  const cosA = (a * a + c * c - b * b) / (2 * a * c);
+  const angleA = Math.acos(Math.max(-1, Math.min(1, cosA)));
+  const P2 = [c * Math.cos(angleA), c * Math.sin(angleA)];
+  return [P0, P1, P2];
+}
+
+// ----- kind: perimeterTrace (perímetro: recorrer cada lado acumulando longitud) -----
+function drawPerimeterTraceFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const [a, b, c] = data.sides;
+  const pts = triangleFromSides(a, b, c);
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const scale = Math.min((w - 60) / (maxX - minX || 1), (h - 70) / (maxY - minY || 1));
+  const offX = (w - (maxX - minX) * scale) / 2 - minX * scale;
+  const offY = 20 - minY * scale;
+  const toCanvas = ([x, y]) => [x * scale + offX, y * scale + offY];
+  const cp = pts.map(toCanvas);
+  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  cp.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+  ctx.closePath(); ctx.stroke();
+  const edges = [[pts[0], pts[1], a], [pts[1], pts[2], b], [pts[2], pts[0], c]];
+  const revealed = Math.min(step, 3);
+  let total = 0;
+  for (let i = 0; i < revealed; i++) {
+    const [p1, p2, len] = edges[i];
+    const [x1, y1] = toCanvas(p1), [x2, y2] = toCanvas(p2);
+    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#92400e'; ctx.textAlign = 'center';
+    ctx.fillText(len + ' ' + data.unit, mx, my - 8);
+    total += len;
+  }
+  ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText('Perímetro acumulado: ' + total + ' ' + data.unit, w / 2, h - 10);
+  return revealed >= 3 ? ('Perímetro = ' + total + ' ' + data.unit) : ('Sumando lados... ' + total + ' ' + data.unit);
+}
+
+// ----- kind: rectAreaPerim (área por filas + perímetro del rectángulo) -----
+function drawRectAreaPerimFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const bCells = data.base, hCells = data.height;
+  const cell = Math.min((w - 60) / bCells, (h - 70) / hCells);
+  const gw = cell * bCells, gh = cell * hCells;
+  const offX = (w - gw) / 2, offY = 30;
+  const rowsRevealed = Math.min(step, hCells);
+  for (let r = 0; r < rowsRevealed; r++) {
+    for (let c = 0; c < bCells; c++) {
+      const x = offX + c * cell, y = offY + r * cell;
+      ctx.fillStyle = 'rgba(79,70,229,0.15)';
+      ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 1;
+      ctx.fillRect(x, y, cell, cell); ctx.strokeRect(x, y, cell, cell);
+    }
+  }
+  const showPerimeter = step > hCells;
+  if (showPerimeter) {
+    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 4;
+    ctx.strokeRect(offX, offY, gw, gh);
+  }
+  ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText('Área: ' + (bCells * rowsRevealed) + ' ' + data.unit + '²', w / 2, offY + gh + 22);
+  if (showPerimeter) {
+    const perim = 2 * (bCells + hCells);
+    ctx.fillStyle = '#92400e';
+    ctx.fillText('Perímetro: ' + perim + ' ' + data.unit, w / 2, offY + gh + 40);
+    return 'Área = ' + (bCells * hCells) + ' ' + data.unit + '², Perímetro = ' + perim + ' ' + data.unit;
+  }
+  return 'Rellenando fila ' + rowsRevealed + ' de ' + hCells + '...';
+}
+
+// ----- kind: metricLadder (sistema métrico: marcador bajando/subiendo la escalera de unidades) -----
+const METRIC_UNITS = ['km', 'hm', 'dam', 'm', 'dm', 'cm', 'mm'];
+
+function drawMetricLadderFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const fromIdx = METRIC_UNITS.indexOf(data.fromUnit);
+  const toIdx = METRIC_UNITS.indexOf(data.toUnit);
+  const n = METRIC_UNITS.length;
+  const rowH = (h - 40) / n;
+  const factorPerStep = data.direction === 'down' ? 10 : (1 / 10);
+  METRIC_UNITS.forEach((u, i) => {
+    const y = 20 + i * rowH + rowH / 2;
+    const active = i === fromIdx || i === toIdx || (i > Math.min(fromIdx, toIdx) && i < Math.max(fromIdx, toIdx));
+    ctx.font = (i === fromIdx || i === toIdx ? 'bold ' : '') + '13px sans-serif';
+    ctx.fillStyle = active ? '#1e293b' : '#94a3b8';
+    ctx.textAlign = 'left';
+    ctx.fillText(u, 20, y + 4);
+  });
+  const stepsTotal = Math.abs(toIdx - fromIdx);
+  const revealed = Math.min(step, stepsTotal);
+  let currentValue = data.value;
+  const dir = toIdx > fromIdx ? 1 : -1;
+  for (let s = 0; s < revealed; s++) currentValue *= factorPerStep;
+  currentValue = Math.round(currentValue * 10000) / 10000;
+  const currentIdx = fromIdx + dir * revealed;
+  const markerY = 20 + currentIdx * rowH + rowH / 2;
+  const markerX = 90;
+  ctx.beginPath(); ctx.arc(markerX, markerY, 8, 0, Math.PI * 2);
+  ctx.fillStyle = revealed >= stepsTotal ? '#10b981' : '#f59e0b'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'left';
+  ctx.fillText(currentValue + ' ' + METRIC_UNITS[currentIdx], markerX + 16, markerY + 5);
+  return revealed >= stepsTotal
+    ? (data.value + ' ' + data.fromUnit + ' = ' + currentValue + ' ' + data.toUnit)
+    : ('Convirtiendo... ' + currentValue + ' ' + METRIC_UNITS[currentIdx]);
+}
+
+// ----- kind: triangleClassify (clasificación de triángulos por lados y ángulos) -----
+function drawTriangleClassifyFrame(ctx, w, h, step, level) {
+  const data = level.simular.data;
+  const [a, b, c] = data.sides;
+  const pts = triangleFromSides(a, b, c);
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const scale = Math.min((w - 60) / (maxX - minX || 1), (h - 90) / (maxY - minY || 1));
+  const offX = (w - (maxX - minX) * scale) / 2 - minX * scale;
+  const offY = 30 - minY * scale;
+  const toC = ([x, y]) => [x * scale + offX, y * scale + offY];
+  const cp = pts.map(toC);
+  ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 3;
+  ctx.beginPath(); cp.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)); ctx.closePath(); ctx.stroke();
+  const edges = [[0, 1, a], [1, 2, b], [2, 0, c]];
+  edges.forEach(([i, j, len]) => {
+    const [x1, y1] = cp[i], [x2, y2] = cp[j];
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    ctx.font = '12px sans-serif'; ctx.fillStyle = '#334155'; ctx.textAlign = 'center';
+    ctx.fillText(len + ' ' + data.unit, mx, my - 6);
+  });
+  let label = 'Dibujando el triángulo...';
+  if (step >= 2) {
+    const counts = {};
+    [a, b, c].forEach(v => counts[v] = (counts[v] || 0) + 1);
+    edges.forEach(([i, j, len]) => {
+      if (counts[len] > 1) {
+        const [x1, y1] = cp[i], [x2, y2] = cp[j];
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+        const nx = -dy / L * 6, ny = dx / L * 6;
+        ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(mx - nx, my - ny); ctx.lineTo(mx + nx, my + ny); ctx.stroke();
+      }
+    });
+    label = 'Marcando lados iguales...';
+  }
+  if (step >= 3) {
+    const maxLen = Math.max(a, b, c);
+    const edgeIdx = edges.findIndex(e => e[2] === maxLen);
+    const oppVertexIdx = (edgeIdx + 2) % 3;
+    const [x, y] = cp[oppVertexIdx];
+    ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3; ctx.stroke();
+    label = data.classification;
+  }
+  ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText(label, w / 2, h - 10);
+  return label;
+}
+
+function renderStepPracticar(level) {
+  const q = level.practicar;
+  const letters = ['A', 'B', 'C', 'D'];
+  return `
+    <div class="lives-display">
+      ${[1,2,3].map(i => `<span class="heart ${i > state.lives ? 'lost' : ''}">❤️</span>`).join('')}
+    </div>
+    <div class="question-text">${nl2br(q.question)}</div>
+    <div class="options">
+      ${q.options.map((opt, idx) => {
+        let cls = 'option';
+        if (state.currentQuestionAnswered) {
+          if (idx === q.correct) cls += ' correct';
+          else if (idx === state.selectedOption) cls += ' incorrect';
+        }
+        return `
+          <button class="${cls}" onclick="selectOption(${idx})" ${state.currentQuestionAnswered ? 'disabled' : ''}>
+            <span class="opt-letter">${letters[idx]}</span>
+            <span>${opt}</span>
+          </button>
+        `;
+      }).join('')}
+    </div>
+    ${state.currentQuestionAnswered ? renderFeedback(q) : ''}
+    ${!state.currentQuestionAnswered ? `
+      <div class="hint-area">
+        <button class="hint-btn" onclick="showHint()">💡 Pista (-10 🪙)</button>
+        <div class="hint-content" id="hint-content">${q.hint}</div>
+      </div>
+    ` : ''}
+  `;
+}
+
+function renderFeedback(q) {
+  const isCorrect = state.selectedOption === q.correct;
+  return `
+    <div class="feedback ${isCorrect ? 'correct' : 'incorrect'}">
+      <div class="feedback-title">${isCorrect ? '🎉 ¡Correcto!' : '❌ Incorrecto'}</div>
+      <div>${q.explanation}</div>
+    </div>
+    <div class="step-nav-row" style="justify-content:flex-end;">
+      <button class="btn" onclick="showResult()">Ver resultado →</button>
+    </div>
+  `;
+}
+
+function renderResult() {
+  const stars = state.attempts === 1 ? 3 : state.attempts === 2 ? 2 : 1;
+  return `
+    <div class="result-screen">
+      <div class="result-emoji">${stars === 3 ? '🏆' : stars === 2 ? '🎉' : '💪'}</div>
+      <h2 class="result-title">${stars === 3 ? '¡Perfecto!' : stars === 2 ? '¡Muy bien!' : '¡Sigue practicando!'}</h2>
+      <div class="result-stars">${[1,2,3].map(s => `<span class="${s <= stars ? 'star-filled' : 'star-empty'}">★</span>`).join('')}</div>
+      <div class="result-stats">
+        <div class="result-stat">
+          <div class="result-stat-value">+${state.score}</div>
+          <div class="result-stat-label">Puntos</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value">${state.attempts}</div>
+          <div class="result-stat-label">Intentos</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value">${state.hintsUsed}</div>
+          <div class="result-stat-label">Pistas usadas</div>
+        </div>
+      </div>
+      <div class="result-actions">
+        <button class="btn secondary" onclick="goHome()">🏠 Inicio</button>
+        <button class="btn secondary" onclick="goToIsland('${state.currentIsland}')">Volver a la isla</button>
+        <button class="btn" onclick="continueToNext()">Continuar al siguiente reto →</button>
+      </div>
+    </div>
+  `;
+}
+
+// ===================== ACTIONS =====================
+function goHome() {
+  state.currentScreen = 'home';
+  state.currentIsland = null;
+  state.currentLevel = null;
+  render();
+}
+
+function goToIsland(islandId) {
+  state.currentScreen = 'island';
+  state.currentIsland = islandId;
+  state.currentLevel = null;
+  render();
+}
+
+function startLevel(islandId, levelId) {
+  const island = gameData.find(i => i.id === islandId);
+  const level = island ? island.levels.find(l => l.id === levelId) : null;
+  state.currentScreen = 'level';
+  state.currentIsland = islandId;
+  state.currentLevel = levelId;
+  state.currentStep = 'ver';
+  state.entenderIdx = 0;
+  state.formulaLegendOpen = false;
+  state.lives = 3;
+  state.score = 0;
+  state.currentQuestionAnswered = false;
+  state.selectedOption = null;
+  state.hintsUsed = 0;
+  state.attempts = 0;
+  state.startTime = Date.now();
+  if (level && level.interactive) {
+    state.dragPool = level.interactive.items.map(it => it.id);
+    state.dragOrder = new Array(level.interactive.items.length).fill(null);
+    state.dragSolved = false;
+  } else {
+    state.dragPool = [];
+    state.dragOrder = [];
+    state.dragSolved = false;
+  }
+  render();
+}
+
+function nextStep() {
+  if (state.currentStep === 'ver') {
+    state.currentStep = 'entender';
+    state.entenderIdx = 0;
+  }
+  render();
+}
+
+function entenderNext() {
+  const level = getCurrentLevel();
+  if (!level) return;
+  const maxIdx = level.entender.steps.length;
+  if (state.entenderIdx < maxIdx) state.entenderIdx++;
+  state.formulaLegendOpen = false;
+  render();
+}
+
+function entenderPrev() {
+  if (state.entenderIdx === 0) return;
+  state.entenderIdx--;
+  state.formulaLegendOpen = false;
+  render();
+}
+
+function toggleFormulaLegend() {
+  state.formulaLegendOpen = !state.formulaLegendOpen;
+  render();
+}
+
+function continueFromEntender() {
+  const level = getCurrentLevel();
+  state.currentStep = (level && level.simular) ? 'simular' : 'practicar';
+  render();
+}
+
+function continueFromSimular() {
+  state.currentStep = 'practicar';
+  render();
+}
+
+function showResult() {
+  state.currentScreen = 'result';
+  render();
+}
+
+function selectOption(idx) {
+  if (state.currentQuestionAnswered) return;
+  state.selectedOption = idx;
+  state.attempts++;
+  const island = gameData.find(i => i.id === state.currentIsland);
+  const level = island.levels.find(l => l.id === state.currentLevel);
+  const isCorrect = idx === level.practicar.correct;
+  if (isCorrect) {
+    const points = Math.max(50, level.points - (state.attempts - 1) * 30 - state.hintsUsed * 10);
+    state.score = points;
+    state.coins += Math.floor(points / 20);
+    state.totalScore += points;
+    state.currentQuestionAnswered = true;
+    const stars = state.attempts === 1 ? 3 : state.attempts === 2 ? 2 : 1;
+    setLevelProgress(island.id, level.id, stars, points);
+    saveState();
+    if (stars === 3) launchConfetti();
+  } else {
+    state.lives--;
+    if (state.lives <= 0) {
+      state.currentQuestionAnswered = true;
+    } else {
+      setTimeout(() => {
+        state.selectedOption = null;
+        render();
+      }, 800);
+    }
+  }
+  render();
+}
+
+function showHint() {
+  if (state.coins < 10) {
+    showToast('❌ No tienes suficientes monedas (necesitas 10 🪙)', 'error');
+    return;
+  }
+  state.coins -= 10;
+  state.hintsUsed++;
+  saveState();
+  const hintContent = document.getElementById('hint-content');
+  if (hintContent) hintContent.classList.add('show');
+  updateStats();
+}
+
+function updateStats() {
+  const stats = document.querySelector('.game-stats');
+  if (stats) {
+    stats.innerHTML = `
+      <div class="stat-pill coins">🪙 ${state.coins}</div>
+      <div class="stat-pill stars">⭐ ${state.totalScore}</div>
+    `;
+  }
+}
+
+function continueToNext() {
+  const island = gameData.find(i => i.id === state.currentIsland);
+  const currentIdx = island.levels.findIndex(l => l.id === state.currentLevel);
+  if (currentIdx < island.levels.length - 1) {
+    const nextLevel = island.levels[currentIdx + 1];
+    if (isLevelUnlocked(island, currentIdx + 1)) {
+      startLevel(island.id, nextLevel.id);
+    } else {
+      goToIsland(island.id);
+    }
+  } else {
+    const islandIdx = gameData.findIndex(i => i.id === state.currentIsland);
+    if (islandIdx < gameData.length - 1 && isIslandUnlocked(islandIdx + 1)) {
+      goToIsland(gameData[islandIdx + 1].id);
+    } else {
+      goToIsland(island.id);
+    }
+  }
+}
+
+// ===================== UTILS =====================
+function showToast(msg, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+function launchConfetti() {
+  const colors = ['#4f46e5', '#ec4899', '#10b981', '#f59e0b', '#ef4444'];
+  for (let i = 0; i < 30; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random() * 100 + 'vw';
+    c.style.background = colors[Math.floor(Math.random() * colors.length)];
+    c.style.animationDelay = Math.random() * 0.5 + 's';
+    c.style.animationDuration = (2 + Math.random() * 2) + 's';
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 3500);
+  }
+}
+
+// ===================== INIT =====================
+render();
+</script>
+</body>
+</html>

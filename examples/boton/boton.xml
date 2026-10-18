@@ -1,0 +1,116 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id=":IlPz{:,ppuDRc,jLJcB">contador</variable>
+    <variable id="Rq|9vTTC-mNFIhhzK-wF">btn</variable>
+  </variables>
+  <block type="interruptor_init" id=",|_K2iF^P~r9AhF#f_3I" x="-30" y="-10">
+    <field name="MODEL">KY004</field>
+    <field name="PIN">12</field>
+    <field name="PULL">PULL_UP</field>
+    <next>
+      <block type="variables_set" id="+Up{^LQm]kh5U2Fa!%^?">
+        <field name="VAR" id=":IlPz{:,ppuDRc,jLJcB">contador</field>
+        <value name="VALUE">
+          <block type="math_number" id="r279(ZEI6!:T@gIgUZ/}">
+            <field name="NUM">0</field>
+          </block>
+        </value>
+        <next>
+          <block type="variables_set" id="AC.5veJ_-LjIlOA@d{4^">
+            <field name="VAR" id="Rq|9vTTC-mNFIhhzK-wF">btn</field>
+            <value name="VALUE">
+              <block type="math_number" id="q7*e*Ckq7Y6#@wJjaRlw">
+                <field name="NUM">0</field>
+              </block>
+            </value>
+            <next>
+              <block type="controls_whileUntil" id="/Ne4/$3WKLFT(^(-*?.6">
+                <field name="MODE">WHILE</field>
+                <value name="BOOL">
+                  <block type="logic_boolean" id="5}AB]/P4^0M8bX1n=%77">
+                    <field name="BOOL">TRUE</field>
+                  </block>
+                </value>
+                <statement name="DO">
+                  <block type="variables_set" id="q+ewWGyRL8{EsEawriZ}">
+                    <field name="VAR" id="Rq|9vTTC-mNFIhhzK-wF">btn</field>
+                    <value name="VALUE">
+                      <block type="logic_negate" id="cO3YR*9P#.)E^aBr1|Sh">
+                        <value name="BOOL">
+                          <block type="interruptor_read" id="-~i4lOv8NW3aEX-AO(j]">
+                            <field name="PIN">12</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="controls_if" id="suqb`EF*`P#!;]4[HMm(">
+                        <value name="IF0">
+                          <block type="logic_compare" id="b6k=yPQc]C(Faj`Wamr{">
+                            <field name="OP">EQ</field>
+                            <value name="A">
+                              <block type="variables_get" id="s!5xqO!^;+$ssv~cHT7{">
+                                <field name="VAR" id="Rq|9vTTC-mNFIhhzK-wF">btn</field>
+                              </block>
+                            </value>
+                            <value name="B">
+                              <block type="math_number" id="hYb5rSCgQSr/@YAbV2G!">
+                                <field name="NUM">1</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                        <statement name="DO0">
+                          <block type="text_print" id="/9oIp{%LgYqEkOfpUF1G">
+                            <value name="TEXT">
+                              <shadow type="text" id="3vW8v)Y4fJS+7zWP]S^K">
+                                <field name="TEXT">3DPit</field>
+                              </shadow>
+                              <block type="text_join" id="i-0Fl?rgRA~ZSMgtPUpM">
+                                <mutation items="2"></mutation>
+                                <value name="ADD0">
+                                  <block type="text" id="11`-17W2P}mU_[h]SLVm">
+                                    <field name="TEXT">Contador: </field>
+                                  </block>
+                                </value>
+                                <value name="ADD1">
+                                  <block type="variables_get" id="*V=0Q/I9rh16F;5Jeh1X">
+                                    <field name="VAR" id=":IlPz{:,ppuDRc,jLJcB">contador</field>
+                                  </block>
+                                </value>
+                              </block>
+                            </value>
+                            <next>
+                              <block type="math_change" id="%-m6/3b8[mWB%468KvP$">
+                                <field name="VAR" id=":IlPz{:,ppuDRc,jLJcB">contador</field>
+                                <value name="DELTA">
+                                  <shadow type="math_number" id="{o0yx$*fccndN2d{e9#X">
+                                    <field name="NUM">1</field>
+                                  </shadow>
+                                </value>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                        <next>
+                          <block type="time_sleep" id="6kVG#!B#uUi7}y1BBVp3">
+                            <field name="UNIT">S</field>
+                            <value name="VALUE">
+                              <shadow type="math_number" id="(@oD}xt#]l8m[vI7df!0">
+                                <field name="NUM">1</field>
+                              </shadow>
+                            </value>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>

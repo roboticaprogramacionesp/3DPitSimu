@@ -1,13 +1,13 @@
 {
   "version": "1.0",
-  "timestamp": 1785555554943,
+  "timestamp": 1792335839789,
   "components": [
     {
-      "id": "esp32_wroom_jq5dfnx",
+      "id": "esp32_wroom_ottcqls",
       "type": "esp32_wroom",
       "name": "ESP32 WeMos D1 R32",
-      "x": 303,
-      "y": 84,
+      "x": 220,
+      "y": 160,
       "width": 276.28,
       "height": 210,
       "rotation": 0,
@@ -17,19 +17,20 @@
         "mcu": "ESP32-WROOM-32",
         "voltaje_operacion": 3.3,
         "flash_mb": 4,
-        "isPowerSource": true
+        "isPowerSource": true,
+        "macAddress": "49:79:00:3E:EE:73"
       },
       "locked": false
     },
     {
-      "id": "tcrt5000_ngwicm1",
+      "id": "tcrt5000_hth9d85",
       "type": "tcrt5000",
       "name": "TCRT5000 Sensor Infrarrojo (Línea/Obstáculo)",
-      "x": 646,
-      "y": 191,
+      "x": 528.794877206391,
+      "y": 287.2307367616543,
       "width": 99.212598,
       "height": 42.519685,
-      "rotation": 0,
+      "rotation": 270,
       "scale": 1,
       "flipX": false,
       "properties": {
@@ -41,81 +42,85 @@
   ],
   "wires": [
     {
-      "id": "wire_7js73j5",
+      "id": "wire_qrz62es",
       "from": {
-        "componentId": "tcrt5000_ngwicm1",
-        "pinId": "gnd"
-      },
-      "to": {
-        "componentId": "esp32_wroom_jq5dfnx",
-        "pinId": "gnd_2"
-      },
-      "points": [
-        {
-          "x": 594.8477518818352,
-          "y": 209.14
-        },
-        {
-          "x": 594.8477518818352,
-          "y": 309.5796728172776
-        },
-        {
-          "x": 479.28,
-          "y": 309.5796728172776
-        }
-      ],
-      "color": "#1a1a1a",
-      "connectorType": "hembra-hembra"
-    },
-    {
-      "id": "wire_7rqfk8e",
-      "from": {
-        "componentId": "esp32_wroom_jq5dfnx",
-        "pinId": "3v3"
-      },
-      "to": {
-        "componentId": "tcrt5000_ngwicm1",
+        "componentId": "tcrt5000_hth9d85",
         "pinId": "vcc"
       },
+      "to": {
+        "componentId": "esp32_wroom_ottcqls",
+        "pinId": "3v3"
+      },
       "points": [
         {
-          "x": 449.28,
-          "y": 319.14186117121153
+          "x": 538.014877206391,
+          "y": 386.85394060108223
         },
         {
-          "x": 606.4589805973264,
-          "y": 319.14186117121153
-        },
-        {
-          "x": 606.4589805973264,
-          "y": 200.22
+          "x": 366.28,
+          "y": 386.85394060108223
         }
       ],
       "color": "#ff5252",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
-      "id": "wire_2uvgdhq",
+      "id": "wire_eox6hsf",
       "from": {
-        "componentId": "esp32_wroom_jq5dfnx",
-        "pinId": "io4"
+        "componentId": "esp32_wroom_ottcqls",
+        "pinId": "gnd_2"
       },
       "to": {
-        "componentId": "tcrt5000_ngwicm1",
+        "componentId": "tcrt5000_hth9d85",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 396.28,
+          "y": 379.16741541892077
+        },
+        {
+          "x": 547.528061977837,
+          "y": 379.16741541892077
+        },
+        {
+          "x": 547.528061977837,
+          "y": 285.46501319828565
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-macho"
+    },
+    {
+      "id": "wire_mnnnyas",
+      "from": {
+        "componentId": "esp32_wroom_ottcqls",
+        "pinId": "io12"
+      },
+      "to": {
+        "componentId": "tcrt5000_hth9d85",
         "pinId": "do"
       },
       "points": [
         {
-          "x": 615.3381554974079,
-          "y": 284
+          "x": 390.28,
+          "y": 145.6057939810791
         },
         {
-          "x": 615.3381554974079,
-          "y": 218.07
+          "x": 587.2760009019934,
+          "y": 145.6057939810791
+        },
+        {
+          "x": 587.2760009019934,
+          "y": 302.6305227023778
+        },
+        {
+          "x": 555.864877206391,
+          "y": 302.6305227023778
         }
       ],
       "color": "#26c6da",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     }
   ],
   "annotations": []

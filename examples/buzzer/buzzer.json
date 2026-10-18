@@ -1,30 +1,13 @@
 {
   "version": "1.0",
-  "timestamp": 1785556048027,
+  "timestamp": 1792336384314,
   "components": [
     {
-      "id": "buzzer_bsipa6q",
-      "type": "buzzer",
-      "name": "Buzzer Piezo Pasivo (KY-006)",
-      "x": 331,
-      "y": 199,
-      "width": 50,
-      "height": 70,
-      "rotation": 0,
-      "scale": 1,
-      "flipX": false,
-      "properties": {
-        "modelo": "Buzzer piezo PASIVO (necesita PWM -- freq()/duty() -- para sonar, a diferencia de uno activo)",
-        "nota": "Suena de verdad en el navegador (Web Audio API) mientras el firmware mantenga el PWM activo en el pin S. Compatible con rtttl.py/songs.py tal cual: from machine import Pin, PWM; PWM(pin, freq=440, duty=512)."
-      },
-      "locked": false
-    },
-    {
-      "id": "esp32_wroom_og8j7nn",
+      "id": "esp32_wroom_ottcqls",
       "type": "esp32_wroom",
       "name": "ESP32 WeMos D1 R32",
-      "x": 35.39251297822386,
-      "y": 118.75815743936056,
+      "x": 220,
+      "y": 160,
       "width": 276.28,
       "height": 210,
       "rotation": 0,
@@ -34,80 +17,107 @@
         "mcu": "ESP32-WROOM-32",
         "voltaje_operacion": 3.3,
         "flash_mb": 4,
-        "isPowerSource": true
+        "isPowerSource": true,
+        "macAddress": "49:79:00:3E:EE:73",
+        "espnowCode": "from machine import Pin, PWM\nfrom time import sleep\nimport rtttl, songs\n\npwm12 = PWM(Pin(12), freq=31, duty=512)\nsleep(1)\npwm12.deinit()\nplay = rtttl.play(Pin(12, Pin.OUT), songs.find('Super Mario - Main Theme'))\n"
+      },
+      "locked": false
+    },
+    {
+      "id": "buzzer_g70tt5g",
+      "type": "buzzer",
+      "name": "Buzzer Piezo Pasivo (KY-006)",
+      "x": 534.3049940301557,
+      "y": 218.1561973445131,
+      "width": 56.694,
+      "height": 65,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "Buzzer piezo PASIVO (necesita PWM -- freq()/duty() -- para sonar, a diferencia de uno activo)",
+        "nota": "Suena de verdad en el navegador (Web Audio API) mientras el firmware mantenga el PWM activo en el pin S. Compatible con rtttl.py/songs.py tal cual: from machine import Pin, PWM; PWM(pin, freq=440, duty=512)."
       },
       "locked": false
     }
   ],
   "wires": [
     {
-      "id": "wire_3hf6zah",
+      "id": "wire_f9soenl",
       "from": {
-        "componentId": "buzzer_bsipa6q",
+        "componentId": "esp32_wroom_ottcqls",
+        "pinId": "io12"
+      },
+      "to": {
+        "componentId": "buzzer_g70tt5g",
+        "pinId": "s"
+      },
+      "points": [
+        {
+          "x": 390.28,
+          "y": 146.41419995198385
+        },
+        {
+          "x": 513.9107112944764,
+          "y": 146.41419995198385
+        },
+        {
+          "x": 513.9107112944764,
+          "y": 295.3863771824088
+        },
+        {
+          "x": 549.0449940301557,
+          "y": 295.3863771824088
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-macho"
+    },
+    {
+      "id": "wire_wl3ddym",
+      "from": {
+        "componentId": "buzzer_g70tt5g",
         "pinId": "gnd"
       },
       "to": {
-        "componentId": "esp32_wroom_og8j7nn",
+        "componentId": "esp32_wroom_ottcqls",
         "pinId": "gnd_2"
       },
       "points": [
         {
-          "x": 368,
-          "y": 354.7809809341834
+          "x": 576.2589940301557,
+          "y": 383.5618010025793
         },
         {
-          "x": 211.67251297822386,
-          "y": 354.7809809341834
+          "x": 396.28,
+          "y": 383.5618010025793
         }
       ],
       "color": "#1a1a1a",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
-      "id": "wire_562gorr",
+      "id": "wire_rq9md36",
       "from": {
-        "componentId": "buzzer_bsipa6q",
-        "pinId": "vcc"
+        "componentId": "esp32_wroom_ottcqls",
+        "pinId": "3v3"
       },
       "to": {
-        "componentId": "esp32_wroom_og8j7nn",
-        "pinId": "3v3"
+        "componentId": "buzzer_g70tt5g",
+        "pinId": "vcc"
       },
       "points": [
         {
-          "x": 356,
-          "y": 366.57848526025805
+          "x": 366.28,
+          "y": 394.123557491087
         },
         {
-          "x": 181.67251297822386,
-          "y": 366.57848526025805
+          "x": 562.6519940301557,
+          "y": 394.123557491087
         }
       ],
       "color": "#ff5252",
-      "connectorType": "hembra-hembra"
-    },
-    {
-      "id": "wire_b6vgchv",
-      "from": {
-        "componentId": "buzzer_bsipa6q",
-        "pinId": "s"
-      },
-      "to": {
-        "componentId": "esp32_wroom_og8j7nn",
-        "pinId": "io4"
-      },
-      "points": [
-        {
-          "x": 344,
-          "y": 338.6370276458708
-        },
-        {
-          "x": 251.67251297822386,
-          "y": 338.6370276458708
-        }
-      ],
-      "color": "#26c6da",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     }
   ],
   "annotations": []

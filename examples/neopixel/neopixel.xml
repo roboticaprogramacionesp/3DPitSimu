@@ -1,0 +1,79 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id="n1vzbSc^bo0MKY_sw6lb">i</variable>
+  </variables>
+  <block type="neopixel_init" id="4)^B50@U=zQUD=@x4A1~" x="-50" y="-10">
+    <field name="NAME">np</field>
+    <field name="PIN">4</field>
+    <value name="NUM">
+      <block type="math_number" id="##,X/jknAJ$uyt]uT~Jz">
+        <field name="NUM">8</field>
+      </block>
+    </value>
+    <next>
+      <block type="controls_for" id="xSw}JTf|Rp9`c=h/4O0X">
+        <field name="VAR" id="n1vzbSc^bo0MKY_sw6lb">i</field>
+        <value name="FROM">
+          <block type="math_number" id=")E?=MuB!H^D6)lvX3okL">
+            <field name="NUM">1</field>
+          </block>
+        </value>
+        <value name="TO">
+          <block type="math_number" id="Rl|-8Ncbyo@MfdJ;IAx)">
+            <field name="NUM">8</field>
+          </block>
+        </value>
+        <value name="BY">
+          <block type="math_number" id=")-.7KU.$N{*$4+EFT9x~">
+            <field name="NUM">1</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="neopixel_pixel_x" id="F7?t+2BTW~H:lj1dUZEv">
+            <field name="NAME">np</field>
+            <value name="X">
+              <block type="variables_get" id="*z;KbHPZ2$v*{6,w0hkJ">
+                <field name="VAR" id="n1vzbSc^bo0MKY_sw6lb">i</field>
+              </block>
+            </value>
+            <value name="COLOR">
+              <shadow type="colour_picker" id="|(^%x614ww_6nBm-ciB1">
+                <field name="COLOUR">#ff0000</field>
+              </shadow>
+            </value>
+            <next>
+              <block type="neopixel_write" id="`HvIFNex/16{_u;A*iZh">
+                <field name="NAME">np</field>
+                <next>
+                  <block type="time_sleep" id="?t=j,gLuqB,XH(YcKX-Z">
+                    <field name="UNIT">S</field>
+                    <value name="VALUE">
+                      <shadow type="math_number" id="6m4MdJo6z`r4M?U|$FqY">
+                        <field name="NUM">1</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="neopixel_pixel_x" id="FqD|!E*.1X;F@y4}DblG">
+                        <field name="NAME">np</field>
+                        <value name="X">
+                          <block type="variables_get" id="6yzGG6Cfj`T?#:*-yv?M">
+                            <field name="VAR" id="n1vzbSc^bo0MKY_sw6lb">i</field>
+                          </block>
+                        </value>
+                        <value name="COLOR">
+                          <shadow type="colour_picker" id="QN7:$C3M:zGdja^Avo%v">
+                            <field name="COLOUR">#000000</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </next>
+  </block>
+</xml>

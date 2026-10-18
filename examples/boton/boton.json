@@ -1,13 +1,13 @@
 {
   "version": "1.0",
-  "timestamp": 1785555282597,
+  "timestamp": 1792335686818,
   "components": [
     {
-      "id": "esp32_wroom_khckmp4",
+      "id": "esp32_wroom_ottcqls",
       "type": "esp32_wroom",
       "name": "ESP32 WeMos D1 R32",
-      "x": 340,
-      "y": 100,
+      "x": 220,
+      "y": 160,
       "width": 276.28,
       "height": 210,
       "rotation": 0,
@@ -17,18 +17,19 @@
         "mcu": "ESP32-WROOM-32",
         "voltaje_operacion": 3.3,
         "flash_mb": 4,
-        "isPowerSource": true
+        "isPowerSource": true,
+        "macAddress": "49:79:00:3E:EE:73"
       },
       "locked": false
     },
     {
-      "id": "ky_004_n0zgerf",
+      "id": "ky_004_wav1scv",
       "type": "ky_004",
       "name": "KY-004 Botón",
-      "x": 660,
-      "y": 180,
-      "width": 53.15,
-      "height": 85.56,
+      "x": 534.1051308979994,
+      "y": 198.1464293757956,
+      "width": 56.694,
+      "height": 89.736,
       "rotation": 0,
       "scale": 1,
       "flipX": false,
@@ -38,72 +39,80 @@
   ],
   "wires": [
     {
-      "id": "wire_npmxv2l",
+      "id": "wire_3xqh19r",
       "from": {
-        "componentId": "ky_004_n0zgerf",
-        "pinId": "gnd"
+        "componentId": "esp32_wroom_ottcqls",
+        "pinId": "io12"
       },
       "to": {
-        "componentId": "esp32_wroom_khckmp4",
-        "pinId": "gnd_2"
+        "componentId": "ky_004_wav1scv",
+        "pinId": "senal"
       },
       "points": [
         {
-          "x": 695.78,
-          "y": 334.94737439670973
+          "x": 390.28,
+          "y": 149.23805971752853
         },
         {
-          "x": 516.28,
-          "y": 334.94737439670973
+          "x": 523.4645663335546,
+          "y": 149.23805971752853
+        },
+        {
+          "x": 523.4645663335546,
+          "y": 305.03923317237303
+        },
+        {
+          "x": 553.0601308979994,
+          "y": 305.03923317237303
         }
       ],
-      "color": "#1a1a1a",
-      "connectorType": "hembra-hembra"
+      "color": "#26c6da",
+      "connectorType": "hembra-macho"
     },
     {
-      "id": "wire_chjs1n6",
+      "id": "wire_6reuyav",
       "from": {
-        "componentId": "ky_004_n0zgerf",
+        "componentId": "ky_004_wav1scv",
         "pinId": "vcc"
       },
       "to": {
-        "componentId": "esp32_wroom_khckmp4",
+        "componentId": "esp32_wroom_ottcqls",
         "pinId": "3v3"
       },
       "points": [
         {
-          "x": 686.77,
-          "y": 344.69737855648833
+          "x": 562.6601308979994,
+          "y": 383.2026795473696
         },
         {
-          "x": 486.28,
-          "y": 344.69737855648833
+          "x": 366.28,
+          "y": 383.2026795473696
         }
       ],
       "color": "#ff5252",
       "connectorType": "hembra-hembra"
     },
     {
-      "id": "wire_k5gtj7l",
+      "id": "wire_x4rb38b",
       "from": {
-        "componentId": "esp32_wroom_khckmp4",
-        "pinId": "io4"
+        "componentId": "esp32_wroom_ottcqls",
+        "pinId": "gnd_2"
       },
       "to": {
-        "componentId": "ky_004_n0zgerf",
-        "pinId": "senal"
+        "componentId": "ky_004_wav1scv",
+        "pinId": "gnd"
       },
       "points": [
         {
-          "x": 556.28,
-          "y": 322.11842155489586
+          "x": 396.28,
+          "y": 375.7001186324496
         },
         {
-          "x": 677.77,
-          "y": 322.11842155489586
+          "x": 572.2711308979995,
+          "y": 375.7001186324496
         }
       ],
-      "color": "#26c6da",
+      "color": "#1a1a1a",
       "connectorType": "hembra-hembra"
     }
   ],

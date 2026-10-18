@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": 1785556654393,
+  "timestamp": 1792339634055,
   "components": [
     {
       "id": "esp32_wroom_syfcwkc",
@@ -17,7 +17,8 @@
         "mcu": "ESP32-WROOM-32",
         "voltaje_operacion": 3.3,
         "flash_mb": 4,
-        "isPowerSource": true
+        "isPowerSource": true,
+        "macAddress": "71:CA:5C:0E:B0:AA"
       },
       "locked": false
     },
@@ -109,7 +110,15 @@
       },
       "points": [
         {
-          "x": 588.2631842878475,
+          "x": 556.28,
+          "y": 85.8086247380563
+        },
+        {
+          "x": 635.7751527128119,
+          "y": 85.8086247380563
+        },
+        {
+          "x": 635.7751527128119,
           "y": 213.78031481758964
         }
       ],

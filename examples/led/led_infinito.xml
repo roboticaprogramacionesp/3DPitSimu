@@ -1,0 +1,49 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="led_init" id="`m5}ha)RP-aZ$iM09m#K" x="-50" y="-30">
+    <field name="NAME">led</field>
+    <field name="MODEL">LED RED</field>
+    <field name="PIN">2</field>
+    <next>
+      <block type="controls_whileUntil" id="r6B2{6Lwh%{lB6m}B`}}">
+        <field name="MODE">WHILE</field>
+        <value name="BOOL">
+          <block type="logic_boolean" id="?c5jzG|6A5K=1-IVfBm=">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="set_led" id="I?#_SO|S(I+hvr[L4{.D">
+            <field name="NAME">led</field>
+            <field name="STATE">1</field>
+            <next>
+              <block type="time_sleep" id="88};3j~Lt/7MNb2[JA[~">
+                <field name="UNIT">S</field>
+                <value name="VALUE">
+                  <shadow type="math_number" id="?P*?6[o3HcM)Q7h,?72C">
+                    <field name="NUM">1</field>
+                  </shadow>
+                </value>
+                <next>
+                  <block type="set_led" id=";SvE@_[$hX/_dtR`7oai">
+                    <field name="NAME">led</field>
+                    <field name="STATE">0</field>
+                    <next>
+                      <block type="time_sleep" id="6{;m]*H4!Je2-Q`}rKnt">
+                        <field name="UNIT">S</field>
+                        <value name="VALUE">
+                          <shadow type="math_number" id="nH;HO}L_b-hs}c.I:ic`">
+                            <field name="NUM">1</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </next>
+  </block>
+</xml>

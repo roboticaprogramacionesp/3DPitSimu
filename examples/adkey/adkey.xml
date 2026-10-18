@@ -1,0 +1,238 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id="6H9JRV7]2A21V,J?sAIC">key</variable>
+  </variables>
+  <block type="analog_sensor_init" id=")23H%Euf**G@mrUwyd|)" x="10" y="10">
+    <field name="NAME">adkey</field>
+    <field name="MODEL">ADKeyboard</field>
+    <field name="PIN">4</field>
+    <field name="ATTEN">ADC.ATTN_11DB</field>
+    <field name="WIDTH">ADC.WIDTH_10BIT</field>
+    <next>
+      <block type="controls_whileUntil" id="Ye+-UZj:ch$)+w@h;S?6">
+        <field name="MODE">WHILE</field>
+        <value name="BOOL">
+          <block type="logic_boolean" id="N%7MKs}P@Lt!j?s%gAD8">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="variables_set" id="6^#;y]*P|9uC{V36_tR%">
+            <field name="VAR" id="6H9JRV7]2A21V,J?sAIC">key</field>
+            <value name="VALUE">
+              <block type="analog_sensor_read" id="NW9qE6Gp-gC=:J{-|J%w">
+                <field name="NAME">adkey</field>
+              </block>
+            </value>
+            <next>
+              <block type="text_print" id="*mmnA=#LJb^|1}!:?g@:">
+                <value name="TEXT">
+                  <block type="variables_get" id="5vALr]A.xN;jA%u,NEzx">
+                    <field name="VAR" id="6H9JRV7]2A21V,J?sAIC">key</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="controls_if" id="z/*_nQ*kn(0?gr#h,1gv">
+                    <value name="IF0">
+                      <block type="logic_operation" id="/ov:-1}+d`wU)~xr`oBf">
+                        <field name="OP">AND</field>
+                        <value name="A">
+                          <block type="logic_compare" id="dBen;urUb)rQcqhy;XY@">
+                            <field name="OP">GTE</field>
+                            <value name="A">
+                              <block type="variables_get" id="?mu{x(oJE,QI6/D*rwZ]">
+                                <field name="VAR" id="6H9JRV7]2A21V,J?sAIC">key</field>
+                              </block>
+                            </value>
+                            <value name="B">
+                              <block type="math_number" id="ao_h-ViR=T:Xii4St%A:">
+                                <field name="NUM">0</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <block type="logic_compare" id="yDW`s22?bO]_n1)36CQc">
+                            <field name="OP">LT</field>
+                            <value name="A">
+                              <block type="variables_get" id="mVMHP?y2n!;zkHpY`lNe">
+                                <field name="VAR" id="6H9JRV7]2A21V,J?sAIC">key</field>
+                              </block>
+                            </value>
+                            <value name="B">
+                              <block type="math_number" id="e;g4q0=Cw)0]]Is.uG./">
+                                <field name="NUM">100</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="text_print" id="aBI1v%Jl;rOq62q?.fM!">
+                        <value name="TEXT">
+                          <block type="text" id="p_+nmHnZot(ALsN5ng#u">
+                            <field name="TEXT">Izquierda</field>
+                          </block>
+                        </value>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="controls_if" id="9=rQb,K_3g0v+KSAqy4x">
+                        <value name="IF0">
+                          <block type="logic_operation" id="=Y1!)itpmjzOI7||3t)%">
+                            <field name="OP">AND</field>
+                            <value name="A">
+                              <block type="logic_compare" id="a^~5c[=9}@7O0g2f*AFT">
+                                <field name="OP">GT</field>
+                                <value name="A">
+                                  <block type="variables_get" id="M,@f(QYa=//unmdoMaDI">
+                                    <field name="VAR" id="6H9JRV7]2A21V,J?sAIC">key</field>
+                                  </block>
+                                </value>
+                                <value name="B">
+                                  <block type="math_number" id="!v@NHZyxj!9G_aDyfO+i">
+                                    <field name="NUM">100</field>
+                                  </block>
+                                </value>
+                              </block>
+                            </value>
+                            <value name="B">
+                              <block type="logic_compare" id="gu[(hxJjvEa6QN$l59Rm">
+                                <field name="OP">LT</field>
+                                <value name="A">
+                                  <block type="variables_get" id="m|*e]8w_{k(#7q%VfZA;">
+                                    <field name="VAR" id="6H9JRV7]2A21V,J?sAIC">key</field>
+                                  </block>
+                                </value>
+                                <value name="B">
+                                  <block type="math_number" id="R7)N/]3C]8zV{Bvlc6vG">
+                                    <field name="NUM">200</field>
+                                  </block>
+                                </value>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                        <statement name="DO0">
+                          <block type="text_print" id="g]Tt(pYr{/D_aykQsk3G">
+                            <value name="TEXT">
+                              <block type="text" id="-pA~jL}3.WgyWx1qy7BR">
+                                <field name="TEXT">Arriba</field>
+                              </block>
+                            </value>
+                          </block>
+                        </statement>
+                        <next>
+                          <block type="controls_if" id="S8Yu8PlQ5]/,-e:D};t/">
+                            <value name="IF0">
+                              <block type="logic_operation" id="eCZZ,aC#G,FGedW[$PUC">
+                                <field name="OP">AND</field>
+                                <value name="A">
+                                  <block type="logic_compare" id="Pp6fG_Z;[HKGZRC5Ry2[">
+                                    <field name="OP">GT</field>
+                                    <value name="A">
+                                      <block type="variables_get" id="GKPXi4(y{i}n.[ia?m)3">
+                                        <field name="VAR" id="6H9JRV7]2A21V,J?sAIC">key</field>
+                                      </block>
+                                    </value>
+                                    <value name="B">
+                                      <block type="math_number" id="9@CTp!sR3;1,WO2.m%.i">
+                                        <field name="NUM">200</field>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </value>
+                                <value name="B">
+                                  <block type="logic_compare" id="MmT_H`11F.PnK)g1%bl|">
+                                    <field name="OP">LT</field>
+                                    <value name="A">
+                                      <block type="variables_get" id="xn`pb{s9~@6hQP7v|g,U">
+                                        <field name="VAR" id="6H9JRV7]2A21V,J?sAIC">key</field>
+                                      </block>
+                                    </value>
+                                    <value name="B">
+                                      <block type="math_number" id="b3PvR*sE%EYaC:+;XzFT">
+                                        <field name="NUM">300</field>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </value>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <block type="text_print" id="%f7*#a^_GIOP6(mmKbug">
+                                <value name="TEXT">
+                                  <block type="text" id="?6x]_{CZ5wbDH1G[cy.h">
+                                    <field name="TEXT">Abajo</field>
+                                  </block>
+                                </value>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="controls_if" id="fc`7(6]H0=kS7s*@8X(/">
+                                <value name="IF0">
+                                  <block type="logic_operation" id="EBNO#?{AwXwjF/9tsHU7">
+                                    <field name="OP">AND</field>
+                                    <value name="A">
+                                      <block type="logic_compare" id=";QLr#f{r9FoI~nXa(IZ]">
+                                        <field name="OP">GT</field>
+                                        <value name="A">
+                                          <block type="variables_get" id="Yflk[9f){OqyP2rD#6%B">
+                                            <field name="VAR" id="6H9JRV7]2A21V,J?sAIC">key</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <block type="math_number" id="~%fpi5pAv2G$$lhh]`69">
+                                            <field name="NUM">300</field>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <value name="B">
+                                      <block type="logic_compare" id="BYCy7FHm=#C6MJS_/TJn">
+                                        <field name="OP">LT</field>
+                                        <value name="A">
+                                          <block type="variables_get" id="UsY[*S8YNs#emJSz(4aF">
+                                            <field name="VAR" id="6H9JRV7]2A21V,J?sAIC">key</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <block type="math_number" id="]xi-p)lHxw@+Kq-[Hgy3">
+                                            <field name="NUM">500</field>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </value>
+                                <statement name="DO0">
+                                  <block type="text_print" id="Im/wruCb_~r7z:^~khxX">
+                                    <value name="TEXT">
+                                      <block type="text" id=".4`#1cOc*zDAXM)iEqz6">
+                                        <field name="TEXT">Derecha</field>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </statement>
+                                <next>
+                                  <block type="time_sleep" id="UR~feK/H(r=5ar;e`k{E">
+                                    <field name="UNIT">S</field>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </next>
+  </block>
+</xml>

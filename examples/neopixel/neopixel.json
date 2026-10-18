@@ -1,13 +1,13 @@
 {
   "version": "1.0",
-  "timestamp": 1785554835448,
+  "timestamp": 1792335591864,
   "components": [
     {
-      "id": "esp32_wroom_exmd23y",
+      "id": "esp32_wroom_ottcqls",
       "type": "esp32_wroom",
       "name": "ESP32 WeMos D1 R32",
-      "x": 300,
-      "y": 140,
+      "x": 220,
+      "y": 160,
       "width": 276.28,
       "height": 210,
       "rotation": 0,
@@ -17,16 +17,17 @@
         "mcu": "ESP32-WROOM-32",
         "voltaje_operacion": 3.3,
         "flash_mb": 4,
-        "isPowerSource": true
+        "isPowerSource": true,
+        "macAddress": "49:79:00:3E:EE:73"
       },
       "locked": false
     },
     {
-      "id": "neopixel_ring_wfhqk78",
+      "id": "neopixel_ring_1ncewtz",
       "type": "neopixel_ring",
       "name": "Anillo de NeoPixel",
-      "x": 589.8422218892443,
-      "y": 196.06311124430232,
+      "x": 508.7650598017941,
+      "y": 201.62659298709357,
       "width": 124.72226013779195,
       "height": 124.72226013779195,
       "rotation": 0,
@@ -40,73 +41,73 @@
   ],
   "wires": [
     {
-      "id": "wire_jmefgno",
+      "id": "wire_kt5wel5",
       "from": {
-        "componentId": "esp32_wroom_exmd23y",
+        "componentId": "esp32_wroom_ottcqls",
         "pinId": "gnd_2"
       },
       "to": {
-        "componentId": "neopixel_ring_wfhqk78",
+        "componentId": "neopixel_ring_1ncewtz",
         "pinId": "gnd"
       },
       "points": [
         {
-          "x": 476.28,
-          "y": 369.73150390106787
+          "x": 396.28,
+          "y": 382.00195241946375
         },
         {
-          "x": 636.4173940358376,
-          "y": 369.73150390106787
+          "x": 555.3402319483873,
+          "y": 382.00195241946375
         }
       ],
       "color": "#1a1a1a",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
-      "id": "wire_nlx608y",
+      "id": "wire_lwe42qh",
       "from": {
-        "componentId": "esp32_wroom_exmd23y",
-        "pinId": "3v3"
-      },
-      "to": {
-        "componentId": "neopixel_ring_wfhqk78",
-        "pinId": "vcc"
-      },
-      "points": [
-        {
-          "x": 446.28,
-          "y": 388.9236172350171
-        },
-        {
-          "x": 667.9893098804431,
-          "y": 388.9236172350171
-        }
-      ],
-      "color": "#ff5252",
-      "connectorType": "hembra-hembra"
-    },
-    {
-      "id": "wire_ovwz0nq",
-      "from": {
-        "componentId": "esp32_wroom_exmd23y",
-        "pinId": "io2"
-      },
-      "to": {
-        "componentId": "neopixel_ring_wfhqk78",
+        "componentId": "neopixel_ring_1ncewtz",
         "pinId": "din"
       },
+      "to": {
+        "componentId": "esp32_wroom_ottcqls",
+        "pinId": "io4"
+      },
       "points": [
         {
-          "x": 506.28,
-          "y": 377.6341388032822
+          "x": 571.12618987069,
+          "y": 374.0299278766324
         },
         {
-          "x": 652.2033519581403,
-          "y": 377.6341388032822
+          "x": 436.28,
+          "y": 374.0299278766324
         }
       ],
       "color": "#26c6da",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
+    },
+    {
+      "id": "wire_6nzyl55",
+      "from": {
+        "componentId": "neopixel_ring_1ncewtz",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_ottcqls",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 586.9121477929929,
+          "y": 390.4168672146746
+        },
+        {
+          "x": 366.28,
+          "y": 390.4168672146746
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-macho"
     }
   ],
   "annotations": []
