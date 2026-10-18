@@ -91,6 +91,28 @@ class I2C:
         pass
 
     def writeto(self, addr, buf, stop=True):
+        # BUG REAL encontrado armando _oled_wasm.py: intentar agregar
+        # esta misma línea desde AFUERA (I2C.writeto = otra_funcion,
+        # un monkey-patch en _oled_wasm.py) NO funcionaba para nada --
+        # confirmado en vivo: I2C.writeto.__name__ seguía dando
+        # "writeto" después del parche, y SH1106 (que manda TODO --
+        # comandos Y datos -- por writeto(), a diferencia de SSD1306
+        # que manda los datos por writevto()) nunca disparaba el
+        # parche ni una vez. Este build de MicroPython WASM no deja
+        # reemplazar un método que la clase YA tenía -- agregar uno
+        # NUEVO (ver writevto() más abajo) sí funciona. Por eso esto
+        # vive ACÁ adentro en vez de parcheado desde otro archivo.
+        if buf:
+            try:
+                _oled_process_write(addr, bytes(buf))
+            except NameError:
+                # _oled_wasm.py no se cargó -- no debería pasar nunca
+                # en esta app (wasmWorker.js lo carga siempre, sin
+                # condición), pero un NameError acá NUNCA debe tirar
+                # abajo un sensor I2C que no tiene nada que ver con
+                # pantallas.
+                pass
+
         if not buf:
             return
         value = buf[0]
@@ -105,6 +127,16 @@ class I2C:
             if device and device.get("on_write"):
                 device["on_write"](value)
             sys.stdout.write("I2CW:%d:%d\n" % (addr, value))
+
+    # Nueva (no existía) -- la usa SSD1306_I2C.write_data() (ver
+    # components_wasm/libs/ssd1306.py) para mandar el control byte
+    # (0x40) y el framebuffer completo como UNA sola transacción I2C
+    # en vez de dos. "bufs" es una lista de bytes-like -- se
+    # concatenan y se reusa toda la lógica de arriba (I2CW:/
+    # register_i2c_device/OLED), sin duplicarla.
+    def writevto(self, addr, bufs, stop=True):
+        combined = b"".join(bytes(b) for b in bufs)
+        self.writeto(addr, combined, stop)
 
     def readfrom(self, addr, nbytes, stop=True):
         device = _devices.get(addr)

@@ -58,6 +58,7 @@ const _stdoutDecoder = new TextDecoder("utf-8");
 
 const BASE_WASM_URL      = new URL("../../components_wasm/_base_wasm.py", import.meta.url);
 const I2C_BUS_WASM_URL   = new URL("../../components_wasm/_i2c_bus_wasm.py", import.meta.url);
+const OLED_WASM_URL      = new URL("../../components_wasm/_oled_wasm.py", import.meta.url);
 const KEYPAD_I2C_WASM_URL = new URL("../../components_wasm/_keypad_i2c_wasm.py", import.meta.url);
 const ADC_BUS_WASM_URL   = new URL("../../components_wasm/_adc_bus_wasm.py", import.meta.url);
 const NEOPIXEL_WASM_URL  = new URL("../../components_wasm/_neopixel_wasm.py", import.meta.url);
@@ -190,6 +191,16 @@ self.onmessage = async (e) => {
 
             const i2cCode = await (await fetch(I2C_BUS_WASM_URL, NO_CACHE)).text();
             await mp.runPython(i2cCode);
+
+            // Después de i2cCode (define _oled_process_write(), que
+            // I2C.writeto() de _i2c_bus_wasm.py llama por nombre vía
+            // late binding -- no importa el orden real entre los dos,
+            // alcanza con que ambos ya hayan cargado antes de que
+            // corra código del alumno) y antes de keypadI2cCode (sin
+            // dependencia real entre ellos, pero así queda agrupado
+            // con el resto de lo relacionado a I2C).
+            const oledCode = await (await fetch(OLED_WASM_URL, NO_CACHE)).text();
+            await mp.runPython(oledCode);
 
             const keypadI2cCode = await (await fetch(KEYPAD_I2C_WASM_URL, NO_CACHE)).text();
             await mp.runPython(keypadI2cCode);

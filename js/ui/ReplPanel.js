@@ -1808,6 +1808,34 @@ class ReplPanel {
     static ALWAYS_HAL_TYPES = ["_base", "_i2c_bus", "_adc_bus", "_uart_bus"];
 
     // ====================================================
+    // BUG REAL encontrado armando el render de OLED en modo navegador
+    // (ver components_wasm/_oled_wasm.py): _buildPendingHal() manda
+    // el components/<tipo>/<tipo>.hal.py REAL de CUALQUIER componente
+    // en el lienzo, sin importar si el bridge es WASM o QEMU -- pensado
+    // para QEMU, donde no existe otro mecanismo que inyecte machine.I2C.
+    // Para "oled" puntualmente esto es CONFLICTIVO en WASM: oled.hal.py
+    // hace "machine.I2C = I2C" con una clase dummy PROPIA (pensada para
+    // QEMU, ver su docstring sobre "la carrera de machine.I2C") que NO
+    // pasa por _i2c_bus_wasm.py ni llama a register_i2c_device() -- y
+    // además reemplaza sys.modules["ssd1306"] con su propia
+    // implementación. Resultado real (confirmado en vivo con
+    // Playwright, instrumentando el stdout del Worker): para SSD1306
+    // "funcionaba" por accidente (la implementación propia de
+    // oled.hal.py también manda OLED: correctamente), pero para
+    // SH1106 -- que no tiene equivalente en oled.hal.py, depende de
+    // sh1106.py real de components_wasm/libs/ llamando a
+    // i2c.writeto() -- la clase dummy que ganó la carrera de
+    // machine.I2C no hace nada con esos bytes, pantalla siempre en
+    // negro. Más grave todavía: si "oled" comparte el lienzo con
+    // CUALQUIER otro componente I2C (ej. un teclado 4x4 I2C), esa
+    // misma clase dummy rompería TAMBIÉN a ese otro componente, no
+    // solo al OLED. En WASM, _oled_wasm.py + _i2c_bus_wasm.py ya
+    // cubren esto mejor (ambos chips, drivers reales de
+    // components_wasm/libs/) -- no hace falta (ni conviene) que
+    // oled.hal.py se mande nunca en este modo.
+    static WASM_SKIP_HAL_TYPES = new Set(["oled"]);
+
+    // ====================================================
     // Aislamiento de fallas entre componentes
     //
     // Hasta ahora, todo el bloque HAL (_base + _i2c_bus + cada
@@ -2166,6 +2194,15 @@ class ReplPanel {
             // ese fetch y lo dejaba en 404 en la consola sin ninguna
             // razón real.
             if (type.startsWith("esp32")) continue;
+
+            // Ver el comentario grande junto a WASM_SKIP_HAL_TYPES --
+            // para estos tipos, mandar su .hal.py real en modo WASM no
+            // suma nada (o directamente rompe otra cosa), porque ya
+            // hay un _xxx_wasm.py dedicado que lo cubre mejor.
+            if (this.bridge?.isWasmBridge && ReplPanel.WASM_SKIP_HAL_TYPES.has(type)) {
+                newlySent.push(type);
+                continue;
+            }
 
             if (this._halSentToFirmware.has(type)) continue; // ya está en el firmware, no lo repetimos
 
