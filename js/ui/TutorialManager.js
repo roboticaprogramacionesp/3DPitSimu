@@ -1201,8 +1201,8 @@ class TutorialManager {
             title: "Buzzer con ESP32",
             icon: "🔊",
             category: "🔧 Entradas · Actuadores",
-            demoGif: "assets/tutorial-demos/buzzer.png",
-            demoCaption: "El buzzer no tiene ningún indicador visual en el lienzo -- suena de verdad en tu navegador (subí el volumen) cuando el firmware le manda PWM, esto es lo que vas a armar y programar en los pasos de abajo.",
+            demoGif: "assets/tutorial-demos/buzzer.gif",
+            demoCaption: "Cuando el firmware le manda PWM, el buzzer suena de verdad en tu navegador (subí el volumen) y además muestra ondas de sonido saliendo del disco -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Coloca la ESP32",
