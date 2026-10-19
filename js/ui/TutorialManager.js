@@ -540,6 +540,8 @@ class TutorialManager {
             title: "Display 7 segmentos con ESP32",
             icon: "🔢",
             category: "💡 LEDs · Salidas digitales",
+            demoGif: "assets/tutorial-demos/display7.gif",
+            demoCaption: "Los 7 segmentos se encienden y apagan juntos, formando un \"8\" completo -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -621,6 +623,8 @@ class TutorialManager {
             title: "KY-009 LED RGB (SMD) con ESP32",
             icon: "🎨",
             category: "💡 LEDs · Salidas digitales",
+            demoGif: "assets/tutorial-demos/ky_009.gif",
+            demoCaption: "El LED cicla entre rojo, verde y azul -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -702,6 +706,8 @@ class TutorialManager {
             title: "KY-011 LED Bicolor con ESP32",
             icon: "🟢",
             category: "💡 LEDs · Salidas digitales",
+            demoGif: "assets/tutorial-demos/ky_011.gif",
+            demoCaption: "El LED cicla entre rojo y verde -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -864,6 +870,8 @@ class TutorialManager {
             title: "Matriz MAX7219 con ESP32",
             icon: "🔲",
             category: "💡 LEDs · Salidas digitales",
+            demoGif: "assets/tutorial-demos/max7219.gif",
+            demoCaption: "La matriz dibuja un carácter y después una figura -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -957,6 +965,8 @@ class TutorialManager {
             title: "Matriz NeoPixel con ESP32",
             icon: "🎆",
             category: "💡 LEDs · Salidas digitales",
+            demoGif: "assets/tutorial-demos/neopixel_matrix.gif",
+            demoCaption: "Primero muestra un carácter fijo y después un texto con scroll -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -1050,6 +1060,8 @@ class TutorialManager {
             title: "Botón (KY-004) con ESP32",
             icon: "🔘",
             category: "🔧 Entradas · Actuadores",
+            demoGif: "assets/tutorial-demos/boton.gif",
+            demoCaption: "Al presionarlo se pone rojo -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -1238,6 +1250,8 @@ class TutorialManager {
             title: "FC-51 — Infrarrojo de obstáculos",
             icon: "🚧",
             category: "🔧 Entradas · Actuadores",
+            demoGif: "assets/tutorial-demos/fc_51.png",
+            demoCaption: "Este sensor no tiene ningún indicador visual en el lienzo -- detecta el obstáculo y manda el resultado por el pin OUT, que vas a leer desde tu código (ver el checkbox \"Objeto detectado\" en su panel de propiedades para simular distintos casos).",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -1678,6 +1692,8 @@ class TutorialManager {
             title: "28BYJ-48 Motor Paso a Paso con ESP32",
             icon: "🔁",
             category: "🔧 Entradas · Actuadores",
+            demoGif: "assets/tutorial-demos/28byj.gif",
+            demoCaption: "Con el interruptor cerrado, el eje gira hasta la posición que le pidas -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
