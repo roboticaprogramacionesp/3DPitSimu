@@ -12696,10 +12696,15 @@ Blockly.Blocks["dict_create_with"].updateShape_ = function () {
   }
 };
 
+// Cantidad real de archivos en js/blockly/img/icons2/ (0.png .. 79.png) --
+// usada tanto por iconDropdown() como por FieldIconGrid.showEditor_() para
+// no pedir íconos que no existen (causaba cientos de 404 en consola).
+const ICON2_COUNT = 80;
+
 function iconDropdown() {
   const icons = [];
 
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < ICON2_COUNT; i++) {
     icons.push([
       {
         src: `js/blockly/img/icons2/${i}.png`,
@@ -12784,7 +12789,7 @@ class FieldIconGrid extends Blockly.Field {
     div.style.overflowY = "auto";
     div.style.zIndex = "1000";
 
-    for (let i = 0; i < 361; i++) {
+    for (let i = 0; i < ICON2_COUNT; i++) {
       const icon = document.createElement("img");
 
       icon.src = `js/blockly/img/icons2/${i}.png`;
