@@ -1825,87 +1825,6 @@ class TutorialManager {
 ],
         },
         {
-            id: "bombillo",
-            title: "Foco / Bombillo con ESP32",
-            icon: "🕯️",
-            category: "🔧 Entradas · Actuadores",
-            steps: [
-                {
-                    title: "Paso 1 — Crea un proyecto nuevo",
-                    text: "Antes de empezar, hace clic en \"🆕 Nuevo\" (menú 📁 Archivo) para arrancar con el lienzo vacío -- si no, el circuito de otro tutorial o proyecto anterior puede quedar mezclado con el que vas a armar ahora.",
-                    highlight: (tm) => tm.highlightElements(["#pdNewProject"]),
-                    onEnter: () => {
-                        document.getElementById("projectDrawer")?.classList.remove("hidden");
-                        document.getElementById("btnProjectMenu")?.classList.add("active");
-                    },
-                    isDone: (tm) => tm.simulator.componentManager.getAll().length === 0,
-                },
-                {
-                    title: "Paso 2 — Coloca la ESP32",
-                    text: "Arrastra la placa ESP32 WeMos D1 R32 desde el panel de componentes hasta el lienzo.",
-                    highlight: (tm) => tm.highlightToolboxAndCanvas("esp32_wroom"),
-                    isDone: (tm) => tm.hasComponent("esp32_wroom"),
-                },
-                {
-                    title: "Paso 3 — Toma el foco",
-                    text: "Arrastra el Foco / Bombillo desde el panel de componentes hasta el lienzo.",
-                    highlight: (tm) => tm.highlightToolboxAndCanvas("bombillo"),
-                    isDone: (tm) => tm.hasComponent("bombillo"),
-                },
-                {
-                    title: "Paso 4 — Conecta el GND",
-                    text: "Traza un cable desde un pin GND de la ESP32 hasta el terminal P1 del foco -- no tiene polaridad, cualquiera de los dos terminales sirve.",
-                    highlight: (tm) => tm.highlightPins([
-                        { type: "esp32_wroom", match: (p) => p.type === "ground" },
-                        { type: "bombillo", match: (p) => p.id === "p1" },
-                    ]),
-                    isDone: (tm) => tm.hasWireBetween(
-                        (pin) => pin.type === "ground",
-                        (comp, pin) => comp.type === "bombillo" && pin.id === "p1",
-                    ),
-                },
-                {
-                    title: "Paso 5 — Conecta el otro terminal",
-                    text: "Elige cualquier pin GPIO libre de la ESP32 y conéctalo al terminal P2 del foco.",
-                    highlight: (tm) => tm.highlightPins([
-                        { type: "esp32_wroom", match: (p) => p.type === "gpio" && !p.inputOnly && p.signal !== "uart" },
-                        { type: "bombillo", match: (p) => p.id === "p2" },
-                    ]),
-                    isDone: (tm) => tm.hasWireBetween(
-                        (pin) => pin.type === "gpio" && !pin.inputOnly && pin.signal !== "uart",
-                        (comp, pin) => comp.type === "bombillo" && pin.id === "p2",
-                    ),
-                },
-                {
-                    title: "Paso 6 — Guarda tu proyecto",
-                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
-                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
-                    onEnter: () => {
-                        document.getElementById("projectDrawer")?.classList.remove("hidden");
-                        document.getElementById("btnProjectMenu")?.classList.add("active");
-                    },
-                    isDone: (tm) => !tm.simulator.projectManager.dirty,
-                },
-                {
-                    title: "Paso 7 — Simula el circuito",
-                    text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
-                    highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
-                    isDone: (tm) => !!tm.simulator.isRunning,
-                },
-                {
-                    title: "Paso 8 — Escribe o carga tu código",
-                    text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
-                    highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
-                    onEnter: (tm) => {
-                        if (tm.replPanel && !tm.replPanel.open) tm.replPanel.toggle();
-                        tm.replPanel?.switchTab("editor");
-                    },
-                    isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
-                    isLast: true,
-                },
-],
-        },
-        {
             id: "ky_008",
             title: "KY-008 Módulo Láser con ESP32",
             icon: "🔴",
@@ -2132,14 +2051,21 @@ class TutorialManager {
                     ),
                 },
                 {
+                    // BUG REAL corregido (reportado por el usuario): el
+                    // relevador KY-019 necesita 5V para activar la
+                    // bobina de verdad -- 3V3 queda al límite/no
+                    // alcanza en el módulo real. A diferencia del
+                    // 3V3 (un solo pin "3v3"), la ESP32 trae DOS pines
+                    // 5V ("5v_1"/"5v_2") -- se acepta cualquiera de los
+                    // dos.
                     title: "Paso 5 — Conecta la alimentación",
-                    text: "Conecta un pin de 3V3 de la ESP32 al VCC del relevador.",
+                    text: "Conecta un pin de 5V de la ESP32 al VCC del relevador -- el KY-019 necesita 5V para activar la bobina, 3.3V no alcanza.",
                     highlight: (tm) => tm.highlightPins([
-                        { type: "esp32_wroom", match: (p) => p.id === "3v3" },
+                        { type: "esp32_wroom", match: (p) => p.id === "5v_1" || p.id === "5v_2" },
                         { type: "ky-019", match: (p) => p.id === "vcc" },
                     ]),
                     isDone: (tm) => tm.hasWireBetween(
-                        (pin) => pin.id === "3v3",
+                        (pin) => pin.id === "5v_1" || pin.id === "5v_2",
                         (comp, pin) => comp.type === "ky-019" && pin.id === "vcc",
                     ),
                 },
@@ -2221,87 +2147,6 @@ class TutorialManager {
                 },
                 {
                     title: "Paso 14 — Escribe o carga tu código",
-                    text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
-                    highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
-                    onEnter: (tm) => {
-                        if (tm.replPanel && !tm.replPanel.open) tm.replPanel.toggle();
-                        tm.replPanel?.switchTab("editor");
-                    },
-                    isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
-                    isLast: true,
-                },
-],
-        },
-        {
-            id: "slide_switch",
-            title: "Interruptor deslizante con ESP32",
-            icon: "🔀",
-            category: "🔧 Entradas · Actuadores",
-            steps: [
-                {
-                    title: "Paso 1 — Crea un proyecto nuevo",
-                    text: "Antes de empezar, hace clic en \"🆕 Nuevo\" (menú 📁 Archivo) para arrancar con el lienzo vacío -- si no, el circuito de otro tutorial o proyecto anterior puede quedar mezclado con el que vas a armar ahora.",
-                    highlight: (tm) => tm.highlightElements(["#pdNewProject"]),
-                    onEnter: () => {
-                        document.getElementById("projectDrawer")?.classList.remove("hidden");
-                        document.getElementById("btnProjectMenu")?.classList.add("active");
-                    },
-                    isDone: (tm) => tm.simulator.componentManager.getAll().length === 0,
-                },
-                {
-                    title: "Paso 2 — Coloca la ESP32",
-                    text: "Arrastra la placa ESP32 WeMos D1 R32 desde el panel de componentes hasta el lienzo.",
-                    highlight: (tm) => tm.highlightToolboxAndCanvas("esp32_wroom"),
-                    isDone: (tm) => tm.hasComponent("esp32_wroom"),
-                },
-                {
-                    title: "Paso 3 — Toma el interruptor deslizante",
-                    text: "Arrastra el Interruptor Deslizante SPDT desde el panel de componentes hasta el lienzo.",
-                    highlight: (tm) => tm.highlightToolboxAndCanvas("slide_switch"),
-                    isDone: (tm) => tm.hasComponent("slide_switch"),
-                },
-                {
-                    title: "Paso 4 — Conecta el COM al GND",
-                    text: "Traza un cable desde un pin GND de la ESP32 hasta el COM (común) del interruptor.",
-                    highlight: (tm) => tm.highlightPins([
-                        { type: "esp32_wroom", match: (p) => p.type === "ground" },
-                        { type: "slide_switch", match: (p) => p.id === "com" },
-                    ]),
-                    isDone: (tm) => tm.hasWireBetween(
-                        (pin) => pin.type === "ground",
-                        (comp, pin) => comp.type === "slide_switch" && pin.id === "com",
-                    ),
-                },
-                {
-                    title: "Paso 5 — Conecta el NO a un GPIO",
-                    text: "Elige un pin GPIO libre de la ESP32 y conéctalo al NO (Normal Abierto) del interruptor -- leé ese pin con un pull-up interno: da ALTO con el interruptor en la otra posición, BAJO cuando lo deslizás hacia este lado.",
-                    highlight: (tm) => tm.highlightPins([
-                        { type: "esp32_wroom", match: (p) => p.type === "gpio" && !p.inputOnly && p.signal !== "uart" },
-                        { type: "slide_switch", match: (p) => p.id === "no" },
-                    ]),
-                    isDone: (tm) => tm.hasWireBetween(
-                        (pin) => pin.type === "gpio" && !pin.inputOnly && pin.signal !== "uart",
-                        (comp, pin) => comp.type === "slide_switch" && pin.id === "no",
-                    ),
-                },
-                {
-                    title: "Paso 6 — Guarda tu proyecto",
-                    text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
-                    highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
-                    onEnter: () => {
-                        document.getElementById("projectDrawer")?.classList.remove("hidden");
-                        document.getElementById("btnProjectMenu")?.classList.add("active");
-                    },
-                    isDone: (tm) => !tm.simulator.projectManager.dirty,
-                },
-                {
-                    title: "Paso 7 — Simula el circuito",
-                    text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
-                    highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
-                    isDone: (tm) => !!tm.simulator.isRunning,
-                },
-                {
-                    title: "Paso 8 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
