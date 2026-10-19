@@ -263,6 +263,8 @@ class TutorialManager {
             title: "LED con resistencia (protegido)",
             icon: "Ω",
             category: "💡 LEDs · Salidas digitales",
+            demoGif: "assets/tutorial-demos/led_resistencia.gif",
+            demoCaption: "El LED parpadea encendiéndose y apagándose -- la resistencia en serie lo protege de una corriente excesiva.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -1829,6 +1831,8 @@ class TutorialManager {
             title: "KY-008 Módulo Láser con ESP32",
             icon: "🔴",
             category: "🔧 Entradas · Actuadores",
+            demoGif: "assets/tutorial-demos/ky_008.gif",
+            demoCaption: "El láser parpadea encendiéndose y apagándose -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -2015,6 +2019,8 @@ class TutorialManager {
             title: "Foco 127V controlado con relevador",
             icon: "⚡",
             category: "🔧 Entradas · Actuadores",
+            demoGif: "assets/tutorial-demos/clavija_127v.gif",
+            demoCaption: "El relevador cambia de estado y enciende/apaga el foco de 127V -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -2163,6 +2169,8 @@ class TutorialManager {
             title: "DHT11 — Temperatura y humedad",
             icon: "💧",
             category: "🌡️ Temperatura · Humedad",
+            demoGif: "assets/tutorial-demos/dht11.png",
+            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer temperatura y humedad en la terminal.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -2256,6 +2264,8 @@ class TutorialManager {
             title: "Sensor de temperatura KY-001",
             icon: "🌡️",
             category: "🌡️ Temperatura · Humedad",
+            demoGif: "assets/tutorial-demos/ky_001.png",
+            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer la temperatura en la terminal.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -2349,6 +2359,8 @@ class TutorialManager {
             title: "Teclado analógico ADKEY",
             icon: "🎛️",
             category: "🎚️ Sensores · Analógicos",
+            demoGif: "assets/tutorial-demos/adkey.png",
+            demoCaption: "Este módulo no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer qué botón está presionado en la terminal.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3007,6 +3019,8 @@ class TutorialManager {
             title: "Sensor ultrasónico HC-SR04",
             icon: "📡",
             category: "📡 Sensores",
+            demoGif: "assets/tutorial-demos/hcsr04.png",
+            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para medir distancia en la terminal.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3286,6 +3300,8 @@ class TutorialManager {
             title: "Display OLED 128x64",
             icon: "🖥️",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/oled.png",
+            demoCaption: "La pantalla OLED muestra el texto que le envías por código -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3379,6 +3395,8 @@ class TutorialManager {
             title: "LCD 16x2 I2C",
             icon: "📟",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/lcd_16x2_i2c.png",
+            demoCaption: "La pantalla LCD muestra el texto que le envías por código, usando solo 2 cables de datos (I2C) -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3472,6 +3490,8 @@ class TutorialManager {
             title: "LCD 16x2 (paralelo)",
             icon: "📺",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/lcd16x2.png",
+            demoCaption: "La pantalla LCD muestra el texto que le envías por código -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3639,6 +3659,8 @@ class TutorialManager {
             title: "TFT 1.54\" ST7789 con ESP32",
             icon: "🖼️",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/tft_st7789.png",
+            demoCaption: "La pantalla TFT a color dibuja formas y colores que le envías por código -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3825,6 +3847,8 @@ class TutorialManager {
             title: "Teclado matricial 3x4 con ESP32",
             icon: "⌨️",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/keypad3x4.png",
+            demoCaption: "Este teclado no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer qué tecla está presionada en la terminal.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3894,6 +3918,8 @@ class TutorialManager {
             title: "Teclado matricial 4x4 con ESP32",
             icon: "#️⃣",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/keypad4x4.png",
+            demoCaption: "Este teclado no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer qué tecla está presionada en la terminal.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3963,6 +3989,8 @@ class TutorialManager {
             title: "Teclado 4x4 I2C con ESP32",
             icon: "🔣",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/keypad4x4_i2c.png",
+            demoCaption: "Este teclado no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer qué tecla está presionada en la terminal, usando solo 2 cables de datos (I2C).",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
