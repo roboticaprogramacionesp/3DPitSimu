@@ -2461,6 +2461,8 @@ class TutorialManager {
             title: "Joystick analógico con ESP32",
             icon: "🕹️",
             category: "🎚️ Sensores · Analógicos",
+            demoGif: "assets/tutorial-demos/joystick.gif",
+            demoCaption: "Al arrastrar la palanca con el mouse, el stick se mueve en X e Y y la ESP32 lee esa posición -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -2554,6 +2556,8 @@ class TutorialManager {
             title: "KY-023 Joystick con ESP32",
             icon: "🎮",
             category: "🎚️ Sensores · Analógicos",
+            demoGif: "assets/tutorial-demos/ky_023.gif",
+            demoCaption: "Al arrastrar la palanca con el mouse, el stick se mueve en X e Y y la ESP32 lee esa posición -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -2647,6 +2651,8 @@ class TutorialManager {
             title: "Potenciómetro rotativo con ESP32",
             icon: "🎚️",
             category: "🎚️ Sensores · Analógicos",
+            demoGif: "assets/tutorial-demos/pot_rotary.gif",
+            demoCaption: "Al arrastrar la perilla con el mouse, gira de un tope al otro y la ESP32 lee ese valor por el ADC -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -2740,6 +2746,8 @@ class TutorialManager {
             title: "Potenciómetro deslizante con ESP32",
             icon: "🔅",
             category: "🎚️ Sensores · Analógicos",
+            demoGif: "assets/tutorial-demos/pot_slider.gif",
+            demoCaption: "Al arrastrar la palanca con el mouse, se desliza de un extremo al otro y la ESP32 lee ese valor por el ADC -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -2833,6 +2841,8 @@ class TutorialManager {
             title: "KY-040 Encoder Rotativo con ESP32",
             icon: "🔄",
             category: "🎚️ Sensores · Analógicos",
+            demoGif: "assets/tutorial-demos/ky040.gif",
+            demoCaption: "Con las flechas (o arrastrando la perilla) el eje gira paso a paso, y tu código cuenta cada paso -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -2926,6 +2936,8 @@ class TutorialManager {
             title: "KY-018 Fotorresistor (LDR) con ESP32",
             icon: "🔆",
             category: "🎚️ Sensores · Analógicos",
+            demoGif: "assets/tutorial-demos/ky_018.png",
+            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer el nivel de luz en la terminal (ver el slider \"Nivel de luz\" en su panel de propiedades para simular distintos casos).",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3114,6 +3126,8 @@ class TutorialManager {
             title: "Módulo GPS NEO-6M con ESP32",
             icon: "🛰️",
             category: "📡 Sensores",
+            demoGif: "assets/tutorial-demos/gps.gif",
+            demoCaption: "El LED del módulo pasa de rojo a verde cuando el GPS tiene señal (fix) -- a la derecha, ampliado. Esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3207,6 +3221,8 @@ class TutorialManager {
             title: "Sensor PIR de Movimiento con ESP32",
             icon: "🚶",
             category: "📡 Sensores",
+            demoGif: "assets/tutorial-demos/pir.gif",
+            demoCaption: "El LED del sensor se pone rojo cuando detecta movimiento -- a la derecha, ampliado. Esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3754,6 +3770,8 @@ class TutorialManager {
             title: "TM1637 4 Dígitos con ESP32",
             icon: "🕐",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/tm1637.gif",
+            demoCaption: "El display muestra un contador que sube de a uno -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4084,6 +4102,8 @@ class TutorialManager {
             title: "Lector RFID RC522 con ESP32",
             icon: "💳",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/rc522.png",
+            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer el UID de una tarjeta en la terminal.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4177,6 +4197,8 @@ class TutorialManager {
             title: "BH1750 Sensor de Luz con ESP32",
             icon: "☀️",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/bh1750.png",
+            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer el nivel de luz (lux) en la terminal.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4270,6 +4292,8 @@ class TutorialManager {
             title: "BMP280 Presión y Temperatura con ESP32",
             icon: "🌦️",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/bmp280.png",
+            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer la presión y la temperatura en la terminal.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4363,6 +4387,8 @@ class TutorialManager {
             title: "DS3231 Reloj de Tiempo Real con ESP32",
             icon: "⏰",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/ds3231.png",
+            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer la fecha y la hora en la terminal.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4549,6 +4575,8 @@ class TutorialManager {
             title: "QMC5883L Brújula con ESP32",
             icon: "🧲",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/qmc5883l.gif",
+            demoCaption: "La aguja de la brújula gira según el rumbo -- a la derecha, ampliada. Esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4642,6 +4670,8 @@ class TutorialManager {
             title: "TCS34725 Sensor de Color con ESP32",
             icon: "👁️",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/tcs34725.gif",
+            demoCaption: "El sensor muestra el color que está \"viendo\" -- a la derecha, ampliado. Esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4870,6 +4900,8 @@ class TutorialManager {
             title: "WiFi: prender un LED desde internet",
             icon: "🌐",
             category: "📡 Comunicación inalámbrica",
+            demoGif: "assets/tutorial-demos/wifi_led.gif",
+            demoCaption: "Cuando llega la orden \"on\" u \"off\" desde internet, el LED se prende o se apaga -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4957,6 +4989,8 @@ class TutorialManager {
             title: "Bluetooth (BLE): mover un servo desde el teléfono virtual",
             icon: "📱",
             category: "📡 Comunicación inalámbrica",
+            demoGif: "assets/tutorial-demos/ble_servo.gif",
+            demoCaption: "Cada comando que mandás desde el teléfono virtual (0, 90 o 180) mueve el servo a esa posición -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
