@@ -1,0 +1,115 @@
+{
+  "version": "1.0",
+  "timestamp": 1792372924915,
+  "components": [
+    {
+      "id": "esp32_wroom_27t0zsa",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 440,
+      "y": 220,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "47:69:64:D3:17:D3"
+      },
+      "locked": false
+    },
+    {
+      "id": "ky_001_njhfffo",
+      "type": "ky_001",
+      "name": "KY-001 Temp Sensor",
+      "x": 740,
+      "y": 220,
+      "width": 56.694,
+      "height": 89.736,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "temperature": 25,
+        "address": "28 01 02 03 04 05 06"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_jmaf7zl",
+      "from": {
+        "componentId": "ky_001_njhfffo",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_27t0zsa",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 759,
+          "y": 447
+        },
+        {
+          "x": 616.28,
+          "y": 447
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_tqy6zre",
+      "from": {
+        "componentId": "ky_001_njhfffo",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_27t0zsa",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 768.5,
+          "y": 459
+        },
+        {
+          "x": 586.28,
+          "y": 459
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_b9rflto",
+      "from": {
+        "componentId": "ky_001_njhfffo",
+        "pinId": "signal"
+      },
+      "to": {
+        "componentId": "esp32_wroom_27t0zsa",
+        "pinId": "io4"
+      },
+      "points": [
+        {
+          "x": 778,
+          "y": 438.33255292013666
+        },
+        {
+          "x": 656.28,
+          "y": 438.33255292013666
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

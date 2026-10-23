@@ -1,0 +1,123 @@
+{
+  "version": "1.0",
+  "timestamp": 1792439093179,
+  "components": [
+    {
+      "id": "esp32_wroom_06exi0j",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 344.66668568054786,
+      "y": 193.99999839067465,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "F1:96:3F:AE:56:FA"
+      },
+      "locked": false
+    },
+    {
+      "id": "ky-018_b6xrdf7",
+      "type": "ky-018",
+      "name": "KY-018 Fotorresistor (LDR)",
+      "x": 660,
+      "y": 195.20661309079534,
+      "width": 56.694,
+      "height": 89.736,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "KY-018: módulo fotorresistor (LDR) + resistencia divisora. Salida analógica 'S' sube con más luz (0% = oscuridad, 100% = luz intensa)",
+        "luz": 41
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_g4u6f68",
+      "from": {
+        "componentId": "esp32_wroom_06exi0j",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "ky-018_b6xrdf7",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 520.9466856805478,
+          "y": 427.8936011361344
+        },
+        {
+          "x": 698.219,
+          "y": 427.8936011361344
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_75s3i6j",
+      "from": {
+        "componentId": "esp32_wroom_06exi0j",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "ky-018_b6xrdf7",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 490.94668568054783,
+          "y": 440.643199124023
+        },
+        {
+          "x": 688.619,
+          "y": 440.643199124023
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_pvsqcgt",
+      "from": {
+        "componentId": "esp32_wroom_06exi0j",
+        "pinId": "io26"
+      },
+      "to": {
+        "componentId": "ky-018_b6xrdf7",
+        "pinId": "s"
+      },
+      "points": [
+        {
+          "x": 580.9466856805478,
+          "y": 170.14911933063496
+        },
+        {
+          "x": 647.3263429570234,
+          "y": 170.14911933063496
+        },
+        {
+          "x": 647.3263429570234,
+          "y": 309.7623479253531
+        },
+        {
+          "x": 678.976,
+          "y": 309.7623479253531
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

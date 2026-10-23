@@ -1,0 +1,157 @@
+{
+  "version": "1.0",
+  "timestamp": 1792438072007,
+  "components": [
+    {
+      "id": "esp32_wroom_mbyq8wc",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 192.66663453976412,
+      "y": 243.3333422144251,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "62:1C:80:15:38:8E"
+      },
+      "locked": false
+    },
+    {
+      "id": "joystick_rnz5vrf",
+      "type": "joystick",
+      "name": "Joystick Analógico (genérico)",
+      "x": 497.7547222925392,
+      "y": 287.26087316896655,
+      "width": 50,
+      "height": 62,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "Joystick analógico genérico (X/Y + botón, resorte de centrado) -- ver también 'ky-023' para el módulo real"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_ta57jvm",
+      "from": {
+        "componentId": "joystick_rnz5vrf",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_mbyq8wc",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 506.0316467375208,
+          "y": 339.76087316896655
+        },
+        {
+          "x": 506.0316467375208,
+          "y": 465.0750421634699
+        },
+        {
+          "x": 368.9466345397641,
+          "y": 465.0750421634699
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_8uzqf26",
+      "from": {
+        "componentId": "esp32_wroom_mbyq8wc",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "joystick_rnz5vrf",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 338.9466345397641,
+          "y": 480.10133775468614
+        },
+        {
+          "x": 515.7547222925392,
+          "y": 480.10133775468614
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_427eb7j",
+      "from": {
+        "componentId": "esp32_wroom_mbyq8wc",
+        "pinId": "io27"
+      },
+      "to": {
+        "componentId": "joystick_rnz5vrf",
+        "pinId": "vry"
+      },
+      "points": [
+        {
+          "x": 388.9466345397641,
+          "y": 230.3812364332174
+        },
+        {
+          "x": 563.5940170222442,
+          "y": 230.3812364332174
+        },
+        {
+          "x": 563.5940170222442,
+          "y": 356.0272203522991
+        },
+        {
+          "x": 533.7547222925392,
+          "y": 356.0272203522991
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_u56fm81",
+      "from": {
+        "componentId": "joystick_rnz5vrf",
+        "pinId": "vrx"
+      },
+      "to": {
+        "componentId": "esp32_wroom_mbyq8wc",
+        "pinId": "io14"
+      },
+      "points": [
+        {
+          "x": 524.7547222925392,
+          "y": 365.04633839098665
+        },
+        {
+          "x": 575.7232084487696,
+          "y": 365.04633839098665
+        },
+        {
+          "x": 575.7232084487696,
+          "y": 220.7400813887388
+        },
+        {
+          "x": 378.9466345397641,
+          "y": 220.7400813887388
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

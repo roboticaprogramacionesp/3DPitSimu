@@ -1,0 +1,81 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id="^*nic3F2R]CvT.GSClJ2">dx</variable>
+    <variable id="V$s|)7DW#IB,ttY`hyxp">dy</variable>
+  </variables>
+  <block type="ky023_analog" id="otTZ:aTAiC-M^Iahwzcv" x="10" y="210">
+    <field name="NAME">joystick</field>
+    <field name="PIN_X">14</field>
+    <field name="PIN_Y">27</field>
+    <field name="PIN_SW">4</field>
+    <field name="ATTEN">ADC.ATTN_11DB</field>
+    <field name="WIDTH">ADC.WIDTH_10BIT</field>
+    <field name="PULL">None</field>
+    <next>
+      <block type="controls_whileUntil" id="9ZQAj7`RJ[/+lgI,Qv;u">
+        <field name="MODE">WHILE</field>
+        <value name="BOOL">
+          <block type="logic_boolean" id="fA:1$NP8%,mZRhoLec.Y">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="variables_set" id="F!_AiraMUJJT2`?~-As.">
+            <field name="VAR" id="^*nic3F2R]CvT.GSClJ2">dx</field>
+            <value name="VALUE">
+              <block type="ky023_select" id="IK`zy8:^9UA:B`1:*AU]">
+                <field name="NAME">joystick</field>
+                <field name="AXIS">X</field>
+              </block>
+            </value>
+            <next>
+              <block type="variables_set" id="o{q)jWL^Z*8m}?H8s;i^">
+                <field name="VAR" id="V$s|)7DW#IB,ttY`hyxp">dy</field>
+                <value name="VALUE">
+                  <block type="ky023_select" id="vdCkOvRS-{YWL8V(Uqi9">
+                    <field name="NAME">joystick</field>
+                    <field name="AXIS">Y</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="text_print" id="UC?~U?1wv51[Pr66qT|H">
+                    <value name="TEXT">
+                      <shadow type="text" id="yT7iG?9Wd(w*JD:@]3c3">
+                        <field name="TEXT">3DPit</field>
+                      </shadow>
+                      <block type="variables_get" id="A^~4iMLT68F[:G5bS^RI">
+                        <field name="VAR" id="^*nic3F2R]CvT.GSClJ2">dx</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="text_print" id="(f6jd6ya1K9EFwF](T!}">
+                        <value name="TEXT">
+                          <shadow type="text">
+                            <field name="TEXT">3DPit</field>
+                          </shadow>
+                          <block type="variables_get" id="CHG2p6yfoH5YipAy?#H?">
+                            <field name="VAR" id="V$s|)7DW#IB,ttY`hyxp">dy</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="time_sleep" id="plU0fq|y30=xMw*4*~#N">
+                            <field name="UNIT">S</field>
+                            <value name="VALUE">
+                              <shadow type="math_number" id="f?[K:3;CiV|zaPfsxs(s">
+                                <field name="NUM">1</field>
+                              </shadow>
+                            </value>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </next>
+  </block>
+</xml>

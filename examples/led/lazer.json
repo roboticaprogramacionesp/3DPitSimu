@@ -1,0 +1,114 @@
+{
+  "version": "1.0",
+  "timestamp": 1792370401927,
+  "components": [
+    {
+      "id": "esp32_wroom_n7gb108",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 360,
+      "y": 220,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "56:D6:4C:99:D5:83"
+      },
+      "locked": false
+    },
+    {
+      "id": "ky-008_btvp36v",
+      "type": "ky-008",
+      "name": "KY-008 Módulo Láser",
+      "x": 660.3852196765594,
+      "y": 262.92466365368944,
+      "width": 56.694,
+      "height": 89.736,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "KY-008: módulo láser (diodo 650nm), enciende con S en ALTO y GND conectado -- mismo criterio que un LED simple"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_7edgwxo",
+      "from": {
+        "componentId": "ky-008_btvp36v",
+        "pinId": "s"
+      },
+      "to": {
+        "componentId": "esp32_wroom_n7gb108",
+        "pinId": "io4"
+      },
+      "points": [
+        {
+          "x": 679.3612196765594,
+          "y": 445.6183376308984
+        },
+        {
+          "x": 576.28,
+          "y": 445.6183376308984
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_y0tt1i4",
+      "from": {
+        "componentId": "ky-008_btvp36v",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_n7gb108",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 689.0042196765594,
+          "y": 462.79711130077413
+        },
+        {
+          "x": 506.28,
+          "y": 462.79711130077413
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_zfqqyyg",
+      "from": {
+        "componentId": "esp32_wroom_n7gb108",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "ky-008_btvp36v",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 536.28,
+          "y": 454.31515942032985
+        },
+        {
+          "x": 698.6042196765594,
+          "y": 454.31515942032985
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

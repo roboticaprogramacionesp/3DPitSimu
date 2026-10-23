@@ -1,0 +1,72 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="qmc5883l_init" id="2{W6o`%yO@d4!n#E95n!" x="110" y="10">
+    <field name="NAME">qmc</field>
+    <field name="SDA">21</field>
+    <field name="SCL">22</field>
+    <field name="ADDR">0x2c</field>
+    <next>
+      <block type="controls_whileUntil" id="a4g-12SDqg,At!,cuLpx">
+        <field name="MODE">WHILE</field>
+        <value name="BOOL">
+          <block type="logic_boolean" id="phbanKL:}5GV2E[9dT`?">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="qmc5883l_read_xyz" id=";U9}b7Cv+$0e@-H5=N{6">
+            <field name="NAME">qmc</field>
+            <next>
+              <block type="text_print" id="Uz0DCrR|r6fbULL92cQ)">
+                <value name="TEXT">
+                  <shadow type="text" id="mjq2aWk8Z,2f{!CK~o;e">
+                    <field name="TEXT">3DPit</field>
+                  </shadow>
+                  <block type="qmc5883l_select" id="MeBgVQ4nx~7.R3hS3EWm">
+                    <field name="NAME">qmc</field>
+                    <field name="AXIS">0</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="text_print" id="F~2$5-vij9-R_$,G.:1$">
+                    <value name="TEXT">
+                      <shadow type="text">
+                        <field name="TEXT">3DPit</field>
+                      </shadow>
+                      <block type="qmc5883l_select" id="Vqb**$[)$dK9fr340Yjj">
+                        <field name="NAME">qmc</field>
+                        <field name="AXIS">1</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="text_print" id="^?JvwFb5VzCSp-)6$-XB">
+                        <value name="TEXT">
+                          <shadow type="text">
+                            <field name="TEXT">3DPit</field>
+                          </shadow>
+                          <block type="qmc5883l_select" id="+2Reg1JUcn{XbN8k/uW`">
+                            <field name="NAME">qmc</field>
+                            <field name="AXIS">2</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="time_sleep" id="ZL07G`5]y]ghOf?zcE7:">
+                            <field name="UNIT">S</field>
+                            <value name="VALUE">
+                              <shadow type="math_number" id="$29uC:]8ZqEWtUy-c:/8">
+                                <field name="NUM">1</field>
+                              </shadow>
+                            </value>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </next>
+  </block>
+</xml>

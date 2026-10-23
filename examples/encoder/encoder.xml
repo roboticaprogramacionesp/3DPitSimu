@@ -1,0 +1,43 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="encoder_rotary_init" id="6q`PdqJxH(TVN*QNet9$" x="83" y="72">
+    <field name="NAME">encoder</field>
+    <field name="CLK">18</field>
+    <field name="DT">19</field>
+    <field name="IN_VAL">0</field>
+    <field name="MAX_VAL">100</field>
+    <field name="REVERSE">False</field>
+    <field name="RANGE_MODE">RotaryIRQ.RANGE_WRAP</field>
+    <next>
+      <block type="controls_whileUntil" id="/OOh4~@z4=i,HNZk(-zC">
+        <field name="MODE">WHILE</field>
+        <value name="BOOL">
+          <block type="logic_boolean" id="A^)MvQ%diwBs5-NSu{]H">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="text_print" id=";4OHJ+Q3(CI/nOIRW.J6">
+            <value name="TEXT">
+              <shadow type="text" id="~3vXf_*v`Z%(5l[K!EC$">
+                <field name="TEXT">3DPit</field>
+              </shadow>
+              <block type="encoder_rotary_value" id="8PSJ!Zr7A/GyI~TO(ipR">
+                <field name="NAME">encoder</field>
+              </block>
+            </value>
+            <next>
+              <block type="time_sleep" id="J(K@,!_@u3Ag}EvU`{1W">
+                <field name="UNIT">S</field>
+                <value name="VALUE">
+                  <shadow type="math_number" id="}-C0Xu6[Z1n;s(hBu57|">
+                    <field name="NUM">1</field>
+                  </shadow>
+                </value>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </next>
+  </block>
+</xml>

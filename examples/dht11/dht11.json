@@ -1,13 +1,13 @@
 {
   "version": "1.0",
-  "timestamp": 1785558242494,
+  "timestamp": 1792372760532,
   "components": [
     {
-      "id": "esp32_wroom_c6cnuqu",
+      "id": "esp32_wroom_isw67ch",
       "type": "esp32_wroom",
       "name": "ESP32 WeMos D1 R32",
-      "x": 341,
-      "y": 78,
+      "x": 200,
+      "y": 160,
       "width": 276.28,
       "height": 210,
       "rotation": 0,
@@ -17,16 +17,17 @@
         "mcu": "ESP32-WROOM-32",
         "voltaje_operacion": 3.3,
         "flash_mb": 4,
-        "isPowerSource": true
+        "isPowerSource": true,
+        "macAddress": "03:AD:CC:5C:B7:E2"
       },
       "locked": false
     },
     {
-      "id": "dht11_ysv7qsl",
+      "id": "dht11_87efp72",
       "type": "dht11",
       "name": "DHT11 Sensor",
-      "x": 638,
-      "y": 146,
+      "x": 506.44627700533675,
+      "y": 168.09916951521032,
       "width": 50,
       "height": 90,
       "rotation": 0,
@@ -41,72 +42,76 @@
   ],
   "wires": [
     {
-      "id": "wire_67muzyp",
+      "id": "wire_1iq27w0",
       "from": {
-        "componentId": "dht11_ysv7qsl",
-        "pinId": "gnd"
+        "componentId": "dht11_87efp72",
+        "pinId": "signal"
       },
       "to": {
-        "componentId": "esp32_wroom_c6cnuqu",
-        "pinId": "gnd_2"
+        "componentId": "esp32_wroom_isw67ch",
+        "pinId": "io4"
       },
       "points": [
         {
-          "x": 670.5,
-          "y": 306.6375227461274
+          "x": 524.5463721873421,
+          "y": 258.0991695152103
         },
         {
-          "x": 517.28,
-          "y": 306.6375227461274
+          "x": 524.5463721873421,
+          "y": 380.0882087575508
+        },
+        {
+          "x": 416.28,
+          "y": 380.0882087575508
         }
       ],
-      "color": "#1a1a1a",
+      "color": "#26c6da",
       "connectorType": "hembra-hembra"
     },
     {
-      "id": "wire_e1j0sw7",
+      "id": "wire_30tiry0",
       "from": {
-        "componentId": "dht11_ysv7qsl",
+        "componentId": "dht11_87efp72",
         "pinId": "vcc"
       },
       "to": {
-        "componentId": "esp32_wroom_c6cnuqu",
+        "componentId": "esp32_wroom_isw67ch",
         "pinId": "3v3"
       },
       "points": [
         {
-          "x": 663,
-          "y": 300.9856032510871
+          "x": 531.4462770053367,
+          "y": 399.71586682163934
         },
         {
-          "x": 487.28,
-          "y": 300.9856032510871
+          "x": 346.28,
+          "y": 399.71586682163934
         }
       ],
       "color": "#ff5252",
       "connectorType": "hembra-hembra"
     },
     {
-      "id": "wire_nogfre7",
+      "id": "wire_o3bbz54",
       "from": {
-        "componentId": "dht11_ysv7qsl",
-        "pinId": "signal"
+        "componentId": "dht11_87efp72",
+        "pinId": "gnd"
       },
       "to": {
-        "componentId": "esp32_wroom_c6cnuqu",
-        "pinId": "io4"
+        "componentId": "esp32_wroom_isw67ch",
+        "pinId": "gnd_2"
       },
       "points": [
         {
-          "x": 655.2,
-          "y": 294.82770588701646
+          "x": 538.9462770053367,
+          "y": 390.9535194715998
         },
         {
-          "x": 557.28,
-          "y": 294.82770588701646
+          "x": 376.28,
+          "y": 390.9535194715998
         }
       ],
-      "color": "#26c6da",
+      "color": "#1a1a1a",
       "connectorType": "hembra-hembra"
     }
   ],

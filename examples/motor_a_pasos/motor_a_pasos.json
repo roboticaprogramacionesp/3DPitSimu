@@ -1,0 +1,296 @@
+{
+  "version": "1.0",
+  "timestamp": 1792364438042,
+  "components": [
+    {
+      "id": "esp32_wroom_6q7r55h",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 400,
+      "y": 160,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "61:C2:2E:01:A8:87"
+      },
+      "locked": false
+    },
+    {
+      "id": "28byj_f36gu6g",
+      "type": "28byj",
+      "name": "28BYJ-48 Motor Paso a Paso + Driver ULN2003",
+      "x": 729.0724085671945,
+      "y": 166.5078889055378,
+      "width": 300,
+      "height": 175,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "28BYJ-48 (motor paso a paso unipolar de 5 hilos) + driver ULN2003, entrada 5-12V. El motor viene pre-cableado de fábrica al driver (conector JST de 5 hilos) -- solo se cablean IN1-IN4 (a GPIOs digitales) y VCC/GND (5-12V)."
+      },
+      "locked": false
+    },
+    {
+      "id": "battery_18650_l57ckt7",
+      "type": "battery_18650",
+      "name": "Batería 18650 (portapilas x2)",
+      "x": 413.3144288201055,
+      "y": 397.498691569189,
+      "width": 217.1906,
+      "height": 113.38971,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "2x pilas 18650 en serie (~7.4V nominal)",
+        "voltaje": 7.4,
+        "celdas": 2,
+        "isPowerSource": true
+      },
+      "locked": false
+    },
+    {
+      "id": "switch_0u2ld8y",
+      "type": "switch",
+      "name": "Interruptor ON/OFF",
+      "x": 702.8223696079338,
+      "y": 397.4210431365303,
+      "width": 40,
+      "height": 26,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "Interruptor de palanca ON/OFF (clic para cambiar de estado; queda fijo, no es momentáneo)"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_cczq8m6",
+      "from": {
+        "componentId": "esp32_wroom_6q7r55h",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "28byj_f36gu6g",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 576.28,
+          "y": 383.66717840382614
+        },
+        {
+          "x": 772.1697995906179,
+          "y": 383.66717840382614
+        },
+        {
+          "x": 772.1697995906179,
+          "y": 320.5778889055378
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_to60fmz",
+      "from": {
+        "componentId": "esp32_wroom_6q7r55h",
+        "pinId": "io26"
+      },
+      "to": {
+        "componentId": "28byj_f36gu6g",
+        "pinId": "in1"
+      },
+      "points": [
+        {
+          "x": 636.28,
+          "y": 145.8141959050161
+        },
+        {
+          "x": 717.2171414197471,
+          "y": 145.8141959050161
+        },
+        {
+          "x": 717.2171414197471,
+          "y": 240.0678889055378
+        }
+      ],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_w0n2xdz",
+      "from": {
+        "componentId": "28byj_f36gu6g",
+        "pinId": "in2"
+      },
+      "to": {
+        "componentId": "esp32_wroom_6q7r55h",
+        "pinId": "io25"
+      },
+      "points": [
+        {
+          "x": 706.4408210326234,
+          "y": 250.12788890553782
+        },
+        {
+          "x": 706.4408210326234,
+          "y": 137.6036660862552
+        },
+        {
+          "x": 626.28,
+          "y": 137.6036660862552
+        }
+      ],
+      "color": "#bb86fc",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_zwk24qt",
+      "from": {
+        "componentId": "28byj_f36gu6g",
+        "pinId": "in3"
+      },
+      "to": {
+        "componentId": "esp32_wroom_6q7r55h",
+        "pinId": "io17"
+      },
+      "points": [
+        {
+          "x": 693.098710077137,
+          "y": 260.1778889055378
+        },
+        {
+          "x": 693.098710077137,
+          "y": 128.87997815382175
+        },
+        {
+          "x": 616.28,
+          "y": 128.87997815382175
+        }
+      ],
+      "color": "#4da3ff",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_pvaage2",
+      "from": {
+        "componentId": "28byj_f36gu6g",
+        "pinId": "in4"
+      },
+      "to": {
+        "componentId": "esp32_wroom_6q7r55h",
+        "pinId": "io16"
+      },
+      "points": [
+        {
+          "x": 683.861864031031,
+          "y": 270.23788890553783
+        },
+        {
+          "x": 683.861864031031,
+          "y": 118.61681588037064
+        },
+        {
+          "x": 606.28,
+          "y": 118.61681588037064
+        }
+      ],
+      "color": "#ff66cc",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_yk2v4mu",
+      "from": {
+        "componentId": "battery_18650_l57ckt7",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "switch_0u2ld8y",
+        "pinId": "term1"
+      },
+      "points": [
+        {
+          "x": 691.4500288037136,
+          "y": 441.40283556918905
+        },
+        {
+          "x": 691.4500288037136,
+          "y": 419.4210431365303
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "macho-macho"
+    },
+    {
+      "id": "wire_xfib1ez",
+      "from": {
+        "componentId": "switch_0u2ld8y",
+        "pinId": "term2"
+      },
+      "to": {
+        "componentId": "28byj_f36gu6g",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 749.7728126877253,
+          "y": 419.4210431365303
+        },
+        {
+          "x": 749.7728126877253,
+          "y": 440.90222880383476
+        },
+        {
+          "x": 782.8948371252014,
+          "y": 440.90222880383476
+        },
+        {
+          "x": 782.8948371252014,
+          "y": 320.5778889055378
+        },
+        {
+          "x": 782.3303301791793,
+          "y": 320.5778889055378
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_tr3arjf",
+      "from": {
+        "componentId": "battery_18650_l57ckt7",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "28byj_f36gu6g",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 772.1697995906179,
+          "y": 458.293949569189
+        },
+        {
+          "x": 772.1697995906179,
+          "y": 320.5778889055378
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "macho-macho"
+    }
+  ],
+  "annotations": []
+}

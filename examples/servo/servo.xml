@@ -1,6 +1,6 @@
 <xml xmlns="https://developers.google.com/blockly/xml">
   <block type="init_servo" id="*gVQ~^17*5.6)#fYUR/`" x="-10" y="10">
-    <field name="PIN">13</field>
+    <field name="PIN">26</field>
     <next>
       <block type="controls_whileUntil" id="HK0@x2Q~6Tp(Z},sMMbC">
         <field name="MODE">WHILE</field>

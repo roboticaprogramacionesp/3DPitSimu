@@ -1,0 +1,164 @@
+{
+  "version": "1.0",
+  "timestamp": 1792441990667,
+  "components": [
+    {
+      "id": "esp32_wroom_exvry1c",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 300,
+      "y": 160,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "12:B1:1D:D3:BA:40"
+      },
+      "locked": false
+    },
+    {
+      "id": "bmp280_fn94uo0",
+      "type": "bmp280",
+      "name": "BMP280 Sensor de Presión y Temperatura (I2C)",
+      "x": 610.4027234232407,
+      "y": 163.60767759607108,
+      "width": 50.4,
+      "height": 54,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "BMP280: sensor de presión barométrica + temperatura, I2C (0x76 por defecto, 0x77 si SDO va a VCC)",
+        "i2cAddress": "0x76",
+        "temperature": 22,
+        "pressure": 101325
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_8trkp5u",
+      "from": {
+        "componentId": "esp32_wroom_exvry1c",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "bmp280_fn94uo0",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 476.28,
+          "y": 386.95831681493655
+        },
+        {
+          "x": 628.4027234232407,
+          "y": 386.95831681493655
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_70bw08z",
+      "from": {
+        "componentId": "esp32_wroom_exvry1c",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "bmp280_fn94uo0",
+        "pinId": "vin"
+      },
+      "points": [
+        {
+          "x": 446.28,
+          "y": 399.70791480282514
+        },
+        {
+          "x": 614.0027234232407,
+          "y": 399.70791480282514
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_183c1j5",
+      "from": {
+        "componentId": "esp32_wroom_exvry1c",
+        "pinId": "io22"
+      },
+      "to": {
+        "componentId": "bmp280_fn94uo0",
+        "pinId": "scl"
+      },
+      "points": [
+        {
+          "x": 380.28,
+          "y": 135.2248012086188
+        },
+        {
+          "x": 682.6304067501309,
+          "y": 135.2248012086188
+        },
+        {
+          "x": 682.6304067501309,
+          "y": 144.8821455324175
+        },
+        {
+          "x": 682.6304067501309,
+          "y": 240.39817458426495
+        },
+        {
+          "x": 635.6027234232407,
+          "y": 240.39817458426495
+        }
+      ],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_xj77ptq",
+      "from": {
+        "componentId": "esp32_wroom_exvry1c",
+        "pinId": "io21"
+      },
+      "to": {
+        "componentId": "bmp280_fn94uo0",
+        "pinId": "sda"
+      },
+      "points": [
+        {
+          "x": 390.28,
+          "y": 149.90112273248567
+        },
+        {
+          "x": 673.984883824932,
+          "y": 149.90112273248567
+        },
+        {
+          "x": 673.984883824932,
+          "y": 154.21229232284617
+        },
+        {
+          "x": 673.984883824932,
+          "y": 226.68739143984328
+        },
+        {
+          "x": 650.0027234232407,
+          "y": 226.68739143984328
+        }
+      ],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

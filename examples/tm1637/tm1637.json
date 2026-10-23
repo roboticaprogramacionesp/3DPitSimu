@@ -1,0 +1,151 @@
+{
+  "version": "1.0",
+  "timestamp": 1792441102285,
+  "components": [
+    {
+      "id": "esp32_wroom_58rb60a",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 320,
+      "y": 160,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "B1:D0:A8:68:FF:BA"
+      },
+      "locked": false
+    },
+    {
+      "id": "tm1637_k6l7hqh",
+      "type": "tm1637",
+      "name": "TM1637 4 Dígitos",
+      "x": 644.5429194054138,
+      "y": 174.42022047240658,
+      "width": 148,
+      "height": 81,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {},
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_mgbe3ua",
+      "from": {
+        "componentId": "esp32_wroom_58rb60a",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "tm1637_k6l7hqh",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 496.28,
+          "y": 381.7042371857696
+        },
+        {
+          "x": 620.5657356549315,
+          "y": 381.7042371857696
+        },
+        {
+          "x": 620.5657356549315,
+          "y": 218.1602204724066
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_841l7dh",
+      "from": {
+        "componentId": "tm1637_k6l7hqh",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_58rb60a",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 637.0946611493031,
+          "y": 225.25822047240658
+        },
+        {
+          "x": 637.0946611493031,
+          "y": 393.22440503651285
+        },
+        {
+          "x": 466.28,
+          "y": 393.22440503651285
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_bc1fizb",
+      "from": {
+        "componentId": "esp32_wroom_58rb60a",
+        "pinId": "io22"
+      },
+      "to": {
+        "componentId": "tm1637_k6l7hqh",
+        "pinId": "clk"
+      },
+      "points": [
+        {
+          "x": 400.28,
+          "y": 132.33174045790588
+        },
+        {
+          "x": 629.0611126725728,
+          "y": 132.33174045790588
+        },
+        {
+          "x": 629.0611126725728,
+          "y": 203.9642204724066
+        }
+      ],
+      "color": "#f2994a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_dwsv3b3",
+      "from": {
+        "componentId": "esp32_wroom_58rb60a",
+        "pinId": "io21"
+      },
+      "to": {
+        "componentId": "tm1637_k6l7hqh",
+        "pinId": "dio"
+      },
+      "points": [
+        {
+          "x": 410.28,
+          "y": 143.64101145186098
+        },
+        {
+          "x": 620.6101020595289,
+          "y": 143.64101145186098
+        },
+        {
+          "x": 620.6101020595289,
+          "y": 211.0042204724066
+        }
+      ],
+      "color": "#f2994a",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

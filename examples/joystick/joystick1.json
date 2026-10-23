@@ -1,0 +1,153 @@
+{
+  "version": "1.0",
+  "timestamp": 1792438575843,
+  "components": [
+    {
+      "id": "esp32_wroom_mbyq8wc",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 192.66663453976412,
+      "y": 243.3333422144251,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "62:1C:80:15:38:8E"
+      },
+      "locked": false
+    },
+    {
+      "id": "ky-023_8q4xl3h",
+      "type": "ky-023",
+      "name": "KY-023 Joystick Analógico (X/Y + botón)",
+      "x": 490.4210697107104,
+      "y": 242.9210721678349,
+      "width": 72,
+      "height": 98,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "KY-023: joystick analógico de doble eje (X/Y) + botón Z, módulo real (a diferencia del 'Joystick' genérico dibujado a mano)"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_bj0m8wa",
+      "from": {
+        "componentId": "ky-023_8q4xl3h",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_mbyq8wc",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 511.6670697107104,
+          "y": 468.299995007246
+        },
+        {
+          "x": 368.9466345397641,
+          "y": 468.299995007246
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_296y15v",
+      "from": {
+        "componentId": "ky-023_8q4xl3h",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_mbyq8wc",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 518.4010697107104,
+          "y": 479.5894575214426
+        },
+        {
+          "x": 338.9466345397641,
+          "y": 479.5894575214426
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_uckxgow",
+      "from": {
+        "componentId": "ky-023_8q4xl3h",
+        "pinId": "vry"
+      },
+      "to": {
+        "componentId": "esp32_wroom_mbyq8wc",
+        "pinId": "io27"
+      },
+      "points": [
+        {
+          "x": 531.8700697107104,
+          "y": 359.1683764121226
+        },
+        {
+          "x": 582.176555051651,
+          "y": 359.1683764121226
+        },
+        {
+          "x": 582.176555051651,
+          "y": 225.40517034884542
+        },
+        {
+          "x": 388.9466345397641,
+          "y": 225.40517034884542
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_10b047c",
+      "from": {
+        "componentId": "esp32_wroom_mbyq8wc",
+        "pinId": "io14"
+      },
+      "to": {
+        "componentId": "ky-023_8q4xl3h",
+        "pinId": "vrx"
+      },
+      "points": [
+        {
+          "x": 378.9466345397641,
+          "y": 215.48410843771933
+        },
+        {
+          "x": 592.4397172843207,
+          "y": 215.48410843771933
+        },
+        {
+          "x": 592.4397172843207,
+          "y": 369.77365376005633
+        },
+        {
+          "x": 525.1350697107105,
+          "y": 369.77365376005633
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

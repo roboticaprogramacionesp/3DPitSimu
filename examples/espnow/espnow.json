@@ -1,0 +1,235 @@
+{
+  "version": "1.0",
+  "timestamp": 1792443002392,
+  "components": [
+    {
+      "id": "esp32_wroom_p2m602x",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 308.6666257182769,
+      "y": 184.66665575901703,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "CE:DF:1D:97:4E:99"
+      },
+      "locked": false
+    },
+    {
+      "id": "ky_004_6dy9uip",
+      "type": "ky_004",
+      "name": "KY-004 Botón",
+      "x": 611.7051153511933,
+      "y": 197.45255714821886,
+      "width": 56.694,
+      "height": 89.736,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {},
+      "locked": false
+    },
+    {
+      "id": "led_7w52gn6",
+      "type": "led",
+      "name": "LED",
+      "x": 694.4065007838947,
+      "y": 201.20851218516574,
+      "width": 20.6,
+      "height": 39.49,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "voltaje_directo": 2,
+        "corriente_ma": 20,
+        "color": "#e60000"
+      },
+      "locked": false
+    },
+    {
+      "id": "resistencia_14ckrvn",
+      "type": "resistencia",
+      "name": "Resistencia",
+      "x": 597.4797101611357,
+      "y": 448.2970623103052,
+      "width": 49,
+      "height": 10.79,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "ohms": 220
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_bygbrf4",
+      "from": {
+        "componentId": "esp32_wroom_p2m602x",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "ky_004_6dy9uip",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 484.9466257182769,
+          "y": 411.2952305369576
+        },
+        {
+          "x": 650.4194857819396,
+          "y": 411.2952305369576
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_oyodly3",
+      "from": {
+        "componentId": "esp32_wroom_p2m602x",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "ky_004_6dy9uip",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 454.9466257182769,
+          "y": 423.33395268663764
+        },
+        {
+          "x": 641.4234843237709,
+          "y": 423.33395268663764
+        },
+        {
+          "x": 641.4234843237709,
+          "y": 287.07355714821887
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_3kj41u2",
+      "from": {
+        "componentId": "esp32_wroom_p2m602x",
+        "pinId": "io4"
+      },
+      "to": {
+        "componentId": "ky_004_6dy9uip",
+        "pinId": "senal"
+      },
+      "points": [
+        {
+          "x": 524.9466257182769,
+          "y": 401.7813125547091
+        },
+        {
+          "x": 630.6231650236539,
+          "y": 401.7813125547091
+        },
+        {
+          "x": 630.6231650236539,
+          "y": 287.07355714821887
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_r38u7wq",
+      "from": {
+        "componentId": "led_7w52gn6",
+        "pinId": "catodo"
+      },
+      "to": {
+        "componentId": "esp32_wroom_p2m602x",
+        "pinId": "gnd_1"
+      },
+      "points": [
+        {
+          "x": 699.1165007838947,
+          "y": 438.72150369499604
+        },
+        {
+          "x": 474.9466257182769,
+          "y": 438.72150369499604
+        },
+        {
+          "x": 474.9466257182769,
+          "y": 436.93187085830425
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_2dqg92s",
+      "from": {
+        "componentId": "resistencia_14ckrvn",
+        "pinId": "term2"
+      },
+      "to": {
+        "componentId": "led_7w52gn6",
+        "pinId": "anodo"
+      },
+      "points": [
+        {
+          "x": 710.8572347929936,
+          "y": 453.6870623103052
+        },
+        {
+          "x": 710.8572347929936,
+          "y": 240.69851218516575
+        },
+        {
+          "x": 708.9145764224319,
+          "y": 240.69851218516575
+        }
+      ],
+      "color": "#f2994a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_1y3uacs",
+      "from": {
+        "componentId": "esp32_wroom_p2m602x",
+        "pinId": "io2"
+      },
+      "to": {
+        "componentId": "resistencia_14ckrvn",
+        "pinId": "term1"
+      },
+      "points": [
+        {
+          "x": 514.3838963858288,
+          "y": 384.66665575901703
+        },
+        {
+          "x": 514.3838963858288,
+          "y": 453.9277598111902
+        },
+        {
+          "x": 598.6197101611357,
+          "y": 453.9277598111902
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

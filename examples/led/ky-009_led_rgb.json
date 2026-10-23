@@ -1,0 +1,118 @@
+{
+  "version": "1.0",
+  "timestamp": 1792363541620,
+  "components": [
+    {
+      "id": "esp32_wroom_8fidc8j",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 300,
+      "y": 80,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "C7:98:79:35:DC:78"
+      },
+      "locked": false
+    },
+    {
+      "id": "ky-009_keum8m5",
+      "type": "ky-009",
+      "name": "KY-009 LED RGB (SMD)",
+      "x": 501.32640958217235,
+      "y": -23.446914691525016,
+      "width": 56.694,
+      "height": 89.736,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "KY-009: LED RGB SMD 5050, cátodo común -- 'com' a GND. Cada canal (R/G/B) acepta digital ON/OFF (Pin) o PWM (machine.PWM/duty) para variar el brillo"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_g8i5txw",
+      "from": {
+        "componentId": "esp32_wroom_8fidc8j",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "ky-009_keum8m5",
+        "pinId": "com"
+      },
+      "points": [
+        {
+          "x": 476.28,
+          "y": 301.5992815532286
+        },
+        {
+          "x": 591.5795076634774,
+          "y": 301.5992815532286
+        },
+        {
+          "x": 591.5795076634774,
+          "y": 74.15754053357198
+        },
+        {
+          "x": 543.9194095821723,
+          "y": 74.15754053357198
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_bkh24fx",
+      "from": {
+        "componentId": "ky-009_keum8m5",
+        "pinId": "r"
+      },
+      "to": {
+        "componentId": "esp32_wroom_8fidc8j",
+        "pinId": "io26"
+      },
+      "points": [],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_n3pje77",
+      "from": {
+        "componentId": "ky-009_keum8m5",
+        "pinId": "g"
+      },
+      "to": {
+        "componentId": "esp32_wroom_8fidc8j",
+        "pinId": "io25"
+      },
+      "points": [],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_zgv29qk",
+      "from": {
+        "componentId": "ky-009_keum8m5",
+        "pinId": "b"
+      },
+      "to": {
+        "componentId": "esp32_wroom_8fidc8j",
+        "pinId": "io17"
+      },
+      "points": [],
+      "color": "#f2994a",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

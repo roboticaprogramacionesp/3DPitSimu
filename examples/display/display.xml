@@ -1,0 +1,19 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="seg7_init" id=".Q)SYTI(?dk32s7/i1[R" x="10" y="10">
+    <field name="NAME">display</field>
+    <field name="TYPE">CC</field>
+    <field name="A">26</field>
+    <field name="B">25</field>
+    <field name="C">17</field>
+    <field name="D">16</field>
+    <field name="E">27</field>
+    <field name="F">14</field>
+    <field name="G">12</field>
+    <next>
+      <block type="seg7_number" id=")K.mCLj56ZI=#9LzBTww">
+        <field name="NAME">display</field>
+        <field name="NUM">5</field>
+      </block>
+    </next>
+  </block>
+</xml>

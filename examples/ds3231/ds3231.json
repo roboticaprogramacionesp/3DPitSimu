@@ -1,0 +1,153 @@
+{
+  "version": "1.0",
+  "timestamp": 1792442091239,
+  "components": [
+    {
+      "id": "esp32_wroom_xhd1jc3",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 320,
+      "y": 160,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "66:97:FE:39:C4:3B"
+      },
+      "locked": false
+    },
+    {
+      "id": "ds3231_g98mvba",
+      "type": "ds3231",
+      "name": "DS3231 Reloj de Tiempo Real (RTC, I2C)",
+      "x": 636.5579129477373,
+      "y": 267.887388133585,
+      "width": 107.72,
+      "height": 62.36,
+      "rotation": 270,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "DS3231 (módulo ZS-042): RTC I2C de alta precisión, dirección fija 0x68. La fecha/hora se ajusta desde el panel de propiedades (por defecto sigue la hora real de la computadora) y sigue corriendo sola mientras el circuito esté simulando"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_yh746kf",
+      "from": {
+        "componentId": "esp32_wroom_xhd1jc3",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "ds3231_g98mvba",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 496.28,
+          "y": 383.88611068508726
+        },
+        {
+          "x": 687.0679129477373,
+          "y": 383.88611068508726
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_xi5mw10",
+      "from": {
+        "componentId": "esp32_wroom_xhd1jc3",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "ds3231_g98mvba",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 466.28,
+          "y": 398.37427977710416
+        },
+        {
+          "x": 679.8679129477373,
+          "y": 398.37427977710416
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_enqpsxi",
+      "from": {
+        "componentId": "esp32_wroom_xhd1jc3",
+        "pinId": "io21"
+      },
+      "to": {
+        "componentId": "ds3231_g98mvba",
+        "pinId": "sda"
+      },
+      "points": [
+        {
+          "x": 410.28,
+          "y": 141.72679596432383
+        },
+        {
+          "x": 615.1192349044578,
+          "y": 141.72679596432383
+        },
+        {
+          "x": 615.1192349044578,
+          "y": 294.94615799117406
+        },
+        {
+          "x": 672.6679129477374,
+          "y": 294.94615799117406
+        }
+      ],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_2ycjjdn",
+      "from": {
+        "componentId": "esp32_wroom_xhd1jc3",
+        "pinId": "io22"
+      },
+      "to": {
+        "componentId": "ds3231_g98mvba",
+        "pinId": "scl"
+      },
+      "points": [
+        {
+          "x": 400.28,
+          "y": 130.1362579593876
+        },
+        {
+          "x": 623.3981711339707,
+          "y": 130.1362579593876
+        },
+        {
+          "x": 623.3981711339707,
+          "y": 281.5729513905765
+        },
+        {
+          "x": 665.4679129477373,
+          "y": 281.5729513905765
+        }
+      ],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

@@ -1,0 +1,154 @@
+{
+  "version": "1.0",
+  "timestamp": 1792438932554,
+  "components": [
+    {
+      "id": "esp32_wroom_s0uatoa",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 320,
+      "y": 220,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "03:58:56:99:2B:C0"
+      },
+      "locked": false
+    },
+    {
+      "id": "ky040_hemodte",
+      "type": "ky040",
+      "name": "KY-040 Encoder Rotativo",
+      "x": 632.0973653333025,
+      "y": 219.7894559006204,
+      "width": 56.694,
+      "height": 89.736,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "Encoder rotativo KY-040 (cuadratura CLK/DT + botón SW)",
+        "stepsPerRev": 20
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_wjv6b1b",
+      "from": {
+        "componentId": "ky040_hemodte",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_s0uatoa",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 652.2983653333025,
+          "y": 443.627917193299
+        },
+        {
+          "x": 496.28,
+          "y": 443.627917193299
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_ht6bo73",
+      "from": {
+        "componentId": "ky040_hemodte",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_s0uatoa",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 659.8173653333025,
+          "y": 454.5411023317893
+        },
+        {
+          "x": 466.28,
+          "y": 454.5411023317893
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_ko8lv1w",
+      "from": {
+        "componentId": "esp32_wroom_s0uatoa",
+        "pinId": "io19"
+      },
+      "to": {
+        "componentId": "ky040_hemodte",
+        "pinId": "clk"
+      },
+      "points": [
+        {
+          "x": 450.28,
+          "y": 186.98047702507097
+        },
+        {
+          "x": 711.8712318786309,
+          "y": 186.98047702507097
+        },
+        {
+          "x": 711.8712318786309,
+          "y": 323.20685188453746
+        },
+        {
+          "x": 682.5553653333025,
+          "y": 323.20685188453746
+        }
+      ],
+      "color": "#bb86fc",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_inspamb",
+      "from": {
+        "componentId": "esp32_wroom_s0uatoa",
+        "pinId": "io18"
+      },
+      "to": {
+        "componentId": "ky040_hemodte",
+        "pinId": "dt"
+      },
+      "points": [
+        {
+          "x": 440.28,
+          "y": 175.3146882307259
+        },
+        {
+          "x": 722.0317626690639,
+          "y": 175.3146882307259
+        },
+        {
+          "x": 722.0317626690639,
+          "y": 336.00160558020616
+        },
+        {
+          "x": 674.9753653333025,
+          "y": 336.00160558020616
+        }
+      ],
+      "color": "#bb86fc",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

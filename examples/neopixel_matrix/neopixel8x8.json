@@ -1,0 +1,116 @@
+{
+  "version": "1.0",
+  "timestamp": 1792363938406,
+  "components": [
+    {
+      "id": "esp32_wroom_t6tppxw",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 356,
+      "y": 172,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "BB:72:C5:0D:4C:B7"
+      },
+      "locked": false
+    },
+    {
+      "id": "neopixel_matrix_847fpm5",
+      "type": "neopixel_matrix",
+      "name": "NeoPixel Matrix",
+      "x": 674,
+      "y": 172,
+      "width": 208,
+      "height": 208,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "cols": 8,
+        "rows": 8,
+        "shape": "square"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_97gxlth",
+      "from": {
+        "componentId": "esp32_wroom_t6tppxw",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "neopixel_matrix_847fpm5",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 532.28,
+          "y": 398.7949038609749
+        },
+        {
+          "x": 798,
+          "y": 398.7949038609749
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_392simk",
+      "from": {
+        "componentId": "esp32_wroom_t6tppxw",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "neopixel_matrix_847fpm5",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 502.28,
+          "y": 410.06462612481937
+        },
+        {
+          "x": 758,
+          "y": 410.06462612481937
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_9fc7uue",
+      "from": {
+        "componentId": "esp32_wroom_t6tppxw",
+        "pinId": "io4"
+      },
+      "to": {
+        "componentId": "neopixel_matrix_847fpm5",
+        "pinId": "din"
+      },
+      "points": [
+        {
+          "x": 572.28,
+          "y": 391.4685732677179
+        },
+        {
+          "x": 778,
+          "y": 391.4685732677179
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

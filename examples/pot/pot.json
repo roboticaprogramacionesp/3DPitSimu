@@ -1,0 +1,127 @@
+{
+  "version": "1.0",
+  "timestamp": 1792438673870,
+  "components": [
+    {
+      "id": "esp32_wroom_7u87uig",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 280,
+      "y": 160,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "F2:52:AA:46:61:43"
+      },
+      "locked": false
+    },
+    {
+      "id": "pot_rotary_257pc9h",
+      "type": "pot_rotary",
+      "name": "Potenciómetro Rotativo 10K",
+      "x": 578.7059513357814,
+      "y": 218.92127555808713,
+      "width": 50,
+      "height": 58,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "Potenciómetro rotativo 10KΩ (un solo eje, salida analógica por SIG)",
+        "nota": "Arrastrá la perilla en círculo para simular la posición -- no vuelve sola al centro al soltar, igual que el potenciómetro real. La carrera mecánica es de ~300° (como el real, con un tope), no una vuelta completa."
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_5f84dec",
+      "from": {
+        "componentId": "pot_rotary_257pc9h",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_7u87uig",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 596.7059513357814,
+          "y": 391.79984189226343
+        },
+        {
+          "x": 456.28,
+          "y": 391.79984189226343
+        },
+        {
+          "x": 456.28,
+          "y": 379.9816646123587
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_gy2kwib",
+      "from": {
+        "componentId": "esp32_wroom_7u87uig",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "pot_rotary_257pc9h",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 426.28,
+          "y": 398.95297392011526
+        },
+        {
+          "x": 610.7059513357814,
+          "y": 398.95297392011526
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_8fyhz0f",
+      "from": {
+        "componentId": "pot_rotary_257pc9h",
+        "pinId": "sig"
+      },
+      "to": {
+        "componentId": "esp32_wroom_7u87uig",
+        "pinId": "io27"
+      },
+      "points": [
+        {
+          "x": 603.7059513357814,
+          "y": 296.9433356721891
+        },
+        {
+          "x": 636.7770496465874,
+          "y": 296.9433356721891
+        },
+        {
+          "x": 636.7770496465874,
+          "y": 147.9719559225478
+        },
+        {
+          "x": 476.28,
+          "y": 147.9719559225478
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

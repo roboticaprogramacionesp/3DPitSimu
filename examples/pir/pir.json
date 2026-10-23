@@ -1,0 +1,115 @@
+{
+  "version": "1.0",
+  "timestamp": 1792439478184,
+  "components": [
+    {
+      "id": "esp32_wroom_o8z027f",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 280,
+      "y": 200,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "67:8B:2E:17:4B:58"
+      },
+      "locked": false
+    },
+    {
+      "id": "pir_8nwy0r0",
+      "type": "pir",
+      "name": "Sensor PIR de Movimiento (HC-SR501)",
+      "x": 593.4885898227392,
+      "y": 205.43951942085957,
+      "width": 54,
+      "height": 80,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "PIR HC-SR501: sensor infrarrojo pasivo de movimiento, salida digital activa en ALTO al detectar (a diferencia del FC-51/TCRT5000, que son activos en BAJO)",
+        "detectado": false
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_41on8mz",
+      "from": {
+        "componentId": "esp32_wroom_o8z027f",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "pir_8nwy0r0",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 456.28,
+          "y": 437.7848621648901
+        },
+        {
+          "x": 629.4885898227392,
+          "y": 437.7848621648901
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_h3bfd7r",
+      "from": {
+        "componentId": "esp32_wroom_o8z027f",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "pir_8nwy0r0",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 426.28,
+          "y": 448.7209963943915
+        },
+        {
+          "x": 611.4885898227392,
+          "y": 448.7209963943915
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_sfxmjzu",
+      "from": {
+        "componentId": "esp32_wroom_o8z027f",
+        "pinId": "io4"
+      },
+      "to": {
+        "componentId": "pir_8nwy0r0",
+        "pinId": "out"
+      },
+      "points": [
+        {
+          "x": 496.28,
+          "y": 424.07485184152074
+        },
+        {
+          "x": 620.4885898227392,
+          "y": 424.07485184152074
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

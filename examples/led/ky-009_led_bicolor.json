@@ -1,0 +1,130 @@
+{
+  "version": "1.0",
+  "timestamp": 1792363654296,
+  "components": [
+    {
+      "id": "esp32_wroom_0xifwlo",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 340,
+      "y": 200,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "C2:22:4B:C1:66:49"
+      },
+      "locked": false
+    },
+    {
+      "id": "ky-011_f6x826v",
+      "type": "ky-011",
+      "name": "KY-011 LED Bicolor (Rojo/Verde)",
+      "x": 635.664840212354,
+      "y": 203.28661593041915,
+      "width": 56.694,
+      "height": 89.736,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "KY-011: LED bicolor rojo+verde, cátodo común -- 'com' a GND. El asset real solo marca claramente el pin derecho como 'S' (silkscreen ambiguo); si tu módulo físico tiene R/G invertidos, cambiá el cableado. Cada canal acepta digital ON/OFF (Pin) o PWM (machine.PWM/duty) para variar el brillo; ambos a la vez mezclan a amarillo/naranja, igual que el LED real"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_tko5yqw",
+      "from": {
+        "componentId": "ky-011_f6x826v",
+        "pinId": "com"
+      },
+      "to": {
+        "componentId": "esp32_wroom_0xifwlo",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 653.3518923691806,
+          "y": 419.0177587725409
+        },
+        {
+          "x": 516.28,
+          "y": 419.0177587725409
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_15is1x0",
+      "from": {
+        "componentId": "esp32_wroom_0xifwlo",
+        "pinId": "io25"
+      },
+      "to": {
+        "componentId": "ky-011_f6x826v",
+        "pinId": "r"
+      },
+      "points": [
+        {
+          "x": 566.28,
+          "y": 178.43896967155018
+        },
+        {
+          "x": 720.0531186101327,
+          "y": 178.43896967155018
+        },
+        {
+          "x": 720.0531186101327,
+          "y": 314.4771847739553
+        },
+        {
+          "x": 664.1238402123539,
+          "y": 314.4771847739553
+        }
+      ],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_6ojc9x4",
+      "from": {
+        "componentId": "esp32_wroom_0xifwlo",
+        "pinId": "io26"
+      },
+      "to": {
+        "componentId": "ky-011_f6x826v",
+        "pinId": "g"
+      },
+      "points": [
+        {
+          "x": 576.28,
+          "y": 188.03502633852483
+        },
+        {
+          "x": 706.505744492051,
+          "y": 188.03502633852483
+        },
+        {
+          "x": 706.505744492051,
+          "y": 306.5745498717409
+        },
+        {
+          "x": 673.7238402123539,
+          "y": 306.5745498717409
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

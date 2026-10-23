@@ -1,0 +1,154 @@
+{
+  "version": "1.0",
+  "timestamp": 1792438762588,
+  "components": [
+    {
+      "id": "esp32_wroom_heikbcj",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 255.9999989271164,
+      "y": 180.66668818394277,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "D8:01:56:DE:AA:DF"
+      },
+      "locked": false
+    },
+    {
+      "id": "pot_slider_kk8yexn",
+      "type": "pot_slider",
+      "name": "Potenciómetro Deslizante 10K",
+      "x": 553.5073468632255,
+      "y": 207.29813424507734,
+      "width": 110,
+      "height": 46,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "Potenciómetro deslizante lineal 10KΩ (módulo con riel, salida analógica duplicada en 2 pines)",
+        "nota": "Arrastrá la perilla en el canvas para simular la posición -- a diferencia del joystick, NO vuelve sola al centro al soltar: se queda donde la dejaste, igual que el potenciómetro real. OUT1 y OUT2 son la MISMA señal (el módulo saca el wiper por 2 pines): conectá el que te resulte más cómodo, o ambos si tu proyecto los usa."
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_m1cse68",
+      "from": {
+        "componentId": "pot_slider_kk8yexn",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_heikbcj",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 569.5073468632255,
+          "y": 401.4913819799418
+        },
+        {
+          "x": 432.27999892711637,
+          "y": 401.4913819799418
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_fc66mzm",
+      "from": {
+        "componentId": "esp32_wroom_heikbcj",
+        "pinId": "3v3"
+      },
+      "to": {
+        "componentId": "pot_slider_kk8yexn",
+        "pinId": "vcc"
+      },
+      "points": [
+        {
+          "x": 402.27999892711637,
+          "y": 411.0121999387902
+        },
+        {
+          "x": 593.5073468632255,
+          "y": 411.0121999387902
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_fq6l2zi",
+      "from": {
+        "componentId": "pot_slider_kk8yexn",
+        "pinId": "out2"
+      },
+      "to": {
+        "componentId": "esp32_wroom_heikbcj",
+        "pinId": "io27"
+      },
+      "points": [
+        {
+          "x": 641.5073468632255,
+          "y": 269.0281751293013
+        },
+        {
+          "x": 674.3092421297571,
+          "y": 269.0281751293013
+        },
+        {
+          "x": 674.3092421297571,
+          "y": 158.09026811102535
+        },
+        {
+          "x": 452.27999892711637,
+          "y": 158.09026811102535
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_kk4nsxc",
+      "from": {
+        "componentId": "pot_slider_kk8yexn",
+        "pinId": "out1"
+      },
+      "to": {
+        "componentId": "esp32_wroom_heikbcj",
+        "pinId": "io14"
+      },
+      "points": [
+        {
+          "x": 617.5073468632255,
+          "y": 283.93028025615894
+        },
+        {
+          "x": 693.7648193500227,
+          "y": 283.93028025615894
+        },
+        {
+          "x": 693.7648193500227,
+          "y": 143.1881149084475
+        },
+        {
+          "x": 442.27999892711637,
+          "y": 143.1881149084475
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

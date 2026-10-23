@@ -1,0 +1,123 @@
+{
+  "version": "1.0",
+  "timestamp": 1792443114491,
+  "components": [
+    {
+      "id": "esp32_wroom_gf0szaw",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 297.33337291081637,
+      "y": 84.66665635506345,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "74:54:C6:DC:CC:DF"
+      },
+      "locked": false
+    },
+    {
+      "id": "led_8j2yjc9",
+      "type": "led",
+      "name": "LED",
+      "x": 620,
+      "y": 140,
+      "width": 20.6,
+      "height": 39.49,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "voltaje_directo": 2,
+        "corriente_ma": 20,
+        "color": "#e60000"
+      },
+      "locked": false
+    },
+    {
+      "id": "resistencia_t4e1vyt",
+      "type": "resistencia",
+      "name": "Resistencia",
+      "x": 540,
+      "y": 320,
+      "width": 49,
+      "height": 10.79,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "ohms": 220
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_pq25j4e",
+      "from": {
+        "componentId": "led_8j2yjc9",
+        "pinId": "catodo"
+      },
+      "to": {
+        "componentId": "esp32_wroom_gf0szaw",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 624.71,
+          "y": 306.2735411816486
+        },
+        {
+          "x": 473.61337291081634,
+          "y": 306.2735411816486
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_trw0vfg",
+      "from": {
+        "componentId": "esp32_wroom_gf0szaw",
+        "pinId": "io2"
+      },
+      "to": {
+        "componentId": "resistencia_t4e1vyt",
+        "pinId": "term1"
+      },
+      "points": [],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_eaxir4b",
+      "from": {
+        "componentId": "resistencia_t4e1vyt",
+        "pinId": "term2"
+      },
+      "to": {
+        "componentId": "led_8j2yjc9",
+        "pinId": "anodo"
+      },
+      "points": [
+        {
+          "x": 587.87,
+          "y": 324.94259241406854
+        },
+        {
+          "x": 634.71,
+          "y": 324.94259241406854
+        }
+      ],
+      "color": "#f2994a",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}
