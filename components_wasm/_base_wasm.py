@@ -123,11 +123,89 @@ def _settle():
     pass
 
 
+# ─────────────────────────────────────────────────────────────
+# Pin.irq() emulado -- BUG REAL reportado en vivo con RotaryIRQ
+# (rotary_irq_esp.py, KY-040): "AttributeError: type object 'Pin' has
+# no attribute 'IRQ_RISING'". Pin no tenía las constantes IRQ_* y,
+# aunque las tuviera, irq() solo guardaba el handler -- nada lo
+# llamaba nunca (a diferencia de _base.hal.py, acá no había ningún
+# _maybe_fire_irq()).
+#
+# Cómo llegan los flancos: Pin.value() lee "_pit_gpio_in_<n>" (global
+# escrita por setGlobal, ver WasmBridge.sendData) -- eso solo guarda
+# el ÚLTIMO valor, así que un encoder (4 fases cada 4ms) perdería las
+# intermedias si solo se mirara el valor actual. Por eso wasmWorker.js
+# además va anotando CADA cambio, en orden, en "_pit_gpio_events"
+# ("<gpio>:<valor>,..."), y _pit_dispatch_irqs() los reproduce uno por
+# uno. Mientras reproduce, Pin.value() devuelve el estado "de ese
+# momento" (_irq_replay), no el último -- rotary.py lee CLK y DT
+# adentro del handler y necesita ver la combinación de esa fase.
+#
+# Cuándo se reproducen: en cada time.sleep*() (ver _PitTimeModule más
+# abajo) -- es el único momento en que el Worker atiende mensajes
+# nuevos de todas formas (yield de Asyncify), igual que en QEMU el
+# patrón típico "irq() + while True: sleep()".
+# ─────────────────────────────────────────────────────────────
+_irq_last = {}
+_irq_replay = {}
+_irq_replay_active = [False]
+
+
+def _pit_dispatch_irqs():
+    g = globals()
+    events = g.get("_pit_gpio_events")
+    if not events:
+        return
+    g["_pit_gpio_events"] = ""
+    if not _irq_handlers:
+        return
+
+    _irq_replay.clear()
+    _irq_replay.update(_irq_last)
+    _irq_replay_active[0] = True
+    try:
+        for item in events.split(","):
+            if not item:
+                continue
+            gpio, _, value = item.partition(":")
+            try:
+                gpio = int(gpio)
+                value = 1 if int(value) else 0
+            except ValueError:
+                continue
+            _irq_replay[gpio] = value
+
+            entry = _irq_handlers.get(gpio)
+            if entry is None:
+                continue
+            old = _irq_last.get(gpio)
+            _irq_last[gpio] = value
+            if old is None or old == value:
+                continue
+
+            trigger = entry["trigger"]
+            if (value and trigger & Pin.IRQ_RISING) or (not value and trigger & Pin.IRQ_FALLING):
+                try:
+                    entry["handler"](entry["pin"])
+                except Exception as e:
+                    # A diferencia de _base.hal.py (que lo traga), acá
+                    # se muestra: un error en el handler del alumno es
+                    # justo lo que tiene que poder ver para corregirlo.
+                    sys.print_exception(e)
+    finally:
+        _irq_replay_active[0] = False
+        _irq_replay.clear()
+
+
 class Pin:
     IN = 0
     OUT = 1
+    OPEN_DRAIN = 2
     PULL_UP = 1
     PULL_DOWN = 2
+    # Mismos valores que machine.Pin del puerto esp32 real.
+    IRQ_RISING = 1
+    IRQ_FALLING = 2
 
     def __init__(self, pin, mode=-1, pull=-1, **kw):
         self._pin_num = pin
@@ -164,6 +242,8 @@ class Pin:
             # wasmWorker.js. _pin_input_states (poblado por
             # process_line(), que SÍ sigue andando para quien lo use)
             # queda como fallback, nunca se deja de escribir.
+            if _irq_replay_active[0] and self._pin_num in _irq_replay:
+                return _irq_replay[self._pin_num]
             g = globals()
             key = "_pit_gpio_in_%d" % self._pin_num
             if key in g:
@@ -174,11 +254,19 @@ class Pin:
         else:
             self.off()
 
-    def irq(self, handler=None, trigger=None, *args, **kw):
+    def irq(self, handler=None, trigger=IRQ_RISING | IRQ_FALLING, *args, **kw):
         if handler is None:
             _irq_handlers.pop(self._pin_num, None)
-        else:
-            _irq_handlers[self._pin_num] = {"handler": handler, "trigger": trigger, "pin": self}
+            _irq_last.pop(self._pin_num, None)
+            return
+        # Reproducir primero lo pendiente para los handlers que ya
+        # existían -- si no, esos eventos viejos se tomarían como
+        # flancos de este pin recién registrado.
+        _pit_dispatch_irqs()
+        if trigger is None:
+            trigger = Pin.IRQ_RISING | Pin.IRQ_FALLING
+        _irq_handlers[self._pin_num] = {"handler": handler, "trigger": trigger, "pin": self}
+        _irq_last[self._pin_num] = self.value()
 
 
 # PWM genérico -- mismo protocolo "PWM:<gpio>:<freq>:<duty>\n" que ya
@@ -271,3 +359,63 @@ machine = _FakeMachineModule()
 machine.Pin = Pin
 machine.PWM = PWM
 sys.modules["machine"] = machine
+
+
+# ─────────────────────────────────────────────────────────────
+# Módulo "time" envuelto -- para que time.sleep*() reproduzca los
+# flancos pendientes (ver _pit_dispatch_irqs arriba). Confirmado: en
+# este puerto "time.sleep = X" tira AttributeError (módulo builtin de
+# solo lectura), así que en vez de parchearlo se registra un módulo
+# propio en sys.modules -- el import de MicroPython mira sys.modules
+# antes que los builtins, mismo truco que "machine" de arriba. Todo lo
+# que no sea sleep*() se delega tal cual al módulo real.
+#
+# Con algún irq() activo, el sleep se trocea en pasos de 10ms (como el
+# _patched_sleep_ms de _base.hal.py) para que el handler corra cerca
+# del momento del flanco y no recién al final de un sleep(1).
+# ─────────────────────────────────────────────────────────────
+import time as _pit_real_time
+
+_SLEEP_POLL_CHUNK_MS = 10
+
+
+def _pit_sleep_ms(ms):
+    ms = int(ms)
+    if not _irq_handlers:
+        _pit_real_time.sleep_ms(ms)
+        _pit_dispatch_irqs()
+        return
+    # Contra un deadline real (no "restar el paso"): cada sleep_ms()
+    # corto duerme algo más de lo pedido (setTimeout), y sumado en un
+    # sleep(1) troceado se notaba (~1.3s).
+    deadline = _pit_real_time.ticks_add(_pit_real_time.ticks_ms(), ms)
+    while True:
+        _pit_dispatch_irqs()
+        remaining = _pit_real_time.ticks_diff(deadline, _pit_real_time.ticks_ms())
+        if remaining <= 0:
+            return
+        _pit_real_time.sleep_ms(_SLEEP_POLL_CHUNK_MS if remaining > _SLEEP_POLL_CHUNK_MS else remaining)
+
+
+def _pit_sleep(seconds):
+    _pit_sleep_ms(seconds * 1000)
+
+
+def _pit_sleep_us(us):
+    _pit_real_time.sleep_us(us)
+    _pit_dispatch_irqs()
+
+
+class _PitTimeModule:
+    __name__ = "time"
+
+    def __getattr__(self, name):
+        return getattr(_pit_real_time, name)
+
+
+_pit_time = _PitTimeModule()
+_pit_time.sleep = _pit_sleep
+_pit_time.sleep_ms = _pit_sleep_ms
+_pit_time.sleep_us = _pit_sleep_us
+sys.modules["time"] = _pit_time
+sys.modules["utime"] = _pit_time

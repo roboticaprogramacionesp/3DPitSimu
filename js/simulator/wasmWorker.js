@@ -40,6 +40,12 @@ let mp = null;
 let baseLoaded = false;
 let processLineBusy = false;
 
+// Ver "setGlobal" más abajo. Si ningún sleep() la drena (script sin
+// sleep, o sin ningún script corriendo), la cola se descarta en vez de
+// crecer para siempre.
+const GPIO_IN_KEY_RE = /^_pit_gpio_in_(\d+)$/;
+const GPIO_EVENTS_MAX_LEN = 4000;
+
 // BUG REAL reportado (texto con tildes/ñ llegando corrupto -- "DÃ³nde"
 // en vez de "Dónde"): el stdout del puerto llega BYTE A BYTE (ver el
 // comentario de "stdout" más abajo), y un carácter no-ASCII en UTF-8
@@ -443,6 +449,16 @@ self.onmessage = async (e) => {
         if (mp && baseLoaded) {
             try {
                 mp.globals.set(msg.key, msg.value);
+                // Cola de flancos para Pin.irq() -- ver
+                // _pit_dispatch_irqs() en _base_wasm.py: el global de
+                // arriba solo guarda el último valor, esto guarda cada
+                // cambio en orden (un encoder manda 4 fases seguidas).
+                const gpioMatch = GPIO_IN_KEY_RE.exec(msg.key);
+                if (gpioMatch) {
+                    let events = mp.globals.get("_pit_gpio_events");
+                    if (typeof events !== "string" || events.length > GPIO_EVENTS_MAX_LEN) events = "";
+                    mp.globals.set("_pit_gpio_events", `${events}${gpioMatch[1]}:${msg.value},`);
+                }
             } catch (err) {
                 self.postMessage({ type: "stdout", data: "\n" + String(err) + "\n" });
             }
