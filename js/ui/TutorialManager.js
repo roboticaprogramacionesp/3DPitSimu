@@ -4765,6 +4765,8 @@ class TutorialManager {
             title: "ESP-NOW: control remoto de un LED",
             icon: "📡",
             category: "📡 Comunicación inalámbrica",
+            demoGif: "assets/tutorial-demos/espnow_led.gif",
+            demoCaption: "Dos ESP32 hablando por ESP-NOW: al presionar el botón de uno, el LED del otro se enciende -- sin ningún cable entre ambas placas.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
