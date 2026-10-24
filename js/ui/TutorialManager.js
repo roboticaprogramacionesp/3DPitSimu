@@ -2908,8 +2908,8 @@ class TutorialManager {
             title: "KY-018 Fotorresistor (LDR) con ESP32",
             icon: "🔆",
             category: "🎚️ Sensores · Analógicos",
-            demoGif: "assets/tutorial-demos/ky_018.png",
-            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer el nivel de luz en la terminal (ver el slider \"Nivel de luz\" en su panel de propiedades para simular distintos casos).",
+            demoGif: "assets/tutorial-demos/ky_018.gif",
+            demoCaption: "El panel de propiedades simula el nivel de luz con un slider -- así vas a probar tu código sin necesitar una fuente de luz real.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4074,8 +4074,8 @@ class TutorialManager {
             title: "Lector RFID RC522 con ESP32",
             icon: "💳",
             category: "🖥️ Pantallas y Módulos",
-            demoGif: "assets/tutorial-demos/rc522.png",
-            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer el UID de una tarjeta en la terminal.",
+            demoGif: "assets/tutorial-demos/rc522.gif",
+            demoCaption: "Desde el panel de propiedades elegís una tarjeta simulada y la \"presentás\" con TAP -- así vas a probar tu código sin necesitar una tarjeta RFID real.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
