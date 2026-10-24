@@ -791,6 +791,8 @@ class TutorialManager {
             title: "KY-016 LED RGB con ESP32",
             icon: "🌟",
             category: "💡 LEDs · Salidas digitales",
+            demoGif: "assets/tutorial-demos/ky_016.gif",
+            demoCaption: "El LED cambia de rojo a verde, azul y blanco combinando los 3 canales -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4482,6 +4484,8 @@ class TutorialManager {
             title: "MPU6050 Acelerómetro y Giroscopio con ESP32",
             icon: "🌀",
             category: "🖥️ Pantallas y Módulos",
+            demoGif: "assets/tutorial-demos/mpu6050.png",
+            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- sus valores de aceleración/giro se simulan con los controles deslizantes del panel de propiedades.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
