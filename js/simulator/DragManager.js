@@ -89,18 +89,29 @@ class DragManager {
             .filter(c => c && !c.locked)
             .map(c => ({ component: c, startX: c.x, startY: c.y }));
 
-        // Cables "internos" al grupo: si AMBOS extremos de un cable son
-        // componentes que se están arrastrando juntos, sus codos
-        // manuales (wire.points, coordenadas ABSOLUTAS -- ver
-        // WireManager.renderAll) deben moverse con el mismo delta que
-        // el grupo. Si no se hacen, el cable se "estira" raro: sus
-        // puntas siguen al pin (auto, vía component:moved) pero los
+        // Codos manuales (wire.points, coordenadas ABSOLUTAS -- ver
+        // WireManager.renderAll) de cualquier cable con AL MENOS UN
+        // extremo en el grupo que se arrastra: se mueven con el mismo
+        // delta que el grupo. Si no se hacen, el cable se "estira" raro
+        // -- la punta sigue al pin (auto, vía component:moved) pero los
         // codos intermedios quedan clavados en su posición vieja.
+        //
+        // ANTES solo cubría el caso "AMBOS extremos en el grupo" (ej.
+        // mover 2 componentes seleccionados juntos, cable entre ellos).
+        // El caso MÁS COMÚN -- mover UN componente cuyo cable va a OTRO
+        // que se queda quieto (ej. un LED cableado a una ESP32 fija) --
+        // quedaba afuera: el cable se deformaba en zigzag cada vez que
+        // el componente se alejaba de donde estaban los codos viejos.
+        // Trasladar TODO el cable por el mismo delta no es "perfecto"
+        // (el tramo cercano al extremo quieto también se corre un poco),
+        // pero mantiene la forma del cable intacta en vez de estirarla
+        // -- mejora clara sin tocar el resto del mecanismo (updateDrag/
+        // endDrag ya aplican este mismo delta compartido, sin cambios).
         const memberIds = new Set(groupIds);
         const wireManager = this.simulator.wireManager;
         const wires = wireManager
             ? wireManager.wires.filter(w =>
-                memberIds.has(w.from.componentId) && memberIds.has(w.to.componentId) &&
+                (memberIds.has(w.from.componentId) || memberIds.has(w.to.componentId)) &&
                 Array.isArray(w.points) && w.points.length > 0)
             : [];
 

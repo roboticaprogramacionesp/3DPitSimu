@@ -487,6 +487,15 @@
          text-anchor="middle"
          id="text57">AMS1117</text>
     </g>
+    <circle
+       id="led_power"
+       cx="1510"
+       cy="950"
+       r="20"
+       fill="#00001a"
+       opacity="0.5"
+       stroke="#333333"
+       stroke-width="3" />
     <rect
        x="522"
        y="1185"
