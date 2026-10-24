@@ -2141,8 +2141,8 @@ class TutorialManager {
             title: "DHT11 — Temperatura y humedad",
             icon: "💧",
             category: "🌡️ Temperatura · Humedad",
-            demoGif: "assets/tutorial-demos/dht11.png",
-            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer temperatura y humedad en la terminal.",
+            demoGif: "assets/tutorial-demos/dht11.gif",
+            demoCaption: "El panel de propiedades simula temperatura y humedad con una barra de colores -- así vas a probar tu código sin esperar a que cambie el clima de verdad.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -2236,8 +2236,8 @@ class TutorialManager {
             title: "Sensor de temperatura KY-001",
             icon: "🌡️",
             category: "🌡️ Temperatura · Humedad",
-            demoGif: "assets/tutorial-demos/ky_001.png",
-            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer la temperatura en la terminal.",
+            demoGif: "assets/tutorial-demos/ky_001.gif",
+            demoCaption: "El panel de propiedades simula la temperatura con una barra de colores -- así vas a probar tu código sin esperar a que cambie el clima de verdad.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -2331,8 +2331,8 @@ class TutorialManager {
             title: "Teclado analógico ADKEY",
             icon: "🎛️",
             category: "🎚️ Sensores · Analógicos",
-            demoGif: "assets/tutorial-demos/adkey.png",
-            demoCaption: "Este módulo no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer qué botón está presionado en la terminal.",
+            demoGif: "assets/tutorial-demos/adkey.gif",
+            demoCaption: "Al presionar un botón se ilumina -- así vas a leer cuál está presionado desde tu código.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3003,8 +3003,8 @@ class TutorialManager {
             title: "Sensor ultrasónico HC-SR04",
             icon: "📡",
             category: "📡 Sensores",
-            demoGif: "assets/tutorial-demos/hcsr04.png",
-            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para medir distancia en la terminal.",
+            demoGif: "assets/tutorial-demos/hcsr04.gif",
+            demoCaption: "El panel de propiedades simula la distancia con una barra de colores -- así vas a probar tu código sin necesitar un objeto real moviéndose.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3837,8 +3837,8 @@ class TutorialManager {
             title: "Teclado matricial 3x4 con ESP32",
             icon: "⌨️",
             category: "🖥️ Pantallas y Módulos",
-            demoGif: "assets/tutorial-demos/keypad3x4.png",
-            demoCaption: "Este teclado no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer qué tecla está presionada en la terminal.",
+            demoGif: "assets/tutorial-demos/keypad3x4.gif",
+            demoCaption: "Al presionar una tecla se ilumina -- así vas a leer cuál está presionada desde tu código.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3908,8 +3908,8 @@ class TutorialManager {
             title: "Teclado matricial 4x4 con ESP32",
             icon: "#️⃣",
             category: "🖥️ Pantallas y Módulos",
-            demoGif: "assets/tutorial-demos/keypad4x4.png",
-            demoCaption: "Este teclado no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer qué tecla está presionada en la terminal.",
+            demoGif: "assets/tutorial-demos/keypad4x4.gif",
+            demoCaption: "Al presionar una tecla se ilumina -- así vas a leer cuál está presionada desde tu código.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -3979,8 +3979,8 @@ class TutorialManager {
             title: "Teclado 4x4 I2C con ESP32",
             icon: "🔣",
             category: "🖥️ Pantallas y Módulos",
-            demoGif: "assets/tutorial-demos/keypad4x4_i2c.png",
-            demoCaption: "Este teclado no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer qué tecla está presionada en la terminal, usando solo 2 cables de datos (I2C).",
+            demoGif: "assets/tutorial-demos/keypad4x4_i2c.gif",
+            demoCaption: "Al presionar una tecla se ilumina -- así vas a leer cuál está presionada desde tu código, usando solo 2 cables de datos (I2C).",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4169,8 +4169,8 @@ class TutorialManager {
             title: "BH1750 Sensor de Luz con ESP32",
             icon: "☀️",
             category: "🖥️ Pantallas y Módulos",
-            demoGif: "assets/tutorial-demos/bh1750.png",
-            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer el nivel de luz (lux) en la terminal.",
+            demoGif: "assets/tutorial-demos/bh1750.gif",
+            demoCaption: "El panel de propiedades simula el nivel de luz (lux) con un slider -- así vas a probar tu código sin necesitar una fuente de luz real.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4264,8 +4264,8 @@ class TutorialManager {
             title: "BMP280 Presión y Temperatura con ESP32",
             icon: "🌦️",
             category: "🖥️ Pantallas y Módulos",
-            demoGif: "assets/tutorial-demos/bmp280.png",
-            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer la presión y la temperatura en la terminal.",
+            demoGif: "assets/tutorial-demos/bmp280.gif",
+            demoCaption: "El panel de propiedades simula presión y temperatura con sliders -- así vas a probar tu código sin esperar a que cambie el clima de verdad.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4359,8 +4359,8 @@ class TutorialManager {
             title: "DS3231 Reloj de Tiempo Real con ESP32",
             icon: "⏰",
             category: "🖥️ Pantallas y Módulos",
-            demoGif: "assets/tutorial-demos/ds3231.png",
-            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- lo vas a usar para leer la fecha y la hora en la terminal.",
+            demoGif: "assets/tutorial-demos/ds3231.gif",
+            demoCaption: "Desde el panel de propiedades podés saltar a cualquier fecha/hora -- así vas a probar tu código sin esperar a que pase el tiempo de verdad.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -4454,8 +4454,8 @@ class TutorialManager {
             title: "MPU6050 Acelerómetro y Giroscopio con ESP32",
             icon: "🌀",
             category: "🖥️ Pantallas y Módulos",
-            demoGif: "assets/tutorial-demos/mpu6050.png",
-            demoCaption: "Este sensor no tiene animación visual propia en el simulador, pero así se ve correctamente conectado -- sus valores de aceleración/giro se simulan con los controles deslizantes del panel de propiedades.",
+            demoGif: "assets/tutorial-demos/mpu6050.gif",
+            demoCaption: "El panel de propiedades simula aceleración y giro con sliders -- así vas a probar tu código sin necesitar mover la placa de verdad.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
