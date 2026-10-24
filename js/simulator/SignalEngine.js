@@ -1069,6 +1069,31 @@ class SignalEngine {
   }
 
   // ====================================================
+  // LED RGB onboard del ESP32-S3-Uno (GPIO48 dedicado) — llamado
+  // desde WasmBridge/QemuBridge al recibir "NEOS3:" (ver el
+  // comentario grande en components_wasm/_neopixel_wasm.py sobre por
+  // qué GPIO48 tiene su propio protocolo en vez de compartir "NEOR:"
+  // con un anillo/tira externo). esp32Id: id exacto del bridge que
+  // mandó esto (WASM, un Worker por ESP32 -- addressing real, sin
+  // ambigüedad con 2+ placas) o null (QEMU, instancia global única --
+  // mismo criterio "primero del tipo" que el resto de este archivo).
+  // ====================================================
+
+  applyEsp32S3RgbLed(esp32Id, hexString) {
+    const esp32 = esp32Id
+      ? this.simulator.componentManager.get(esp32Id)
+      : this.simulator.componentManager.getAll().find((c) => c.type === "esp32_s3");
+
+    if (!esp32 || esp32.type !== "esp32_s3") return;
+
+    const r = parseInt(hexString.substr(0, 2), 16) || 0;
+    const g = parseInt(hexString.substr(2, 2), 16) || 0;
+    const b = parseInt(hexString.substr(4, 2), 16) || 0;
+
+    this.simulator.renderer.setEsp32S3RgbLed(esp32, r, g, b);
+  }
+
+  // ====================================================
   // Evaluar LEDs
   // ====================================================
 
@@ -2600,6 +2625,15 @@ class SignalEngine {
       this.simulator.renderer.setEsp32GpioLed(esp32, false);
       this.simulator.renderer.setEsp32PowerLed(esp32, false);
     }
+    // A diferencia del bloque de arriba (solo "el primer ESP32"),
+    // acá SÍ se recorren TODOS los esp32_s3 -- apagar el LED onboard
+    // de cada uno al resetear, no solo del primero, para que una
+    // corrida anterior no deje "prendido" el de un segundo/tercer
+    // ESP32-S3 en un proyecto multi-dispositivo (ESP-NOW, etc.).
+    this.simulator.componentManager
+      .getAll()
+      .filter((c) => c.type === "esp32_s3")
+      .forEach((c) => this.simulator.renderer.setEsp32S3RgbLed(c, 0, 0, 0));
     const oled = this.simulator.componentManager
       .getAll()
       .find((c) => c.type === "oled");

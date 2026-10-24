@@ -461,6 +461,23 @@ class WasmBridge {
             return true;
         }
 
+        if (line.startsWith("NEOS3:")) {
+            // Formato: NEOS3:<RGB888 en hex, 6 hex chars> -- LED RGB
+            // ONBOARD del ESP32-S3-Uno, dedicado a GPIO48 (ver el
+            // comentario grande en _neopixel_wasm.py/write()). A
+            // diferencia de "NEOR:" (busca "el primer neopixel_ring
+            // del lienzo", protocolo sin id de dispositivo), acá SÍ
+            // hay un bridge por ESP32 -- this.esp32 ya identifica
+            // exactamente CUÁL placa mandó esto, así que el LED de la
+            // placa correcta se actualiza aunque haya 2+ ESP32-S3 en
+            // el mismo proyecto.
+            const hex = line.slice(6);
+            if (this.esp32) {
+                this.simulator.signalEngine.applyEsp32S3RgbLed(this.esp32.id, hex);
+            }
+            return true;
+        }
+
         if (line.startsWith("SERVOOUT:")) {
             // Formato: SERVOOUT:<gpio>:<angulo> -- ver QemuBridge.js
             // (sg90.hal.py al llamar servo.duty()/duty_u16()).

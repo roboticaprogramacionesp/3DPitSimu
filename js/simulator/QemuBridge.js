@@ -615,6 +615,7 @@ class QemuBridge {
                trimmed.startsWith("TFT:")    ||
                trimmed.startsWith("NEO:")    ||
                trimmed.startsWith("NEOR:")   ||
+               trimmed.startsWith("NEOS3:")  ||
                trimmed.startsWith("I2CW:")   ||
                trimmed.startsWith("PININFO:") ||
                trimmed.startsWith("PWM:")     ||
@@ -901,6 +902,19 @@ class QemuBridge {
                     this.simulator.signalEngine.applyNeopixelRingFrame(hex, n);
                 }
             }
+            return;
+        }
+
+        if (line.startsWith("NEOS3:")) {
+            // Formato: NEOS3:<RGB888 en hex, 6 hex chars> -- LED RGB
+            // onboard del ESP32-S3-Uno (GPIO48 dedicado, ver el
+            // comentario grande junto a "NEOS3:" en WasmBridge.js).
+            // QEMU es una única instancia global (sin multi-ESP32,
+            // ver más arriba) -- signalEngine.applyEsp32S3RgbLed()
+            // sin id busca "el primer esp32_s3 del lienzo", mismo
+            // criterio que ya usa este archivo para NEOR/NEO.
+            const hex = line.slice(6);
+            this.simulator.signalEngine.applyEsp32S3RgbLed(null, hex);
             return;
         }
 

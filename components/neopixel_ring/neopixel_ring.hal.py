@@ -75,6 +75,18 @@ class NeoPixel:
             self._buf[i] = color
 
     def write(self):
+        # GPIO48 es el pin dedicado del LED RGB ONBOARD en el
+        # ESP32-S3-Uno (DIYables) -- ver el mismo bloque en
+        # components_wasm/_neopixel_wasm.py (port directo) para el
+        # porqué completo de "NEOS3:" en vez de "NEOR:" acá.
+        if self._pin_num == 48 and self.n >= 1:
+            c = self._buf[0]
+            r = c[0] if len(c) > 0 else 0
+            g = c[1] if len(c) > 1 else 0
+            b = c[2] if len(c) > 2 else 0
+            _sys.stdout.write("NEOS3:%02x%02x%02x\n" % (r & 0xFF, g & 0xFF, b & 0xFF))
+            return
+
         hex_parts = []
         for c in self._buf:
             r = c[0] if len(c) > 0 else 0

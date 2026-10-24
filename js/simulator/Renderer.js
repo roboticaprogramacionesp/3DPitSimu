@@ -2943,6 +2943,28 @@ class Renderer {
     );
   }
 
+  // LED RGB onboard del ESP32-S3-Uno (GPIO48 dedicado) -- llamado
+  // desde SignalEngine.applyEsp32S3RgbLed() al recibir "NEOS3:" (ver
+  // ese método y el comentario grande en _neopixel_wasm.py). Mismo
+  // criterio visual que ky-016/ky-009 (apagado = restaurar el color
+  // original del SVG, prendido = color sólido + resplandor), pero
+  // sobre un único <circle data-role="rgb-led"> en vez de un grupo
+  // completo de capas -- este LED no tiene domo multi-capa, es un
+  // solo círculo de silkscreen.
+  setEsp32S3RgbLed(component, r, g, b) {
+    const dot = component.element?.querySelector('[data-role="rgb-led"]');
+    if (!dot) return;
+
+    if (r === 0 && g === 0 && b === 0) {
+      dot.style.fill = "";
+      dot.style.filter = "";
+    } else {
+      const color = `rgb(${r},${g},${b})`;
+      dot.style.fill = color;
+      dot.style.filter = `drop-shadow(0 0 6px ${color})`;
+    }
+  }
+
   // Brillo continuo del LED GPIO2 integrado (PWM, ver SignalEngine.setPwmState) --
   // mismo criterio que Renderer.applyLedBrightness() para el LED
   // externo: piso de opacidad 0.25 para que no se vea "apagado del

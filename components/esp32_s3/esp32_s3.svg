@@ -577,6 +577,7 @@
        stroke-width="5"
        id="rect68" />
     <circle
+       data-role="rgb-led"
        cx="1495"
        cy="1345"
        r="38"
