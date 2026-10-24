@@ -5270,6 +5270,10 @@ class TutorialManager {
             if (e.target.closest(".tutorial-modal-close, .tutorial-modal-minimize")) return;
 
             dragging = true;
+            // Avisa a start() que no debe recentrar más (ver el
+            // recentrado por "load" del demoGif) -- a partir de acá
+            // la posición es decisión del alumno, no nuestra.
+            this._userMovedModal = true;
 
             const modalRect = this.modal.getBoundingClientRect();
             const parentRect = workspaceEl.getBoundingClientRect();
@@ -5405,7 +5409,54 @@ class TutorialManager {
         );
 
         this.goTo(0);
+
+        // A pedido: al ARRANCAR un tutorial (no en cada paso), el modal
+        // tiene que aparecer centrado -- antes abría siempre pegado a
+        // la esquina superior derecha (o, peor, dondequiera que el
+        // alumno lo hubiera arrastrado en un tutorial ANTERIOR, ver
+        // _bindDrag(): una vez arrastrado una vez, modal.style.left
+        // queda fijo para siempre) y el alumno podía ni darse cuenta
+        // de que se abrió. Se centra DESPUÉS de goTo(0) -- recién ahí
+        // el modal ya tiene su contenido real (incluido el demoGif del
+        // paso 0, que cambia bastante la altura) para medir
+        // offsetWidth/offsetHeight de verdad; de ahí en más el alumno
+        // lo puede arrastrar donde quiera, como siempre.
+        this._centerModal();
+
+        // BUG REAL encontrado probando esto: el demoGif del paso 0 (si
+        // lo tiene) puede seguir cargando en este punto -- goTo(0) ya
+        // le puso el src, pero el navegador recién sabe su alto REAL
+        // cuando la imagen termina de bajar/decodificar. _centerModal()
+        // de arriba mide offsetHeight CON la imagen todavía chica (o
+        // en 0), así que el modal crece después y queda visiblemente
+        // descentrado. Si el alumno no tocó el modal todavía (no lo
+        // arrastró), recentrar una vez más apenas la imagen cargue.
+        this._userMovedModal = false;
+        const mediaEl = this._els.media;
+        if (mediaEl && !mediaEl.classList.contains("hidden") && !mediaEl.complete) {
+            const tutorialAtStart = this.activeTutorial;
+            mediaEl.addEventListener("load", () => {
+                if (this.activeTutorial !== tutorialAtStart) return; // el alumno ya se fue a otro tutorial
+                if (this._userMovedModal) return; // el alumno ya lo arrastró, no pisarle la posición
+                this._centerModal();
+            }, { once: true });
+        }
+
         this._startPolling();
+
+    }
+
+    _centerModal() {
+
+        const workspaceEl = document.getElementById("workspace") || document.body;
+        const parentRect = workspaceEl.getBoundingClientRect();
+
+        const left = Math.max(4, (parentRect.width  - this.modal.offsetWidth)  / 2);
+        const top  = Math.max(4, (parentRect.height - this.modal.offsetHeight) / 2);
+
+        this.modal.style.left  = `${left}px`;
+        this.modal.style.top   = `${top}px`;
+        this.modal.style.right = "auto";
 
     }
 
