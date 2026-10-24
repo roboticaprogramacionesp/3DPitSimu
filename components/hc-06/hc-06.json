@@ -11,12 +11,12 @@
     "pinSize": 5,
 
     "pins": [
-        { "id": "key",   "name": "KEY",   "x": 122.21, "y": 5.96,  "type": "input",  "signal": "digital", "optional": true },
-        { "id": "vcc",   "name": "VCC",   "x": 122.21, "y": 14.98, "type": "power",  "signal": "power", "voltage": 3.3 },
-        { "id": "gnd",   "name": "GND",   "x": 122.12, "y": 23.98, "type": "ground", "signal": "ground" },
-        { "id": "txd",   "name": "TXD",   "x": 122.17, "y": 32.80, "type": "gpio",   "signal": "uart" },
-        { "id": "rxd",   "name": "RXD",   "x": 122.25, "y": 41.98, "type": "gpio",   "signal": "uart" },
-        { "id": "state", "name": "State", "x": 122.21, "y": 50.98, "type": "gpio",   "signal": "digital", "optional": true }
+        { "id": "key",   "name": "KEY",   "x": 148.05, "y": 5.77,  "type": "input",  "signal": "digital", "optional": true },
+        { "id": "vcc",   "name": "VCC",   "x": 148.05, "y": 14.79, "type": "power",  "signal": "power", "voltage": 3.3 },
+        { "id": "gnd",   "name": "GND",   "x": 148.05, "y": 23.79, "type": "ground", "signal": "ground" },
+        { "id": "txd",   "name": "TXD",   "x": 148.05, "y": 32.79, "type": "gpio",   "signal": "uart" },
+        { "id": "rxd",   "name": "RXD",   "x": 148.05, "y": 41.79, "type": "gpio",   "signal": "uart" },
+        { "id": "state", "name": "State", "x": 148.05, "y": 50.79, "type": "gpio",   "signal": "digital", "optional": true }
     ],
 
     "properties": {

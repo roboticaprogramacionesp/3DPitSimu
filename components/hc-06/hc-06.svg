@@ -23,6 +23,8 @@
                                 <g gorn="0.3.0.0.0.0.0.0.0" id="breadboard" >
                                     <rect gorn="0.3.0.0.0.0.0.0.0.0" width="127.96388" style="fill:#0a73b1;fill-opacity:1" x="336.94156" id="rect3336" y="478.29791" height="56.700001" />
                                     <ellipse gorn="0.3.0.0.0.0.0.0.0.1" stroke="#1f0000" stroke-opacity="1" cx="459.15323" fill="#b3b3b3" ry="3.5358574" rx="3.6238463" id="KEY" cy="484.26038"  stroke-width="2.60333204"/>
+                                    <rect width="26.574802" style="fill:#b3b3b3;fill-opacity:1;fill-rule:nonzero" x="459.3" y="482.08875" height="4.3310289" />
+                                    <rect width="2.6978669" style="fill:none" x="483.64157" id="connector6pin" y="482.66126" height="2.8207259" />
                                     <ellipse gorn="0.3.0.0.0.0.0.0.0.2" stroke="#1f0000" stroke-opacity="1" cx="459.15323" fill="#b3b3b3" ry="3.5358574" id="VCC" rx="3.6238463" cy="493.27631"  stroke-width="2.60333204"/>
                                     <rect width="26.574802" style="fill:#b3b3b3;fill-opacity:1;fill-rule:nonzero" x="459.25381" y="491.10468" height="4.3310289" />
                                     <rect gorn="0.3.0.0.0.0.0.0.0.4" width="2.6978669" style="fill:none" x="483.64157" y="491.67719" id="connector0pin" height="2.8207259" />
@@ -36,6 +38,8 @@
                                     <rect gorn="0.3.0.0.0.0.0.0.0.12" width="26.574802" style="fill:#b3b3b3;fill-opacity:1;fill-rule:nonzero" x="459.34073" id="connector5pin" y="518.09515" height="4.3310289" />
                                     <rect gorn="0.3.0.0.0.0.0.0.0.13" width="2.6978669" style="fill:none" x="483.64157" y="518.67719" id="connector3pin" height="2.8207259" />
                                     <ellipse gorn="0.3.0.0.0.0.0.0.0.14" stroke="#1f0000" stroke-opacity="1" cx="459.15323" fill="#b3b3b3" ry="3.5358574" id="State" rx="3.6238463" cy="529.27631"  stroke-width="2.60333204"/>
+                                    <rect width="26.574802" style="fill:#b3b3b3;fill-opacity:1;fill-rule:nonzero" x="459.3" y="527.10468" height="4.3310289" />
+                                    <rect width="2.6978669" style="fill:none" x="483.64157" id="connector7pin" y="527.67719" height="2.8207259" />
                                     <g transform="scale(1.0203336,0.98007162)" >
                                         <g >
                                             <g >
