@@ -170,7 +170,7 @@ class TutorialManager {
             icon: "💡",
             category: "💡 LEDs · Salidas digitales",
             demoGif: "assets/tutorial-demos/led_basico.gif",
-            demoCaption: "El LED parpadea encendiéndose y apagándose -- esto es lo que vas a armar y programar en los pasos de abajo.",
+            demoCaption: "El LED integrado de la ESP32 (GPIO2) parpadea encendiéndose y apagándose -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
@@ -184,42 +184,12 @@ class TutorialManager {
                 },
                 {
                     title: "Paso 2 — Coloca la ESP32",
-                    text: "Arrastra la placa ESP32 WeMos D1 R32 desde el panel de componentes (izquierda) hasta el lienzo.",
+                    text: "Arrastra la placa ESP32 WeMos D1 R32 desde el panel de componentes (izquierda) hasta el lienzo. No hace falta agregar ni cablear ningún LED externo -- la propia placa ya trae uno integrado en el pin GPIO2, el mismo que vas a prender y apagar en este tutorial.",
                     highlight: (tm) => tm.highlightToolboxAndCanvas("esp32_wroom"),
                     isDone: (tm) => tm.hasComponent("esp32_wroom"),
                 },
                 {
-                    title: "Paso 3 — Toma un LED",
-                    text: "Arrastra el LED desde el panel de componentes hasta el lienzo, cerca de la ESP32.",
-                    highlight: (tm) => tm.highlightToolboxAndCanvas("led"),
-                    isDone: (tm) => tm.hasComponent("led"),
-                },
-                {
-                    title: "Paso 4 — Conecta el GND al cátodo",
-                    text: "Traza un cable desde un pin GND de la ESP32 hasta el cátodo (–) del LED, la pata más corta.",
-                    highlight: (tm) => tm.highlightPins([
-                        { type: "esp32_wroom", match: (p) => p.type === "ground" },
-                        { type: "led", match: (p) => p.id === "catodo" },
-                    ]),
-                    isDone: (tm) => tm.hasWireBetween(
-                        (pin) => pin.type === "ground",
-                        (comp, pin) => comp.type === "led" && pin.id === "catodo",
-                    ),
-                },
-                {
-                    title: "Paso 5 — Conecta un pin al ánodo",
-                    text: "Elige cualquier pin GPIO libre de la ESP32 y conéctalo al ánodo (+) del LED, la pata más larga.",
-                    highlight: (tm) => tm.highlightPins([
-                        { type: "esp32_wroom", match: (p) => p.type === "gpio" && !p.inputOnly && p.signal !== "uart" },
-                        { type: "led", match: (p) => p.id === "anodo" },
-                    ]),
-                    isDone: (tm) => tm.hasWireBetween(
-                        (pin) => pin.type === "gpio" && !pin.inputOnly && pin.signal !== "uart",
-                        (comp, pin) => comp.type === "led" && pin.id === "anodo",
-                    ),
-                },
-                {
-                    title: "Paso 6 — Guarda tu proyecto",
+                    title: "Paso 3 — Guarda tu proyecto",
                     text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
                     highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
                     onEnter: () => {
@@ -229,14 +199,14 @@ class TutorialManager {
                     isDone: (tm) => !tm.simulator.projectManager.dirty,
                 },
                 {
-                    title: "Paso 7 — Simula el circuito",
+                    title: "Paso 4 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 8 — Escribe o carga tu código",
-                    text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
+                    title: "Paso 5 — Escribe o carga tu código",
+                    text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir (usa Pin(2, Pin.OUT) para controlar el LED integrado). Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     // A diferencia de los pasos anteriores (que solo resaltan
                     // algo que el usuario tiene que hacer), este paso hace la
                     // acción por él: "levantar" el panel MicroPython -- ver
