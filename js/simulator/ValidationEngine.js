@@ -80,7 +80,17 @@ class ValidationEngine {
         }
 
         for (const comp of this.simulator.componentManager.getAll()) {
-            if (comp.type === "esp32_wroom") continue; // ESP32 es central
+            // BUG REAL encontrado al agregar la placa esp32_s3: esto
+            // comparaba contra "esp32_wroom" exacto -- con un ESP32-S3
+            // (o cualquier otro ESP32 futuro) en el lienzo, SIEMPRE
+            // salía "no está conectado a nada" aunque tuviera medio
+            // circuito cableado encima, porque el propio ESP32 nunca
+            // aparece como "from"/"to" de ningún cable (son los OTROS
+            // componentes los que se conectan A él). Mismo criterio de
+            // prefijo que usa el resto del simulador (WasmBridge,
+            // EspNowBus, ComponentManager.getEsp32DisplayLabel) para
+            // reconocer cualquier placa ESP32, no solo la WROOM.
+            if (comp.type.startsWith("esp32")) continue; // ESP32 es central
             if (!connectedComponents.has(comp.id) && this.simulator.componentManager.getAll().length > 1) {
                 warnings.push(`${comp.name || comp.type} no está conectado a nada`);
             }

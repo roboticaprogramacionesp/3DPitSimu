@@ -7,6 +7,12 @@
             "hasBehavior": true
         },
         {
+            "type": "esp32_s3",
+            "name": "ESP32-S3-Uno",
+            "category": "Microcontroladores",
+            "hasBehavior": true
+        },
+        {
             "type": "led",
             "name": "LED",
             "category": "LEDs",
@@ -328,6 +334,16 @@
             "name": "Resistencia",
             "category": "Componentes básicos",
             "hasBehavior": true
+        },
+        {
+            "type": "hc-06",
+            "name": "HC-06 Módulo Bluetooth",
+            "category": "Comunicación"
+        },
+        {
+            "type": "inmp441",
+            "name": "INMP441 Micrófono I2S",
+            "category": "Sensores"
         }
     ]
 }

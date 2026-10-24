@@ -1,0 +1,2980 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="2.77in"
+   height="2.1in"
+   viewBox="0 0 2772.38 2100"
+   version="1.2"
+   id="svg268"
+   sodipodi:docname="DIYables-ESP32-S3-Uno_1_breadboard.svg"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs268" />
+  <sodipodi:namedview
+     id="namedview268"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="in"
+     inkscape:zoom="1.8905286"
+     inkscape:cx="110.02214"
+     inkscape:cy="110.81557"
+     inkscape:window-width="1366"
+     inkscape:window-height="697"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg268" />
+  <desc
+     id="desc1">DIYables ESP32-S3 Uno, breadboard view</desc>
+  <g
+     id="breadboard">
+    <path
+       transform="translate(65.9,0)"
+       d="m 2537.3643,4.2398542 59.9028,59.7777598 v 448.277646 l 99.7639,99.61108 v 1285.08296 l -99.7639,99.6111 v 60.4305 c 2.2083,19.3889 -11.6805,36.9444 -30.9861,39.2222 -2.6111,0.2917 -5.5,0.2917 -8.2639,0 h -2514.513078 c -19.402772,2.2778 -36.9861003,-11.6111 -39.2638774,-30.9583 -0.3194443,-2.7361 -0.3194443,-5.5 0,-8.2778 v -2013.554935 c -2.2638882,-19.402772 11.6388854,-36.9722115 31.0416574,-39.2222108 2.722221,-0.3194443 5.499998,-0.3194443 8.22222,0 h 2493.860278 z"
+       fill="#7d2fa3"
+       stroke="#5c1f7a"
+       stroke-width="8"
+       id="path1" />
+    <circle
+       cx="666.35"
+       cy="100.24"
+       r="72"
+       fill="#d8c27a"
+       id="circle1" />
+    <circle
+       cx="666.35"
+       cy="100.24"
+       r="58"
+       fill="#ffffff"
+       id="circle2" />
+    <circle
+       cx="690.9"
+       cy="1990"
+       r="72"
+       fill="#d8c27a"
+       id="circle3" />
+    <circle
+       cx="690.9"
+       cy="1990"
+       r="58"
+       fill="#ffffff"
+       id="circle4" />
+    <circle
+       cx="2668.39"
+       cy="707"
+       r="72"
+       fill="#d8c27a"
+       id="circle5" />
+    <circle
+       cx="2668.39"
+       cy="707"
+       r="58"
+       fill="#ffffff"
+       id="circle6" />
+    <circle
+       cx="2668.39"
+       cy="1803.52"
+       r="72"
+       fill="#d8c27a"
+       id="circle7" />
+    <circle
+       cx="2668.39"
+       cy="1803.52"
+       r="58"
+       fill="#ffffff"
+       id="circle8" />
+    <rect
+       x="205"
+       y="95"
+       width="50"
+       height="40"
+       fill="#c9c9c9"
+       id="rect8" />
+    <rect
+       x="445"
+       y="95"
+       width="50"
+       height="40"
+       fill="#c9c9c9"
+       id="rect9" />
+    <rect
+       x="205"
+       y="255"
+       width="50"
+       height="40"
+       fill="#c9c9c9"
+       id="rect10" />
+    <rect
+       x="445"
+       y="255"
+       width="50"
+       height="40"
+       fill="#c9c9c9"
+       id="rect11" />
+    <rect
+       x="235"
+       y="75"
+       width="230"
+       height="240"
+       rx="10"
+       fill="#d9d9d9"
+       stroke="#9a9a9a"
+       stroke-width="6"
+       id="rect12" />
+    <circle
+       cx="350"
+       cy="195"
+       r="70"
+       fill="#1e1e1e"
+       id="circle12" />
+    <circle
+       cx="350"
+       cy="195"
+       r="52"
+       fill="#333333"
+       id="circle13" />
+    <rect
+       x="287.9"
+       y="518.5"
+       width="31"
+       height="18"
+       fill="#c9c9c9"
+       id="rect13" />
+    <rect
+       x="287.9"
+       y="563.5"
+       width="31"
+       height="18"
+       fill="#c9c9c9"
+       id="rect14" />
+    <rect
+       x="287.9"
+       y="608.5"
+       width="31"
+       height="18"
+       fill="#c9c9c9"
+       id="rect15" />
+    <rect
+       x="287.9"
+       y="653.5"
+       width="31"
+       height="18"
+       fill="#c9c9c9"
+       id="rect16" />
+    <rect
+       x="287.9"
+       y="698.5"
+       width="31"
+       height="18"
+       fill="#c9c9c9"
+       id="rect17" />
+    <rect
+       x="287.9"
+       y="743.5"
+       width="31"
+       height="18"
+       fill="#c9c9c9"
+       id="rect18" />
+    <rect
+       x="27.9"
+       y="462.5"
+       width="260"
+       height="355"
+       fill="#b3b3b3"
+       id="rect19" />
+    <rect
+       x="27.9"
+       y="462.5"
+       width="45"
+       height="355"
+       fill="#999999"
+       id="rect20" />
+    <rect
+       x="129.9"
+       y="440.5"
+       width="28"
+       height="22"
+       fill="#999999"
+       id="rect21" />
+    <rect
+       x="129.9"
+       y="817.5"
+       width="28"
+       height="22"
+       fill="#999999"
+       id="rect22" />
+    <g
+       transform="matrix(0,-1,1,0,470,1010)"
+       id="g22">
+      <text
+         x="0"
+         y="23.04"
+         text-anchor="start"
+         font-size="64"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text22">USB</text>
+    </g>
+    <rect
+       x="8"
+       y="1545"
+       width="585"
+       height="345"
+       rx="12"
+       fill="#151515"
+       stroke="#000000"
+       stroke-width="6"
+       id="rect23" />
+    <rect
+       x="8"
+       y="1595"
+       width="90"
+       height="245"
+       fill="#262626"
+       id="rect24" />
+    <rect
+       x="420"
+       y="1580"
+       width="140"
+       height="275"
+       rx="10"
+       fill="#202020"
+       id="rect25" />
+    <rect
+       x="500"
+       y="1890"
+       width="120"
+       height="50"
+       fill="#c9c9c9"
+       id="rect26" />
+    <text
+       x="260"
+       y="2045"
+       font-size="64"
+       font-family="Droid Sans"
+       font-weight="bold"
+       fill="#ffffff"
+       text-anchor="start"
+       id="text26">DC</text>
+    <rect
+       x="729"
+       y="410"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect27" />
+    <rect
+       x="729"
+       y="705"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect28" />
+    <rect
+       x="779"
+       y="410"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect29" />
+    <rect
+       x="779"
+       y="705"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect30" />
+    <rect
+       x="829"
+       y="410"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect31" />
+    <rect
+       x="829"
+       y="705"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect32" />
+    <rect
+       x="879"
+       y="410"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect33" />
+    <rect
+       x="879"
+       y="705"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect34" />
+    <rect
+       x="929"
+       y="410"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect35" />
+    <rect
+       x="929"
+       y="705"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect36" />
+    <rect
+       x="979"
+       y="410"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect37" />
+    <rect
+       x="979"
+       y="705"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect38" />
+    <rect
+       x="1029"
+       y="410"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect39" />
+    <rect
+       x="1029"
+       y="705"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect40" />
+    <rect
+       x="1079"
+       y="410"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect41" />
+    <rect
+       x="1079"
+       y="705"
+       width="22"
+       height="60"
+       fill="#c9c9c9"
+       id="rect42" />
+    <rect
+       x="715"
+       y="470"
+       width="400"
+       height="235"
+       rx="8"
+       fill="#1f1f1f"
+       id="rect43" />
+    <circle
+       cx="747"
+       cy="673"
+       r="14"
+       fill="#3a3a3a"
+       id="circle43" />
+    <text
+       transform="translate(915,600)"
+       font-size="48"
+       font-family="Droid Sans"
+       font-weight="bold"
+       fill="#8a8a8a"
+       text-anchor="middle"
+       id="text43">CH340C</text>
+    <g
+       id="diyables_logo"
+       transform="matrix(0.29,0,0,0.29,715,795)"
+       fill="#ffffff">
+      <g
+         id="g50">
+        <g
+           id="g45" />
+        <g
+           id="g49" />
+      </g>
+    </g>
+    <rect
+       x="910"
+       y="1125"
+       width="280"
+       height="210"
+       rx="18"
+       fill="#7a7a7a"
+       stroke="#555555"
+       stroke-width="6"
+       id="rect51" />
+    <rect
+       x="945"
+       y="1160"
+       width="210"
+       height="140"
+       rx="10"
+       fill="#9b9b9b"
+       id="rect52" />
+    <text
+       x="1050"
+       y="1248"
+       font-size="60"
+       font-family="Droid Sans"
+       font-weight="bold"
+       fill="#333333"
+       text-anchor="middle"
+       id="text52">100</text>
+    <rect
+       x="1300"
+       y="975"
+       width="130"
+       height="300"
+       fill="#c9c9c9"
+       id="rect53" />
+    <rect
+       x="1240"
+       y="1010"
+       width="70"
+       height="40"
+       fill="#c9c9c9"
+       id="rect54" />
+    <rect
+       x="1240"
+       y="1110"
+       width="70"
+       height="40"
+       fill="#c9c9c9"
+       id="rect55" />
+    <rect
+       x="1240"
+       y="1210"
+       width="70"
+       height="40"
+       fill="#c9c9c9"
+       id="rect56" />
+    <rect
+       x="1270"
+       y="985"
+       width="200"
+       height="280"
+       rx="6"
+       fill="#1f1f1f"
+       id="rect57" />
+    <g
+       transform="matrix(0,-1,1,0,1370,1125)"
+       id="g57">
+      <text
+         x="0"
+         y="14"
+         font-size="40"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#8a8a8a"
+         text-anchor="middle"
+         id="text57">AMS1117</text>
+    </g>
+    <rect
+       x="522"
+       y="1185"
+       width="24"
+       height="200"
+       fill="#c9c9c9"
+       id="rect58" />
+    <rect
+       x="572"
+       y="1185"
+       width="24"
+       height="200"
+       fill="#c9c9c9"
+       id="rect59" />
+    <rect
+       x="622"
+       y="1185"
+       width="24"
+       height="200"
+       fill="#c9c9c9"
+       id="rect60" />
+    <rect
+       x="500"
+       y="1210"
+       width="150"
+       height="150"
+       fill="#1f1f1f"
+       id="rect61" />
+    <rect
+       x="630"
+       y="1530"
+       width="40"
+       height="100"
+       fill="#c9c9c9"
+       id="rect62" />
+    <rect
+       x="880"
+       y="1530"
+       width="40"
+       height="100"
+       fill="#c9c9c9"
+       id="rect63" />
+    <rect
+       x="655"
+       y="1515"
+       width="245"
+       height="130"
+       fill="#1f1f1f"
+       id="rect64" />
+    <rect
+       x="670"
+       y="1515"
+       width="22"
+       height="130"
+       fill="#8a8a8a"
+       id="rect65" />
+    <text
+       x="800"
+       y="1600"
+       font-size="46"
+       font-family="Droid Sans"
+       font-weight="bold"
+       fill="#8a8a8a"
+       text-anchor="middle"
+       id="text65">M7</text>
+    <rect
+       x="1470"
+       y="690"
+       width="160"
+       height="80"
+       rx="6"
+       fill="#e3a72f"
+       id="rect66" />
+    <rect
+       x="1470"
+       y="690"
+       width="35"
+       height="80"
+       fill="#b8822a"
+       id="rect67" />
+    <rect
+       x="1440"
+       y="1290"
+       width="110"
+       height="110"
+       fill="#f2f2f2"
+       stroke="#bdbdbd"
+       stroke-width="5"
+       id="rect68" />
+    <circle
+       cx="1495"
+       cy="1345"
+       r="38"
+       fill="#e8e1d0"
+       stroke="#d3c9b0"
+       stroke-width="4"
+       id="circle68" />
+    <text
+       x="1495"
+       y="1460"
+       font-size="38"
+       font-family="Droid Sans"
+       font-weight="bold"
+       fill="#ffffff"
+       text-anchor="middle"
+       id="text68">RGB</text>
+    <rect
+       x="570"
+       y="405"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect69" />
+    <rect
+       x="570"
+       y="405"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect70" />
+    <rect
+       x="644.1"
+       y="405"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect71" />
+    <rect
+       x="690"
+       y="405"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect72" />
+    <rect
+       x="690"
+       y="405"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect73" />
+    <rect
+       x="764.1"
+       y="405"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect74" />
+    <rect
+       x="1170"
+       y="405"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect75" />
+    <rect
+       x="1170"
+       y="405"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect76" />
+    <rect
+       x="1244.1"
+       y="405"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect77" />
+    <rect
+       x="1170"
+       y="470"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect78" />
+    <rect
+       x="1170"
+       y="470"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect79" />
+    <rect
+       x="1244.1"
+       y="470"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect80" />
+    <rect
+       x="1300"
+       y="830"
+       width="48"
+       height="95"
+       fill="#2b2b2b"
+       id="rect81" />
+    <rect
+       x="1300"
+       y="830"
+       width="48"
+       height="20.9"
+       fill="#c9c9c9"
+       id="rect82" />
+    <rect
+       x="1300"
+       y="904.1"
+       width="48"
+       height="20.9"
+       fill="#c9c9c9"
+       id="rect83" />
+    <rect
+       x="1360"
+       y="830"
+       width="48"
+       height="95"
+       fill="#2b2b2b"
+       id="rect84" />
+    <rect
+       x="1360"
+       y="830"
+       width="48"
+       height="20.9"
+       fill="#c9c9c9"
+       id="rect85" />
+    <rect
+       x="1360"
+       y="904.1"
+       width="48"
+       height="20.9"
+       fill="#c9c9c9"
+       id="rect86" />
+    <rect
+       x="350"
+       y="560"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect87" />
+    <rect
+       x="350"
+       y="560"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect88" />
+    <rect
+       x="424.1"
+       y="560"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect89" />
+    <rect
+       x="350"
+       y="645"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect90" />
+    <rect
+       x="350"
+       y="645"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect91" />
+    <rect
+       x="424.1"
+       y="645"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect92" />
+    <rect
+       x="370"
+       y="1075"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect93" />
+    <rect
+       x="370"
+       y="1075"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect94" />
+    <rect
+       x="444.1"
+       y="1075"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect95" />
+    <rect
+       x="370"
+       y="1135"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect96" />
+    <rect
+       x="370"
+       y="1135"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect97" />
+    <rect
+       x="444.1"
+       y="1135"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect98" />
+    <rect
+       x="370"
+       y="1195"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect99" />
+    <rect
+       x="370"
+       y="1195"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect100" />
+    <rect
+       x="444.1"
+       y="1195"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect101" />
+    <rect
+       x="370"
+       y="1255"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect102" />
+    <rect
+       x="370"
+       y="1255"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect103" />
+    <rect
+       x="444.1"
+       y="1255"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect104" />
+    <rect
+       x="660"
+       y="1290"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect105" />
+    <rect
+       x="660"
+       y="1290"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect106" />
+    <rect
+       x="734.1"
+       y="1290"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect107" />
+    <rect
+       x="660"
+       y="1375"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect108" />
+    <rect
+       x="660"
+       y="1375"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect109" />
+    <rect
+       x="734.1"
+       y="1375"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect110" />
+    <rect
+       x="1580"
+       y="1470"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect111" />
+    <rect
+       x="1580"
+       y="1470"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect112" />
+    <rect
+       x="1654.1"
+       y="1470"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect113" />
+    <rect
+       x="2350"
+       y="770"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect114" />
+    <rect
+       x="2350"
+       y="770"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect115" />
+    <rect
+       x="2424.1"
+       y="770"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect116" />
+    <rect
+       x="2460"
+       y="770"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect117" />
+    <rect
+       x="2460"
+       y="770"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect118" />
+    <rect
+       x="2534.1"
+       y="770"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect119" />
+    <rect
+       x="720"
+       y="1720"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect120" />
+    <rect
+       x="720"
+       y="1720"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect121" />
+    <rect
+       x="794.1"
+       y="1720"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect122" />
+    <rect
+       x="840"
+       y="1720"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect123" />
+    <rect
+       x="840"
+       y="1720"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect124" />
+    <rect
+       x="914.1"
+       y="1720"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect125" />
+    <rect
+       x="980"
+       y="1720"
+       width="95"
+       height="48"
+       fill="#2b2b2b"
+       id="rect126" />
+    <rect
+       x="980"
+       y="1720"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect127" />
+    <rect
+       x="1054.1"
+       y="1720"
+       width="20.9"
+       height="48"
+       fill="#c9c9c9"
+       id="rect128" />
+    <rect
+       x="1010"
+       y="1415"
+       width="120"
+       height="70"
+       fill="#8b6a4a"
+       id="rect129" />
+    <rect
+       x="1010"
+       y="1415"
+       width="26.4"
+       height="70"
+       fill="#c9c9c9"
+       id="rect130" />
+    <rect
+       x="1103.6"
+       y="1415"
+       width="26.4"
+       height="70"
+       fill="#c9c9c9"
+       id="rect131" />
+    <rect
+       x="1150"
+       y="1415"
+       width="120"
+       height="70"
+       fill="#8b6a4a"
+       id="rect132" />
+    <rect
+       x="1150"
+       y="1415"
+       width="26.4"
+       height="70"
+       fill="#c9c9c9"
+       id="rect133" />
+    <rect
+       x="1243.6"
+       y="1415"
+       width="26.4"
+       height="70"
+       fill="#c9c9c9"
+       id="rect134" />
+    <rect
+       x="380"
+       y="1400"
+       width="120"
+       height="70"
+       fill="#8b6a4a"
+       id="rect135" />
+    <rect
+       x="380"
+       y="1400"
+       width="26.4"
+       height="70"
+       fill="#c9c9c9"
+       id="rect136" />
+    <rect
+       x="473.6"
+       y="1400"
+       width="26.4"
+       height="70"
+       fill="#c9c9c9"
+       id="rect137" />
+    <rect
+       x="520"
+       y="1460"
+       width="120"
+       height="70"
+       fill="#8b6a4a"
+       id="rect138" />
+    <rect
+       x="520"
+       y="1460"
+       width="26.4"
+       height="70"
+       fill="#c9c9c9"
+       id="rect139" />
+    <rect
+       x="613.6"
+       y="1460"
+       width="26.4"
+       height="70"
+       fill="#c9c9c9"
+       id="rect140" />
+    <g
+       id="esp32_s3_wroom_1">
+      <rect
+         x="1721"
+         y="880"
+         width="1004"
+         height="709"
+         rx="10"
+         fill="#151515"
+         id="rect141" />
+      <rect
+         x="1766"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect142" />
+      <rect
+         x="1766"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect143" />
+      <rect
+         x="1816"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect144" />
+      <rect
+         x="1816"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect145" />
+      <rect
+         x="1866"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect146" />
+      <rect
+         x="1866"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect147" />
+      <rect
+         x="1916"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect148" />
+      <rect
+         x="1916"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect149" />
+      <rect
+         x="1966"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect150" />
+      <rect
+         x="1966"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect151" />
+      <rect
+         x="2016"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect152" />
+      <rect
+         x="2016"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect153" />
+      <rect
+         x="2066"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect154" />
+      <rect
+         x="2066"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect155" />
+      <rect
+         x="2116"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect156" />
+      <rect
+         x="2116"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect157" />
+      <rect
+         x="2166"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect158" />
+      <rect
+         x="2166"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect159" />
+      <rect
+         x="2216"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect160" />
+      <rect
+         x="2216"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect161" />
+      <rect
+         x="2266"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect162" />
+      <rect
+         x="2266"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect163" />
+      <rect
+         x="2316"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect164" />
+      <rect
+         x="2316"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect165" />
+      <rect
+         x="2366"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect166" />
+      <rect
+         x="2366"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect167" />
+      <rect
+         x="2416"
+         y="874"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect168" />
+      <rect
+         x="2416"
+         y="1563"
+         width="26"
+         height="32"
+         fill="#d4a017"
+         id="rect169" />
+      <rect
+         x="1715"
+         y="940"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect170" />
+      <rect
+         x="1715"
+         y="990"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect171" />
+      <rect
+         x="1715"
+         y="1040"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect172" />
+      <rect
+         x="1715"
+         y="1090"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect173" />
+      <rect
+         x="1715"
+         y="1140"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect174" />
+      <rect
+         x="1715"
+         y="1190"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect175" />
+      <rect
+         x="1715"
+         y="1240"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect176" />
+      <rect
+         x="1715"
+         y="1290"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect177" />
+      <rect
+         x="1715"
+         y="1340"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect178" />
+      <rect
+         x="1715"
+         y="1390"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect179" />
+      <rect
+         x="1715"
+         y="1440"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect180" />
+      <rect
+         x="1715"
+         y="1490"
+         width="32"
+         height="26"
+         fill="#d4a017"
+         id="rect181" />
+      <rect
+         x="1761"
+         y="918"
+         width="694"
+         height="633"
+         rx="14"
+         fill="#d3d3d3"
+         stroke="#9a9a9a"
+         stroke-width="6"
+         id="rect182" />
+      <g
+         id="qr_code" />
+      <path
+         d="M 2505 1499 V 950 H 2530 V 1499 H 2555 V 950 H 2580 V 1499 H 2605 V 950 H 2630 V 1499 H 2655 V 950 H 2680 V 1499 H 2705 V 950"
+         fill="none"
+         stroke="#3b3b3b"
+         stroke-width="18"
+         id="path184"
+         style="stroke:#fff53b;stroke-opacity:1" />
+    </g>
+    <text
+       x="1700"
+       y="640"
+       font-size="90"
+       font-family="Droid Sans"
+       font-weight="bold"
+       fill="#ffffff"
+       text-anchor="start"
+       id="text184">ESP32-S3</text>
+    <rect
+       x="756.82"
+       y="50"
+       width="1000"
+       height="100"
+       fill="#1c1c1c"
+       stroke="#000000"
+       stroke-width="4"
+       id="rect184" />
+    <rect
+       x="766.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect185" />
+    <line
+       x1="856.82"
+       y1="50"
+       x2="856.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line185" />
+    <rect
+       x="866.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect186" />
+    <line
+       x1="956.82"
+       y1="50"
+       x2="956.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line186" />
+    <rect
+       x="966.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect187" />
+    <line
+       x1="1056.82"
+       y1="50"
+       x2="1056.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line187" />
+    <rect
+       x="1066.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect188" />
+    <line
+       x1="1156.82"
+       y1="50"
+       x2="1156.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line188" />
+    <rect
+       x="1166.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect189" />
+    <line
+       x1="1256.82"
+       y1="50"
+       x2="1256.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line189" />
+    <rect
+       x="1266.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect190" />
+    <line
+       x1="1356.82"
+       y1="50"
+       x2="1356.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line190" />
+    <rect
+       x="1366.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect191" />
+    <line
+       x1="1456.82"
+       y1="50"
+       x2="1456.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line191" />
+    <rect
+       x="1466.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect192" />
+    <line
+       x1="1556.82"
+       y1="50"
+       x2="1556.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line192" />
+    <rect
+       x="1566.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect193" />
+    <line
+       x1="1656.82"
+       y1="50"
+       x2="1656.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line193" />
+    <rect
+       x="1666.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect194" />
+    <line
+       x1="1756.82"
+       y1="50"
+       x2="1756.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line194" />
+    <rect
+       x="1816.82"
+       y="50"
+       width="800"
+       height="100"
+       fill="#1c1c1c"
+       stroke="#000000"
+       stroke-width="4"
+       id="rect195" />
+    <rect
+       x="1826.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect196" />
+    <line
+       x1="1916.82"
+       y1="50"
+       x2="1916.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line196" />
+    <rect
+       x="1926.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect197" />
+    <line
+       x1="2016.82"
+       y1="50"
+       x2="2016.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line197" />
+    <rect
+       x="2026.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect198" />
+    <line
+       x1="2116.82"
+       y1="50"
+       x2="2116.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line198" />
+    <rect
+       x="2126.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect199" />
+    <line
+       x1="2216.82"
+       y1="50"
+       x2="2216.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line199" />
+    <rect
+       x="2226.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect200" />
+    <line
+       x1="2316.82"
+       y1="50"
+       x2="2316.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line200" />
+    <rect
+       x="2326.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect201" />
+    <line
+       x1="2416.82"
+       y1="50"
+       x2="2416.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line201" />
+    <rect
+       x="2426.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect202" />
+    <line
+       x1="2516.82"
+       y1="50"
+       x2="2516.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line202" />
+    <rect
+       x="2526.82"
+       y="60"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect203" />
+    <line
+       x1="2616.82"
+       y1="50"
+       x2="2616.82"
+       y2="150"
+       stroke="#000000"
+       stroke-width="4"
+       id="line203" />
+    <rect
+       x="1116.82"
+       y="1950"
+       width="800"
+       height="100"
+       fill="#1c1c1c"
+       stroke="#000000"
+       stroke-width="4"
+       id="rect204" />
+    <rect
+       x="1126.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect205" />
+    <line
+       x1="1216.82"
+       y1="1950"
+       x2="1216.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line205" />
+    <rect
+       x="1226.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect206" />
+    <line
+       x1="1316.82"
+       y1="1950"
+       x2="1316.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line206" />
+    <rect
+       x="1326.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect207" />
+    <line
+       x1="1416.82"
+       y1="1950"
+       x2="1416.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line207" />
+    <rect
+       x="1426.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect208" />
+    <line
+       x1="1516.82"
+       y1="1950"
+       x2="1516.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line208" />
+    <rect
+       x="1526.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect209" />
+    <line
+       x1="1616.82"
+       y1="1950"
+       x2="1616.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line209" />
+    <rect
+       x="1626.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect210" />
+    <line
+       x1="1716.82"
+       y1="1950"
+       x2="1716.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line210" />
+    <rect
+       x="1726.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect211" />
+    <line
+       x1="1816.82"
+       y1="1950"
+       x2="1816.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line211" />
+    <rect
+       x="1826.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect212" />
+    <line
+       x1="1916.82"
+       y1="1950"
+       x2="1916.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line212" />
+    <rect
+       x="2016.82"
+       y="1950"
+       width="600"
+       height="100"
+       fill="#1c1c1c"
+       stroke="#000000"
+       stroke-width="4"
+       id="rect213" />
+    <rect
+       x="2026.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect214" />
+    <line
+       x1="2116.82"
+       y1="1950"
+       x2="2116.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line214" />
+    <rect
+       x="2126.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect215" />
+    <line
+       x1="2216.82"
+       y1="1950"
+       x2="2216.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line215" />
+    <rect
+       x="2226.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect216" />
+    <line
+       x1="2316.82"
+       y1="1950"
+       x2="2316.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line216" />
+    <rect
+       x="2326.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect217" />
+    <line
+       x1="2416.82"
+       y1="1950"
+       x2="2416.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line217" />
+    <rect
+       x="2426.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect218" />
+    <line
+       x1="2516.82"
+       y1="1950"
+       x2="2516.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line218" />
+    <rect
+       x="2526.82"
+       y="1960"
+       width="80"
+       height="80"
+       fill="#2a2a2a"
+       id="rect219" />
+    <line
+       x1="2616.82"
+       y1="1950"
+       x2="2616.82"
+       y2="2050"
+       stroke="#000000"
+       stroke-width="4"
+       id="line219" />
+    <line
+       x1="1200"
+       y1="285"
+       x2="1700"
+       y2="285"
+       stroke="#ffffff"
+       stroke-width="7"
+       id="line220" />
+    <line
+       x1="1830"
+       y1="285"
+       x2="2600"
+       y2="285"
+       stroke="#ffffff"
+       stroke-width="7"
+       id="line221" />
+    <text
+       x="1300"
+       y="340"
+       font-size="42"
+       font-family="Droid Sans"
+       font-weight="bold"
+       fill="#ffffff"
+       text-anchor="middle"
+       id="text221">SPI</text>
+    <text
+       x="2560"
+       y="330"
+       font-size="42"
+       font-family="Droid Sans"
+       font-weight="bold"
+       fill="#ffffff"
+       text-anchor="end"
+       id="text222">DIGITAL</text>
+    <line
+       x1="2030"
+       y1="1825"
+       x2="2570"
+       y2="1825"
+       stroke="#ffffff"
+       stroke-width="7"
+       id="line222" />
+    <text
+       x="2300"
+       y="1810"
+       font-size="42"
+       font-family="Droid Sans"
+       font-weight="bold"
+       fill="#ffffff"
+       text-anchor="middle"
+       id="text223">ANALOG</text>
+    <rect
+       id="connector3pin"
+       x="1147.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1166.82,1930)"
+       id="g224">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text224">IO0</text>
+    </g>
+    <rect
+       id="connector4pin"
+       x="1247.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1266.82,1930)"
+       id="g225">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text225">5V</text>
+    </g>
+    <rect
+       id="connector5pin"
+       x="1347.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1366.82,1930)"
+       id="g226">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text226">RST</text>
+    </g>
+    <rect
+       id="connector6pin"
+       x="1447.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1466.82,1930)"
+       id="g227">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text227">3V3</text>
+    </g>
+    <rect
+       id="connector7pin"
+       x="1547.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1566.82,1930)"
+       id="g228">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text228">5V</text>
+    </g>
+    <rect
+       id="connector8pin"
+       x="1647.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1666.82,1930)"
+       id="g229">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text229">GND</text>
+    </g>
+    <rect
+       id="connector9pin"
+       x="1747.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1766.82,1930)"
+       id="g230">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text230">GND</text>
+    </g>
+    <rect
+       id="connector10pin"
+       x="1847.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1866.82,1930)"
+       id="g231">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text231">VIN</text>
+    </g>
+    <rect
+       id="connector11pin"
+       x="2047.44"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2066.82,1930)"
+       id="g232">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text232">IO2</text>
+    </g>
+    <rect
+       id="connector12pin"
+       x="2147.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2166.82,1930)"
+       id="g233">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text233">IO1</text>
+    </g>
+    <rect
+       id="connector13pin"
+       x="2247.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2266.82,1930)"
+       id="g234">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text234">IO7</text>
+    </g>
+    <rect
+       id="connector14pin"
+       x="2347.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2366.82,1930)"
+       id="g235">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text235">IO6</text>
+    </g>
+    <rect
+       id="connector15pin"
+       x="2447.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2466.82,1930)"
+       id="g236">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text236">IO5</text>
+    </g>
+    <rect
+       id="connector16pin"
+       x="2547.43"
+       y="1980.62"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2566.82,1930)"
+       id="g237">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="start"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text237">IO4</text>
+    </g>
+    <rect
+       id="connector33pin"
+       x="2547.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2566.82,168)"
+       id="g238">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text238">IO44</text>
+    </g>
+    <rect
+       id="connector34pin"
+       x="2447.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2466.82,168)"
+       id="g239">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text239">IO43</text>
+    </g>
+    <rect
+       id="connector35pin"
+       x="2347.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2366.82,168)"
+       id="g240">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text240">IO18</text>
+    </g>
+    <rect
+       id="connector36pin"
+       x="2247.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2266.82,168)"
+       id="g241">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text241">IO17</text>
+    </g>
+    <rect
+       id="connector37pin"
+       x="2147.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2166.82,168)"
+       id="g242">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text242">IO19</text>
+    </g>
+    <rect
+       id="connector38pin"
+       x="2047.44"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,2066.82,168)"
+       id="g243">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text243">IO20</text>
+    </g>
+    <rect
+       id="connector39pin"
+       x="1947.44"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1966.82,168)"
+       id="g244">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text244">IO3</text>
+    </g>
+    <rect
+       id="connector40pin"
+       x="1847.44"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1866.82,168)"
+       id="g245">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text245">IO14</text>
+    </g>
+    <rect
+       id="connector41pin"
+       x="1687.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1706.82,168)"
+       id="g246">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text246">IO21</text>
+    </g>
+    <rect
+       id="connector42pin"
+       x="1587.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1606.82,168)"
+       id="g247">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text247">IO46</text>
+    </g>
+    <rect
+       id="connector43pin"
+       x="1487.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1506.82,168)"
+       id="g248">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text248">IO10</text>
+    </g>
+    <rect
+       id="connector44pin"
+       x="1387.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1406.82,168)"
+       id="g249">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text249">IO11</text>
+    </g>
+    <rect
+       id="connector45pin"
+       x="1287.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1306.82,168)"
+       id="g250">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text250">IO13</text>
+    </g>
+    <rect
+       id="connector46pin"
+       x="1187.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1206.82,168)"
+       id="g251">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text251">IO12</text>
+    </g>
+    <rect
+       id="connector47pin"
+       x="1087.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1106.82,168)"
+       id="g252">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text252">GND</text>
+    </g>
+    <rect
+       id="connector48pin"
+       x="987.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,1006.82,168)"
+       id="g253">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text253">RST</text>
+    </g>
+    <rect
+       id="connector49pin"
+       x="887.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,906.82,168)"
+       id="g254">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text254">IO8</text>
+    </g>
+    <rect
+       id="connector50pin"
+       x="787.43"
+       y="80.61"
+       width="38.77"
+       height="38.77"
+       fill="#0d0d0d" />
+    <g
+       transform="matrix(0,-1,1,0,806.82,168)"
+       id="g255">
+      <text
+         x="0"
+         y="15.84"
+         text-anchor="end"
+         font-size="44"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text255">IO9</text>
+    </g>
+    <circle
+       id="connector51pin"
+       cx="1506.82"
+       cy="350"
+       r="34"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="1506.82"
+       cy="350"
+       r="17"
+       fill="#3b2244"
+       id="circle255" />
+    <g
+       transform="matrix(0,-1,1,0,1506.82,400)"
+       id="g256">
+      <text
+         x="0"
+         y="14.4"
+         text-anchor="end"
+         font-size="40"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text256">IO35</text>
+    </g>
+    <circle
+       id="connector52pin"
+       cx="1606.82"
+       cy="350"
+       r="34"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="1606.82"
+       cy="350"
+       r="17"
+       fill="#3b2244"
+       id="circle256" />
+    <g
+       transform="matrix(0,-1,1,0,1606.82,400)"
+       id="g257">
+      <text
+         x="0"
+         y="14.4"
+         text-anchor="end"
+         font-size="40"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text257">IO36</text>
+    </g>
+    <circle
+       id="connector53pin"
+       cx="1706.82"
+       cy="350"
+       r="34"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="1706.82"
+       cy="350"
+       r="17"
+       fill="#3b2244"
+       id="circle257" />
+    <g
+       transform="matrix(0,-1,1,0,1706.82,400)"
+       id="g258">
+      <text
+         x="0"
+         y="14.4"
+         text-anchor="end"
+         font-size="40"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text258">IO37</text>
+    </g>
+    <circle
+       id="connector54pin"
+       cx="1806.82"
+       cy="350"
+       r="34"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="1806.82"
+       cy="350"
+       r="17"
+       fill="#3b2244"
+       id="circle258" />
+    <g
+       transform="matrix(0,-1,1,0,1806.82,400)"
+       id="g259">
+      <text
+         x="0"
+         y="14.4"
+         text-anchor="end"
+         font-size="40"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text259">IO38</text>
+    </g>
+    <circle
+       id="connector55pin"
+       cx="1906.82"
+       cy="350"
+       r="34"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="1906.82"
+       cy="350"
+       r="17"
+       fill="#3b2244"
+       id="circle259" />
+    <g
+       transform="matrix(0,-1,1,0,1906.82,400)"
+       id="g260">
+      <text
+         x="0"
+         y="14.4"
+         text-anchor="end"
+         font-size="40"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text260">IO39</text>
+    </g>
+    <circle
+       id="connector56pin"
+       cx="2006.82"
+       cy="350"
+       r="34"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="2006.82"
+       cy="350"
+       r="17"
+       fill="#3b2244"
+       id="circle260" />
+    <g
+       transform="matrix(0,-1,1,0,2006.82,400)"
+       id="g261">
+      <text
+         x="0"
+         y="14.4"
+         text-anchor="end"
+         font-size="40"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text261">IO40</text>
+    </g>
+    <circle
+       id="connector57pin"
+       cx="2106.82"
+       cy="350"
+       r="34"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="2106.82"
+       cy="350"
+       r="17"
+       fill="#3b2244"
+       id="circle261" />
+    <g
+       transform="matrix(0,-1,1,0,2106.82,400)"
+       id="g262">
+      <text
+         x="0"
+         y="14.4"
+         text-anchor="end"
+         font-size="40"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text262">IO41</text>
+    </g>
+    <rect
+       id="connector58pin"
+       x="2172.82"
+       y="316"
+       width="68"
+       height="68"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="2206.82"
+       cy="350"
+       r="17"
+       fill="#3b2244"
+       id="circle262" />
+    <g
+       transform="matrix(0,-1,1,0,2206.82,400)"
+       id="g263">
+      <text
+         x="0"
+         y="14.4"
+         text-anchor="end"
+         font-size="40"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text263">IO42</text>
+    </g>
+    <rect
+       id="connector59pin"
+       x="1432.82"
+       y="1746"
+       width="68"
+       height="68"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="1466.82"
+       cy="1780"
+       r="17"
+       fill="#3b2244"
+       id="circle263" />
+    <g
+       transform="matrix(0,-1,1,0,1466.82,1735)"
+       id="g264">
+      <text
+         x="0"
+         y="12.96"
+         text-anchor="start"
+         font-size="36"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text264">IO45</text>
+    </g>
+    <circle
+       id="connector60pin"
+       cx="1566.82"
+       cy="1780"
+       r="34"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="1566.82"
+       cy="1780"
+       r="17"
+       fill="#3b2244"
+       id="circle264" />
+    <g
+       transform="matrix(0,-1,1,0,1566.82,1735)"
+       id="g265">
+      <text
+         x="0"
+         y="12.96"
+         text-anchor="start"
+         font-size="36"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text265">IO16</text>
+    </g>
+    <circle
+       id="connector61pin"
+       cx="1666.82"
+       cy="1780"
+       r="34"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="1666.82"
+       cy="1780"
+       r="17"
+       fill="#3b2244"
+       id="circle265" />
+    <g
+       transform="matrix(0,-1,1,0,1666.82,1735)"
+       id="g266">
+      <text
+         x="0"
+         y="12.96"
+         text-anchor="start"
+         font-size="36"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text266">IO15</text>
+    </g>
+    <circle
+       id="connector62pin"
+       cx="1766.82"
+       cy="1780"
+       r="34"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="1766.82"
+       cy="1780"
+       r="17"
+       fill="#3b2244"
+       id="circle266" />
+    <g
+       transform="matrix(0,-1,1,0,1766.82,1735)"
+       id="g267">
+      <text
+         x="0"
+         y="12.96"
+         text-anchor="start"
+         font-size="36"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text267">IO47</text>
+    </g>
+    <circle
+       id="connector63pin"
+       cx="1866.82"
+       cy="1780"
+       r="34"
+       fill="#e4e4e4"
+       stroke="#ffffff"
+       stroke-width="7" />
+    <circle
+       cx="1866.82"
+       cy="1780"
+       r="17"
+       fill="#3b2244"
+       id="circle267" />
+    <g
+       transform="matrix(0,-1,1,0,1866.82,1735)"
+       id="g268">
+      <text
+         x="0"
+         y="12.96"
+         text-anchor="start"
+         font-size="36"
+         font-family="Droid Sans"
+         font-weight="bold"
+         fill="#ffffff"
+         id="text268">IO48</text>
+    </g>
+  </g>
+</svg>

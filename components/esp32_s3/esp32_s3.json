@@ -1,0 +1,58 @@
+{
+    "type": "esp32_s3",
+    "name": "ESP32-S3-Uno",
+
+    "width": 277.238,
+    "height": 210,
+
+    "svg": "components/esp32_s3/esp32_s3.svg",
+
+    "pinShape": "square",
+    "pinSize": 6,
+
+    "pins": [
+        { "id": "io9",   "name": "GPIO9",  "x": 80.68,  "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io8",   "name": "GPIO8",  "x": 90.68,  "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "rst_0", "name": "RST",    "x": 100.68, "y": 10, "type": "input",  "signal": "reset" },
+        { "id": "gnd_0", "name": "GND",    "x": 110.68, "y": 10, "type": "ground", "signal": "ground" },
+        { "id": "io12",  "name": "GPIO12", "x": 120.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io13",  "name": "GPIO13", "x": 130.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io11",  "name": "GPIO11", "x": 140.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io10",  "name": "GPIO10", "x": 150.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io46",  "name": "GPIO46", "x": 160.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io21",  "name": "GPIO21", "x": 170.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io14",  "name": "GPIO14", "x": 186.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io3",   "name": "GPIO3",  "x": 196.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io20",  "name": "GPIO20", "x": 206.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io19",  "name": "GPIO19", "x": 216.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io17",  "name": "GPIO17", "x": 226.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io18",  "name": "GPIO18", "x": 236.68, "y": 10, "type": "gpio",   "signal": "digital" },
+        { "id": "io43",  "name": "GPIO43 (TX0)", "x": 246.68, "y": 10, "type": "gpio", "signal": "uart" },
+        { "id": "io44",  "name": "GPIO44 (RX0)", "x": 256.68, "y": 10, "type": "gpio", "signal": "uart" },
+
+        { "id": "io42",  "name": "GPIO42", "x": 220.68, "y": 35,  "type": "gpio", "signal": "digital" },
+        { "id": "io45",  "name": "GPIO45", "x": 146.68, "y": 178, "type": "gpio", "signal": "digital" },
+
+        { "id": "io0",   "name": "GPIO0 (BOOT)", "x": 116.68, "y": 200, "type": "gpio",   "signal": "digital" },
+        { "id": "5v_1",  "name": "5V",           "x": 126.68, "y": 200, "type": "power",  "signal": "power", "voltage": 5 },
+        { "id": "rst_1", "name": "RST",          "x": 136.68, "y": 200, "type": "input",  "signal": "reset" },
+        { "id": "3v3",   "name": "3V3",          "x": 146.68, "y": 200, "type": "power",  "signal": "power", "voltage": 3.3 },
+        { "id": "5v_2",  "name": "5V",           "x": 156.68, "y": 200, "type": "power",  "signal": "power", "voltage": 5 },
+        { "id": "gnd_1", "name": "GND",          "x": 166.68, "y": 200, "type": "ground", "signal": "ground" },
+        { "id": "gnd_2", "name": "GND",          "x": 176.68, "y": 200, "type": "ground", "signal": "ground" },
+        { "id": "vin",   "name": "VIN",          "x": 186.68, "y": 200, "type": "power",  "signal": "power", "voltage": 5 },
+        { "id": "io2",   "name": "GPIO2",        "x": 206.68, "y": 200, "type": "gpio",   "signal": "analog" },
+        { "id": "io1",   "name": "GPIO1",        "x": 216.68, "y": 200, "type": "gpio",   "signal": "analog" },
+        { "id": "io7",   "name": "GPIO7",        "x": 226.68, "y": 200, "type": "gpio",   "signal": "analog" },
+        { "id": "io6",   "name": "GPIO6",        "x": 236.68, "y": 200, "type": "gpio",   "signal": "analog" },
+        { "id": "io5",   "name": "GPIO5",        "x": 246.68, "y": 200, "type": "gpio",   "signal": "analog" },
+        { "id": "io4",   "name": "GPIO4",        "x": 256.68, "y": 200, "type": "gpio",   "signal": "analog" }
+    ],
+
+    "properties": {
+        "mcu": "ESP32-S3",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 8,
+        "isPowerSource": true
+    }
+}
