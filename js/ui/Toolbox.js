@@ -71,17 +71,27 @@ class Toolbox {
         // Agrupar por categoría
         const categories = {};
 
-        for (const entry of this.entries) {
+        // BUG REAL de rendimiento (a pedido: "se tarda mucho" al cargar
+        // la página): este for..of hacía "await Utils.loadJSON(...)" UNO
+        // POR UNO, en serie -- con ~56 componentes en el manifest, el
+        // panel izquierdo se quedaba vacío hasta que terminaran 56
+        // round-trips HTTP encadenados. Promise.all() los dispara todos
+        // de una (son fetches totalmente independientes entre sí, nada
+        // de un componente depende del JSON de otro), sin cambiar qué se
+        // termina mostrando -- mismo resultado, solo que en paralelo.
+        const definitions = await Promise.all(
+            this.entries.map(entry =>
+                Utils.loadJSON(`components/${entry.type}/${entry.type}.json`)
+            )
+        );
+
+        this.entries.forEach((entry, i) => {
 
             const cat = entry.category || "General";
 
             if (!categories[cat]) categories[cat] = [];
 
-            // Cargar la definición JSON del componente para obtener
-            // el nombre real (puede diferir del que está en el manifest)
-            const definition = await Utils.loadJSON(
-                `components/${entry.type}/${entry.type}.json`
-            );
+            const definition = definitions[i];
 
             this.definitions[entry.type] = definition;
 
@@ -89,7 +99,7 @@ class Toolbox {
 
             categories[cat].push({ ...entry, displayName });
 
-        }
+        });
 
         // Renderizar por categoría
         for (const [category, items] of Object.entries(categories)) {

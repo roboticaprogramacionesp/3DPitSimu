@@ -1046,6 +1046,28 @@ class WasmBridge {
             return Promise.resolve();
         }
 
+        // BUG REAL (confirmado en vivo probando ESP-NOW): ReplPanel.
+        // runEditorCode() ya evita un doble-click en "▶ Ejecutar" con
+        // "if (this._running) return" -- pero _running vive por
+        // INSTANCIA de ReplPanel, no por Worker. Con una ventana
+        // flotante (ReplWindowManager.open()) apuntando al MISMO
+        // dispositivo que el panel acoplado (caso típico al probar
+        // ESP-NOW: abrir el otro ESP32 en una ventana aparte para
+        // tener los dos a la vista), cada panel arranca con su propio
+        // _running=false -- nada impedía que los DOS mandaran su
+        // propio "run" casi en simultáneo a este mismo Worker. Un
+        // segundo mp.runPython() mientras el primero sigue "en vuelo"
+        // (suspendido en su propio sleep()) revienta el módulo
+        // Asyncify entero con "RuntimeError: ... We cannot start an
+        // async operation when one is already in flight" --
+        // irrecuperable, con un alud de "RangeError: Invalid array
+        // length" después (mismo patrón que el bug ya documentado más
+        // abajo con "IN:<gpio>" y el teclado matricial). Acá, en el
+        // bridge (dueño real y único de este Worker), es el único
+        // lugar que puede detectar esto sin importar cuántos paneles/
+        // ventanas estén mirando este mismo dispositivo a la vez.
+        if (this._pendingRunResolvers.size > 0) return Promise.resolve();
+
         const runId = ++this._runIdCounter;
         const promise = new Promise(resolve => this._pendingRunResolvers.set(runId, resolve));
         const keypadSnapshot = this._computeKeypadI2cSnapshot();
