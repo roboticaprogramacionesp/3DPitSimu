@@ -543,7 +543,7 @@ class TutorialManager {
             icon: "🔢",
             category: "💡 LEDs · Salidas digitales",
             demoGif: "assets/tutorial-demos/display7.gif",
-            demoCaption: "Los 7 segmentos se encienden y apagan juntos, formando un \"8\" completo -- esto es lo que vas a armar y programar en los pasos de abajo.",
+            demoCaption: "El display va mostrando los números del 0 al 9, prendiendo la combinación de segmentos correcta para cada uno -- esto es lo que vas a armar y programar en los pasos de abajo.",
             steps: [
                 {
                     title: "Paso 1 — Crea un proyecto nuevo",
