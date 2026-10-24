@@ -850,6 +850,23 @@ class ReplPanel {
         } else if (previousValue && esp32s.some(e => e.id === previousValue)) {
             this.deviceSelect.value = previousValue;
         }
+        // Si ninguno de los dos matcheó (primera vez que hay 2+ ESP32
+        // y _activeEsp32Id todavía es null, ej. recién deserializado
+        // un proyecto con 2 placas antes de tocar el selector), el
+        // <select> igual queda con ALGO elegido (default del browser:
+        // la primera <option>) -- pero nada de eso dispara su evento
+        // "change".
+
+        // BUG REAL: asignar deviceSelect.value por DOM (arriba, o el
+        // default del browser) nunca dispara "change", así que
+        // _switchActiveDevice() no se llegaba a llamar -- el selector
+        // mostraba una placa pero el editor seguía con el código de
+        // la que se estaba mirando antes (o vacío), y quedaba así
+        // hasta que el alumno tocara el selector a mano. Se fuerza
+        // la sincronización acá mismo; _switchActiveDevice() ya es
+        // no-op si el id no cambió, así que es seguro llamarlo
+        // siempre que haya 2+ ESP32.
+        this._switchActiveDevice(this.deviceSelect.value);
 
         this.deviceSelect.style.display = "";
         this.popOutBtn.style.display = "";
