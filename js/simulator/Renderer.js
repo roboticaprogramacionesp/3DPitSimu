@@ -2929,11 +2929,15 @@ class Renderer {
   setEsp32GpioLed(component, isOn) {
     if (!component.element) return;
 
+    // No todas las placas ESP32 traen este LED integrado en GPIO2 --
+    // es una convención de ciertos DevKits (WeMos D1 R32), no de
+    // todas (ej. el ESP32-S3-Uno no tiene uno): sin el #led_red_io2
+    // en su SVG, esto es simplemente "no aplica acá", no un error --
+    // antes avisaba con console.warn() en CADA escritura a io2 de
+    // cualquier placa que no lo tuviera, puro ruido en la consola
+    // sin ningún problema real detrás.
     const el = component.element.querySelector("#led_red_io2");
-    if (!el) {
-      console.warn("[Renderer] No se encontró #led_red_io2 en el ESP32");
-      return;
-    }
+    if (!el) return;
 
     this._setElementColor(
       el,
