@@ -67,6 +67,7 @@ const I2C_BUS_WASM_URL   = new URL("../../components_wasm/_i2c_bus_wasm.py", imp
 const OLED_WASM_URL      = new URL("../../components_wasm/_oled_wasm.py", import.meta.url);
 const KEYPAD_I2C_WASM_URL = new URL("../../components_wasm/_keypad_i2c_wasm.py", import.meta.url);
 const ADC_BUS_WASM_URL   = new URL("../../components_wasm/_adc_bus_wasm.py", import.meta.url);
+const UART_BUS_WASM_URL  = new URL("../../components_wasm/_uart_bus_wasm.py", import.meta.url);
 const NEOPIXEL_WASM_URL  = new URL("../../components_wasm/_neopixel_wasm.py", import.meta.url);
 const DHT_WASM_URL       = new URL("../../components_wasm/_dht_wasm.py", import.meta.url);
 const ESPNOW_WASM_URL    = new URL("../../components_wasm/_espnow_wasm.py", import.meta.url);
@@ -280,6 +281,15 @@ self.onmessage = async (e) => {
 
             const adcCode = await (await fetch(ADC_BUS_WASM_URL, NO_CACHE)).text();
             await mp.runPython(adcCode);
+
+            // FALTABA ENTERO (ver el comentario grande en
+            // _uart_bus_wasm.py) -- machine.UART nunca se reemplazaba
+            // en este runtime, así que ni el GPS podía funcionar de
+            // verdad corriendo código de usuario real. Sin dependencia
+            // de orden respecto a lo de arriba, más allá de necesitar
+            // register_line_handler() de _base_wasm.py.
+            const uartCode = await (await fetch(UART_BUS_WASM_URL, NO_CACHE)).text();
+            await mp.runPython(uartCode);
 
             const neopixelCode = await (await fetch(NEOPIXEL_WASM_URL, NO_CACHE)).text();
             await mp.runPython(neopixelCode);

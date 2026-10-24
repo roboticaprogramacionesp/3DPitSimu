@@ -1859,6 +1859,110 @@ class SignalEngine {
     bridge.sendData(`UART:${uartId}:${this._buildGpgga(component)}`);
   }
 
+  // ====================================================
+  // HC-06 (Bluetooth clásico/SPP, también por UART) -- a diferencia
+  // del GPS (unidireccional, siempre el "primer" ESP32), acá hace
+  // falta BIDIRECCIONALIDAD real -- el panel del teléfono virtual
+  // (BlePanel.js, que ahora también atiende HC-06 además de BLE)
+  // necesita tanto mandar texto HACIA el ESP32 (mismo protocolo
+  // "UART:" que ya usa el GPS) como recibir lo que el firmware
+  // escriba con uart.write() (protocolo nuevo "UARTTX:", ver
+  // _uart_bus.hal.py). _resolveHc06Uart() identifica el ESP32 Y el
+  // uart id a partir del cableado real (no asume "el primer ESP32"
+  // como _findGpsUartId -- con 2+ ESP32 en el lienzo, cada HC-06
+  // puede estar en uno distinto).
+  // ====================================================
+
+  _resolveHc06Uart(component) {
+    const net = this.getNet(`${component.id}:txd`);
+    let esp32Id = null;
+    let gpioNum = null;
+    for (const key of net) {
+      const [cId, pId] = key.split(":");
+      const comp = this.simulator.componentManager.get(cId);
+      if (!comp || !comp.type.startsWith("esp32")) continue;
+      const match = pId.match(/^io(\d+)$/);
+      if (match) {
+        esp32Id = cId;
+        gpioNum = parseInt(match[1], 10);
+        break;
+      }
+    }
+    if (gpioNum === null) return null;
+
+    for (const key of Object.keys(this.declaredPins)) {
+      if (!key.startsWith("uart:")) continue;
+      const declared = this.declaredPins[key];
+      if (declared.rx === gpioNum) {
+        return { esp32Id, uartId: parseInt(key.slice("uart:".length), 10) };
+      }
+    }
+    return null;
+  }
+
+  // Dirección firmware -> navegador: dado el uart id que el
+  // firmware declaró (PININFO) y el ESP32 que lo mandó, encuentra
+  // qué HC-06 (si hay alguno) está cableado al pin TX declarado
+  // para ese id -- el RXD del módulo recibe lo que el ESP32 transmite.
+  _findHc06ByUartTx(esp32Id, uartId) {
+    const declared = this.declaredPins[`uart:${uartId}`];
+    if (!declared || declared.tx === undefined) return null;
+
+    const net = this.getNet(`${esp32Id}:io${declared.tx}`);
+    for (const key of net) {
+      const [cId, pId] = key.split(":");
+      if (pId !== "rxd") continue;
+      const comp = this.simulator.componentManager.get(cId);
+      if (comp && comp.type === "hc-06") return comp;
+    }
+    return null;
+  }
+
+  // Llamado desde WasmBridge al recibir "UARTTX:<id>:<hex>" (ver
+  // comentario ahí) -- resuelve a qué componente HC-06 le llegó y
+  // avisa al teléfono virtual.
+  handleUartTx(esp32Id, uartId, text) {
+    const component = this._findHc06ByUartTx(esp32Id, uartId);
+    if (!component) return;
+    this.simulator.eventBus.emit("hc06:data", { componentId: component.id, esp32Id, data: text });
+  }
+
+  // Dirección navegador -> firmware (el alumno escribió algo en el
+  // teléfono virtual) -- mismo protocolo "UART:<id>:<texto>" que ya
+  // usa el GPS, el firmware no necesita saber si el emisor es un GPS
+  // o un HC-06, ambos drenan del mismo buffer de entrada.
+  sendHc06Text(componentId, text) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+    if (!this.isComponentPowered(component)) return;
+
+    const resolved = this._resolveHc06Uart(component);
+    if (!resolved) return;
+
+    const bridge = this.simulator.bridges.get(resolved.esp32Id);
+    if (!bridge?.connected) return;
+
+    bridge.sendData(`UART:${resolved.uartId}:${text}`);
+  }
+
+  // Consultado por BlePanel.js (sondeo periódico, ver el comentario
+  // ahí) -- lista los HC-06 del lienzo que están alimentados, bien
+  // cableados Y cuyo ESP32 ya construyó un UART sobre esos pines
+  // (recién ahí se puede resolver a qué id mandarle algo).
+  listReadyHc06Devices() {
+    const result = [];
+    const hc06s = this.simulator.componentManager.getAll().filter((c) => c.type === "hc-06");
+    for (const comp of hc06s) {
+      if (!this.isComponentPowered(comp)) continue;
+      const resolved = this._resolveHc06Uart(comp);
+      if (!resolved) continue;
+      const bridge = this.simulator.bridges.get(resolved.esp32Id);
+      if (!bridge?.connected) continue;
+      result.push({ componentId: comp.id, esp32Id: resolved.esp32Id, name: comp.name || "HC-06" });
+    }
+    return result;
+  }
+
    // ====================================================
   // Encoder rotativo KY-040 (CLK/DT en cuadratura + SW)
   //

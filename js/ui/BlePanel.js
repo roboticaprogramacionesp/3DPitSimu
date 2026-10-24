@@ -2,19 +2,40 @@
 ==========================================================
  PitSimulator — BlePanel.js
 
- "Teléfono virtual" BLE (ver plan ESP-NOW→WiFi→BLE, última fase) --
- un panel dentro de la propia app, con la misma idea que la app
- "Serial Bluetooth Terminal" (conectar a un periférico BLE con UART
- por Nordic UART Service y mandar/recibir texto plano), pero 100%
- simulado: no hay Bluetooth real de por medio (una pestaña de
- navegador no tiene con qué emparejarse a un ESP32 real), así que
- este panel se conecta directo al ESP32 SIMULADO que esté corriendo
- en este mismo lienzo -- mismo espíritu que ESP-NOW entre dos ESP32.
+ "Teléfono virtual" (ver plan ESP-NOW→WiFi→BLE, última fase, más el
+ agregado posterior de HC-06) -- un panel dentro de la propia app,
+ con la misma idea que la app "Serial Bluetooth Terminal" (conectar
+ a un periférico con UART por Bluetooth y mandar/recibir texto
+ plano), pero 100% simulado: no hay Bluetooth real de por medio (una
+ pestaña de navegador no tiene con qué emparejarse a un ESP32 real),
+ así que este panel se conecta directo al ESP32 SIMULADO que esté
+ corriendo en este mismo lienzo -- mismo espíritu que ESP-NOW entre
+ dos ESP32.
 
- Protocolo real: ver _bluetooth_wasm.py (BLE.gap_advertise()/
- gatts_notify() del lado Python) y WasmBridge.js (eventos
- "ble:advertising"/"ble:notify", y los métodos bleConnect()/
- bleDisconnect()/bleWrite() que este panel llama).
+ Atiende DOS "especies" de dispositivo bajo una sola lista (mismo
+ panel, a pedido -- la app real "Serial Bluetooth Terminal" tampoco
+ distingue BLE de clásico en su UI, son la misma lista de "a qué me
+ puedo conectar"):
+   - kind "ble": BLE real (módulo `bluetooth`, Nordic UART Service)
+     -- ver _bluetooth_wasm.py y WasmBridge.js (eventos
+     "ble:advertising"/"ble:notify", métodos bleConnect()/
+     bleDisconnect()/bleWrite()). Aparece apenas el firmware llama
+     gap_advertise() con NUS.
+   - kind "hc06": Bluetooth CLÁSICO (SPP) vía el componente HC-06 --
+     del lado del código del alumno es un machine.UART más (ver
+     _uart_bus.hal.py y SignalEngine._resolveHc06Uart/
+     _findHc06ByUartTx/sendHc06Text/handleUartTx), sin ningún import
+     de `bluetooth` de por medio. No hay "advertise" -- un HC-06 real
+     siempre está ahí, emparejado, así que acá "aparece" apenas está
+     bien cableado, alimentado, y el firmware construyó su UART sobre
+     esos pines (se sondea periódicamente, ver _pollHc06Devices()).
+
+ Cada entrada de _devices se guarda bajo una clave compuesta
+ "ble:<esp32Id>" / "hc06:<componentId>" -- un BLE "pertenece" a un
+ ESP32 entero (una sola instancia BLE.gap_advertise() por firmware),
+ pero puede haber VARIOS HC-06 distintos cableados al mismo o a
+ distintos ESP32 (cada uno su propio UART), así que esos se
+ identifican por componentId, no por esp32Id.
 ==========================================================
 */
 
@@ -26,17 +47,16 @@ class BlePanel {
 
         this.open = false;
 
-        // esp32Id -> { name } -- dispositivos que llamaron
-        // gap_advertise() con el Nordic UART Service reconocido (ver
-        // _bluetooth_wasm.py) desde el último "▶ Simular".
+        // deviceKey ("ble:<esp32Id>" / "hc06:<componentId>") -> { kind, name, esp32Id, componentId }
         this._devices = new Map();
 
-        this._connectedEsp32Id = null;
+        this._connectedDeviceKey = null;
 
         this.buildDOM();
         this.bindEvents();
         this.bindBusEvents();
         this._bindDrag();
+        this._startHc06Polling();
 
     }
 
@@ -63,7 +83,7 @@ class BlePanel {
 
         this.deviceSelect = document.createElement("select");
         this.deviceSelect.className = "ble-device-select";
-        this.deviceSelect.title = "ESP32 con un servicio UART BLE anunciado (gap_advertise())";
+        this.deviceSelect.title = "ESP32 con BLE anunciado (gap_advertise()) o un HC-06 bien cableado";
 
         this.connectBtn = document.createElement("button");
         this.connectBtn.className = "ble-btn ble-btn-connect";
@@ -123,7 +143,7 @@ class BlePanel {
         });
 
         this.connectBtn.addEventListener("click", () => {
-            if (this._connectedEsp32Id) {
+            if (this._connectedDeviceKey) {
                 this._disconnect();
             } else {
                 this._connect();
@@ -140,12 +160,19 @@ class BlePanel {
     bindBusEvents() {
 
         this.simulator.eventBus.on("ble:advertising", ({ esp32Id, name }) => {
-            this._devices.set(esp32Id, { name });
+            this._devices.set(`ble:${esp32Id}`, { kind: "ble", name, esp32Id, componentId: null });
             this._refreshDeviceSelect();
         });
 
         this.simulator.eventBus.on("ble:notify", ({ esp32Id, data }) => {
-            if (esp32Id !== this._connectedEsp32Id) return;
+            if (this._connectedDeviceKey !== `ble:${esp32Id}`) return;
+            this._appendLog("rx", data);
+        });
+
+        // Ver SignalEngine.handleUartTx() -- equivalente de "ble:notify"
+        // pero para HC-06 (dirección firmware -> navegador por UART).
+        this.simulator.eventBus.on("hc06:data", ({ componentId, data }) => {
+            if (this._connectedDeviceKey !== `hc06:${componentId}`) return;
             this._appendLog("rx", data);
         });
 
@@ -160,11 +187,55 @@ class BlePanel {
         this.simulator.eventBus.on("simulation:stop", () => this._disconnect());
 
         this.simulator.eventBus.on("component:removed", ({ componentId }) => {
-            if (!this._devices.has(componentId)) return;
-            this._devices.delete(componentId);
-            if (this._connectedEsp32Id === componentId) this._disconnect();
-            this._refreshDeviceSelect();
+            let changed = false;
+            this._devices.forEach((info, key) => {
+                if (info.esp32Id !== componentId && info.componentId !== componentId) return;
+                this._devices.delete(key);
+                changed = true;
+                if (this._connectedDeviceKey === key) this._disconnect();
+            });
+            if (changed) this._refreshDeviceSelect();
         });
+
+    }
+
+    // HC-06 no tiene ningún evento tipo "gap_advertise()" que avise
+    // "ya estoy listo" -- es un UART pasivo, así que se sondea cada
+    // 1s (mismo espíritu que el tick de ds3231.behavior.js/gps) para
+    // ver qué módulos del lienzo ya están bien cableados, alimentados
+    // y con su UART construido del lado del firmware (ver
+    // SignalEngine.listReadyHc06Devices()). Corre siempre (no solo
+    // con el panel abierto) para que la lista ya esté lista la
+    // primera vez que el alumno lo abre.
+    _startHc06Polling() {
+        setInterval(() => this._pollHc06Devices(), 1000);
+    }
+
+    _pollHc06Devices() {
+
+        const ready = this.simulator.signalEngine.listReadyHc06Devices();
+        const readyIds = new Set(ready.map((d) => d.componentId));
+
+        let changed = false;
+
+        // Sacar los que ya no están listos (cable removido, se apagó
+        // la simulación sin pasar por "simulation:stop", etc.).
+        this._devices.forEach((info, key) => {
+            if (info.kind !== "hc06") return;
+            if (readyIds.has(info.componentId)) return;
+            this._devices.delete(key);
+            changed = true;
+            if (this._connectedDeviceKey === key) this._disconnect();
+        });
+
+        ready.forEach(({ componentId, esp32Id, name }) => {
+            const key = `hc06:${componentId}`;
+            if (this._devices.has(key)) return;
+            this._devices.set(key, { kind: "hc06", name, esp32Id, componentId });
+            changed = true;
+        });
+
+        if (changed) this._refreshDeviceSelect();
 
     }
 
@@ -177,21 +248,22 @@ class BlePanel {
         if (this._devices.size === 0) {
             const opt = document.createElement("option");
             opt.value = "";
-            opt.textContent = "(ningún ESP32 está anunciando BLE todavía)";
+            opt.textContent = "(ningún dispositivo Bluetooth disponible todavía)";
             this.deviceSelect.appendChild(opt);
             this.deviceSelect.disabled = true;
             this.connectBtn.disabled = true;
             return;
         }
 
-        this._devices.forEach((info, esp32Id) => {
+        this._devices.forEach((info, key) => {
             const opt = document.createElement("option");
-            opt.value = esp32Id;
-            opt.textContent = `${info.name} (${esp32Id})`;
+            opt.value = key;
+            const tag = info.kind === "ble" ? "BLE" : "HC-06";
+            opt.textContent = `${info.name} (${tag})`;
             this.deviceSelect.appendChild(opt);
         });
 
-        this.deviceSelect.disabled = !!this._connectedEsp32Id;
+        this.deviceSelect.disabled = !!this._connectedDeviceKey;
         this.connectBtn.disabled = false;
 
         if (previous && this._devices.has(previous)) {
@@ -202,37 +274,48 @@ class BlePanel {
 
     _connect() {
 
-        const esp32Id = this.deviceSelect.value;
-        if (!esp32Id) return;
+        const key = this.deviceSelect.value;
+        if (!key) return;
 
-        const bridge = this.simulator.bridges.get(esp32Id);
+        const info = this._devices.get(key);
+        if (!info) return;
+
+        const bridge = this.simulator.bridges.get(info.esp32Id);
         if (!bridge?.connected) {
             this._appendSystemLine("⚠ Ese ESP32 no está conectado ahora mismo (¿sigue corriendo la simulación?).");
             return;
         }
 
-        bridge.bleConnect();
+        // El HC-06 (Bluetooth clásico, sin GATT) no tiene ningún
+        // handshake que hacerle al firmware -- "conectar" acá es
+        // 100% de este lado (UI), listo para mandar/recibir apenas
+        // está cableado y alimentado. BLE sí necesita avisarle al
+        // firmware (dispara _IRQ_CENTRAL_CONNECT, ver _bluetooth_wasm.py).
+        if (info.kind === "ble") bridge.bleConnect();
 
-        this._connectedEsp32Id = esp32Id;
+        this._connectedDeviceKey = key;
         this.deviceSelect.disabled = true;
         this.connectBtn.textContent = "Desconectar";
         this.input.disabled = false;
         this.sendBtn.disabled = false;
 
         this.log.innerHTML = "";
-        this._appendSystemLine(`Conectado a ${this._devices.get(esp32Id)?.name || esp32Id}`);
+        this._appendSystemLine(`Conectado a ${info.name}`);
 
     }
 
     _disconnect() {
 
-        if (this._connectedEsp32Id) {
-            const bridge = this.simulator.bridges.get(this._connectedEsp32Id);
-            bridge?.bleDisconnect();
+        if (this._connectedDeviceKey) {
+            const info = this._devices.get(this._connectedDeviceKey);
+            if (info?.kind === "ble") {
+                const bridge = this.simulator.bridges.get(info.esp32Id);
+                bridge?.bleDisconnect();
+            }
             this._appendSystemLine("Desconectado.");
         }
 
-        this._connectedEsp32Id = null;
+        this._connectedDeviceKey = null;
         this.connectBtn.textContent = "Conectar";
         this.input.disabled = true;
         this.sendBtn.disabled = true;
@@ -243,16 +326,22 @@ class BlePanel {
     _send() {
 
         const text = this.input.value;
-        if (!text || !this._connectedEsp32Id) return;
+        if (!text || !this._connectedDeviceKey) return;
 
-        const bridge = this.simulator.bridges.get(this._connectedEsp32Id);
+        const info = this._devices.get(this._connectedDeviceKey);
+        const bridge = info && this.simulator.bridges.get(info.esp32Id);
         if (!bridge?.connected) {
             this._appendSystemLine("⚠ Se perdió la conexión con el ESP32.");
             this._disconnect();
             return;
         }
 
-        bridge.bleWrite(text);
+        if (info.kind === "ble") {
+            bridge.bleWrite(text);
+        } else {
+            this.simulator.signalEngine.sendHc06Text(info.componentId, text);
+        }
+
         this._appendLog("tx", text);
         this.input.value = "";
 

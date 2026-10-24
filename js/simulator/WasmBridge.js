@@ -695,6 +695,27 @@ class WasmBridge {
             return true;
         }
 
+        if (line.startsWith("UARTTX:")) {
+            // Formato: UARTTX:<uart id>:<hex> -- ver _uart_bus.hal.py
+            // (UART.write(), agregado para el HC-06). A diferencia de
+            // BLE_NOTIFY (un solo periférico lógico por ESP32), acá
+            // puede haber varios módulos UART distintos -- SignalEngine
+            // resuelve CUÁL componente (si hay alguno HC-06) está
+            // cableado al pin TX de este uart id antes de emitir el
+            // evento, así que ese trabajo se delega ahí en vez de
+            // hacerlo acá.
+            const rest = line.slice("UARTTX:".length);
+            const sepIdx = rest.indexOf(":");
+            if (sepIdx > 0 && this.esp32) {
+                const uartId = parseInt(rest.slice(0, sepIdx), 10);
+                const data = WasmBridge._hexToUtf8(rest.slice(sepIdx + 1));
+                if (!Number.isNaN(uartId)) {
+                    this.simulator.signalEngine.handleUartTx(this.esp32.id, uartId, data);
+                }
+            }
+            return true;
+        }
+
         const halErrorMatch = line.match(/^HAL_ERROR:([^:]+):/);
         if (halErrorMatch) {
             // Multi-ESP32 (Fase 2): mismo criterio que "qemu:output".

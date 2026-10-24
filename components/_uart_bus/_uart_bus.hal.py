@@ -23,22 +23,39 @@
 # dibujado desde el TX del GPS hasta encontrar a qué id corresponde
 # antes de mandar cualquier "UART:<id>:...".
 #
-# ── Protocolo "UART:" (navegador -> firmware, UNIDIRECCIONAL) ───
+# ── Protocolo "UART:" (navegador -> firmware) ────────────────────
 # El navegador manda "UART:<id>:<texto SIN saltos de línea>\n" (ej.
 # una oración NMEA completa, sin su propio \r\n -- lo agrega este
 # archivo al guardarla en el buffer de entrada) -- ver
 # gps.hal.py/SignalEngine._notifyGpsToFirmware. Se acumula en un
 # buffer de bytes por id, que any()/read()/readline() drenan.
 #
-# No hay protocolo en sentido contrario todavía: write() se acepta y
-# se ignora -- ningún componente actual necesita LEER lo que el
-# firmware manda por TX (un GPS real tampoco escucha nada por ahí).
+# ── Protocolo "UARTTX:" (firmware -> navegador) ──────────────────
+# Agregado para el HC-06 (Bluetooth clásico/SPP, ver hc-06.behavior.js
+# y SignalEngine._findHc06ByUartTx): a diferencia del GPS (que solo
+# TRANSMITE hacia el ESP32), un módulo Bluetooth clásico es
+# bidireccional -- lo que el firmware escribe con uart.write() tiene
+# que llegarle al "teléfono virtual" (ver BlePanel.js, que ahora
+# también atiende HC-06 además de BLE). write() manda
+# "UARTTX:<id>:<hex>\n" -- mismo criterio de codificación hex que
+# BLE_NOTIFY (ver components_wasm/_bluetooth_wasm.py) para no
+# depender de que el payload sea texto válido.
 # =============================================================
 
 import sys as _sys
 
 _uart_buffers = {}          # uart_id (int) -> bytearray
 _uart_pininfo_declared = set()
+
+
+def _uart_to_bytes(data):
+    if isinstance(data, str):
+        return data.encode("utf-8")
+    return bytes(data)
+
+
+def _uart_bytes_to_hex(b):
+    return "".join("%02x" % x for x in b)
 
 
 def _uart_buf(uart_id):
@@ -95,11 +112,11 @@ def _gpio_num(pin_obj):
 
 class UART:
     """
-    Reemplazo sintético de machine.UART -- unidireccional (navegador
-    -> firmware), pensado para sensores tipo GPS que solo TRANSMITEN
-    hacia el ESP32. read()/readline()/any() devuelven lo que haya en
-    el buffer de entrada; write() se acepta y se ignora (ver
-    docstring del módulo).
+    Reemplazo sintético de machine.UART -- read()/readline()/any()
+    devuelven lo que haya en el buffer de entrada (navegador ->
+    firmware, ej. NMEA del GPS); write() manda lo escrito hacia el
+    navegador (firmware -> navegador, ej. respuestas de un HC-06
+    hacia el teléfono virtual) -- ver docstring del módulo.
     """
 
     def __init__(self, id, baudrate=9600, tx=None, rx=None, *a, **kw):
@@ -157,7 +174,11 @@ class UART:
         return len(data)
 
     def write(self, buf):
-        return len(buf) if buf else 0
+        if not buf:
+            return 0
+        data = _uart_to_bytes(buf)
+        _sys.stdout.write("UARTTX:%d:%s\n" % (self._id, _uart_bytes_to_hex(data)))
+        return len(data)
 
 
 import machine as _machine_module
