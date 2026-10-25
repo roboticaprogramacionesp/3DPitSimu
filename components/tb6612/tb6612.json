@@ -1,0 +1,36 @@
+{
+    "type": "tb6612",
+    "name": "TB6612FNG Breakout (Motor A/B)",
+
+    "width": 57.6,
+    "height": 57.6,
+
+    "svg": "components/tb6612/tb6612.svg",
+
+    "pinShape": "square",
+    "pinSize": 4,
+
+    "pins": [
+        { "id": "vm",    "name": "VM",   "x": 7.2,  "y": 3.6,  "type": "power",  "signal": "power" },
+        { "id": "vcc",   "name": "VCC",  "x": 7.2,  "y": 10.8, "type": "power",  "signal": "power", "voltage": 5 },
+        { "id": "gnd_1", "name": "GND",  "x": 7.2,  "y": 18,   "type": "ground", "signal": "ground" },
+        { "id": "ao1",   "name": "AO1",  "x": 7.2,  "y": 25.2, "type": "output", "signal": "motor", "optional": true },
+        { "id": "ao2",   "name": "AO2",  "x": 7.2,  "y": 32.4, "type": "output", "signal": "motor", "optional": true },
+        { "id": "bo2",   "name": "BO2",  "x": 7.2,  "y": 39.6, "type": "output", "signal": "motor", "optional": true },
+        { "id": "bo1",   "name": "BO1",  "x": 7.2,  "y": 46.8, "type": "output", "signal": "motor", "optional": true },
+        { "id": "gnd_2", "name": "GND",  "x": 7.2,  "y": 54,   "type": "ground", "signal": "ground" },
+
+        { "id": "pwma", "name": "PWMA", "x": 50.4, "y": 3.6,  "type": "input", "signal": "pwm",     "optional": true },
+        { "id": "ain2", "name": "AIN2", "x": 50.4, "y": 10.8, "type": "input", "signal": "digital", "optional": true },
+        { "id": "ain1", "name": "AIN1", "x": 50.4, "y": 18,   "type": "input", "signal": "digital", "optional": true },
+        { "id": "stby", "name": "STBY", "x": 50.4, "y": 25.2, "type": "input", "signal": "digital", "optional": true },
+        { "id": "bin1", "name": "BIN1", "x": 50.4, "y": 32.4, "type": "input", "signal": "digital", "optional": true },
+        { "id": "bin2", "name": "BIN2", "x": 50.4, "y": 39.6, "type": "input", "signal": "digital", "optional": true },
+        { "id": "pwmb", "name": "PWMB", "x": 50.4, "y": 46.8, "type": "input", "signal": "pwm",     "optional": true },
+        { "id": "gnd_3", "name": "GND", "x": 50.4, "y": 54,   "type": "ground", "signal": "ground" }
+    ],
+
+    "properties": {
+        "modelo": "TB6612FNG: puente H doble -- STBY tiene que estar en HIGH para habilitar el chip (tiene pulldown interno, si no se cablea queda deshabilitado), después cada motor se maneja con su propio par de dirección (AIN1/AIN2 o BIN1/BIN2) + su propio PWM de velocidad (PWMA/PWMB)."
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "type": "l9110",
+    "name": "L9110S Puente H Doble (Motor A/B)",
+
+    "width": 80.0625,
+    "height": 105.4919,
+
+    "svg": "components/l9110/l9110.svg",
+
+    "pinShape": "square",
+    "pinSize": 5,
+
+    "pins": [
+        { "id": "out_b1", "name": "OUT B1 (Motor B)", "x": 10.877, "y": 8.5,   "type": "output", "signal": "motor", "optional": true },
+        { "id": "out_b2", "name": "OUT B2 (Motor B)", "x": 30.168, "y": 8.5,   "type": "output", "signal": "motor", "optional": true },
+        { "id": "out_a1", "name": "OUT A1 (Motor A)", "x": 50.693, "y": 8.513, "type": "output", "signal": "motor", "optional": true },
+        { "id": "out_a2", "name": "OUT A2 (Motor A)", "x": 70.003, "y": 8.513, "type": "output", "signal": "motor", "optional": true },
+
+        { "id": "b_ia", "name": "B-IA", "x": 18.741, "y": 97.259, "type": "input",  "signal": "pwm",     "optional": true },
+        { "id": "b_ib", "name": "B-IB", "x": 27.741, "y": 97.259, "type": "input",  "signal": "pwm",     "optional": true },
+        { "id": "gnd",  "name": "GND",  "x": 36.74,  "y": 97.259, "type": "ground", "signal": "ground" },
+        { "id": "vcc",  "name": "VCC",  "x": 45.739, "y": 97.259, "type": "power",  "signal": "power", "voltage": 5 },
+        { "id": "a_ia", "name": "A-IA", "x": 54.739, "y": 97.259, "type": "input",  "signal": "pwm",     "optional": true },
+        { "id": "a_ib", "name": "A-IB", "x": 63.738, "y": 97.259, "type": "input",  "signal": "pwm",     "optional": true }
+    ],
+
+    "properties": {
+        "modelo": "L9110S: puente H doble más simple que el L298N -- sin pines ENA/ENB separados, cada motor se maneja solo con sus 2 pines IA/IB (PWM en uno y LOW en el otro = adelante o atrás con velocidad; ambos en HIGH = freno; ambos en LOW = libre)."
+    }
+}

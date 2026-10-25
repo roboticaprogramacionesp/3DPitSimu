@@ -131,6 +131,18 @@
             "hasBehavior": true
         },
         {
+            "type": "l9110",
+            "name": "L9110S Puente H Doble",
+            "category": "Actuadores",
+            "hasBehavior": true
+        },
+        {
+            "type": "tb6612",
+            "name": "TB6612FNG Breakout",
+            "category": "Actuadores",
+            "hasBehavior": true
+        },
+        {
             "type": "lcd_16x2_i2c",
             "name": "LCD 16x2 I2C",
             "category": "Pantallas",
