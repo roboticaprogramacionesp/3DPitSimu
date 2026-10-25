@@ -36,6 +36,14 @@ class WasmBridge {
     // Fase 1/2 del plan para cómo se generan.
     static WORKER_PATH = "js/simulator/wasmWorker.js";
 
+    // Tope de _pendingVisibleOutput (ver _appendPendingVisibleOutput) --
+    // sin esto, un ESP32 de fondo (multi-ESP32/ESP-NOW) que imprime
+    // mucho mientras el usuario nunca vuelve a mirarlo acumulaba texto
+    // sin límite por el resto de la sesión. ~20kB es de sobra para
+    // cualquier print() normal de un alumno; si se llega a ese punto
+    // ya no importa guardar el principio, solo lo más reciente.
+    static MAX_PENDING_VISIBLE_OUTPUT = 20000;
+
     // Marca para que ReplPanel.js (y cualquier otro código que
     // dependa de this.simulator.qemuBridge genéricamente) pueda
     // distinguir este bridge del QemuBridge real SIN un import/
@@ -333,7 +341,7 @@ class WasmBridge {
             if (this.simulator.qemuBridge === this) {
                 this.simulator.eventBus.emit("qemu:output", msg.data);
             } else {
-                this._pendingVisibleOutput = (this._pendingVisibleOutput || "") + msg.data;
+                this._appendPendingVisibleOutput(msg.data);
             }
             // Aditivo -- ver comentario de "device:status" más arriba.
             if (this.esp32) {
@@ -350,6 +358,24 @@ class WasmBridge {
             }
             return;
         }
+
+    }
+
+    // Acumula texto en _pendingVisibleOutput con tope -- ver
+    // MAX_PENDING_VISIBLE_OUTPUT. Al recortar, se queda con lo más
+    // reciente y descarta el principio: lo que más le va a servir al
+    // alumno al volver a mirar este dispositivo es el último estado,
+    // no el primer print() de hace rato.
+    _appendPendingVisibleOutput(text) {
+
+        let buf = (this._pendingVisibleOutput || "") + text;
+
+        if (buf.length > WasmBridge.MAX_PENDING_VISIBLE_OUTPUT) {
+            buf = "...(salida recortada -- este dispositivo imprimió mucho mientras no lo mirabas)...\n"
+                + buf.slice(-WasmBridge.MAX_PENDING_VISIBLE_OUTPUT);
+        }
+
+        this._pendingVisibleOutput = buf;
 
     }
 
@@ -400,7 +426,7 @@ class WasmBridge {
             if (this.simulator.qemuBridge === this) {
                 this.simulator.eventBus.emit("qemu:output", text);
             } else {
-                this._pendingVisibleOutput = (this._pendingVisibleOutput || "") + text;
+                this._appendPendingVisibleOutput(text);
             }
             // Aditivo -- ver comentario de "device:status" en _onWorkerMessage.
             if (this.esp32) {
