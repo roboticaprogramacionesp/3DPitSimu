@@ -1,0 +1,127 @@
+/* ==========================================================
+   PitSimulator — ir-remote-panel.css
+   "Control remoto virtual" IR -- panel flotante, mismo criterio
+   general que ble-panel.css (posición inicial fija, arrastrable
+   después agarrando la cabecera). Arranca un poco más abajo que el
+   teléfono BLE para que no se solapen si se abren los dos juntos. */
+#irRemotePanel {
+    position: absolute;
+    top: 190px;
+    right: 330px;
+    width: 220px;
+    z-index: 220;
+    display: flex;
+    flex-direction: column;
+    background: #1a1a2e;
+    border: 1px solid #2d2d4e;
+    border-radius: 10px;
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+}
+
+#irRemotePanel.dragging { user-select: none; }
+
+#irRemotePanel.ir-closed { display: none; }
+
+/* ---- Cabecera (mismo look que .ble-header) ---- */
+
+.ir-header {
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    height: 32px;
+    min-height: 32px;
+    background: #16213e;
+    border-bottom: 1px solid #2d2d4e;
+    cursor: grab;
+    user-select: none;
+}
+
+#irRemotePanel.dragging .ir-header { cursor: grabbing; }
+
+.ir-header-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
+
+.ir-icon  { font-size: 14px; }
+.ir-title {
+    color: #a9b1d6;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ir-btn-close {
+    margin-left: auto;
+    padding: 2px 8px;
+    background: #242442;
+    border: 1px solid #4a2d2d;
+    border-radius: 6px;
+    color: #ff8a80;
+    font-size: 12px;
+    cursor: pointer;
+}
+.ir-btn-close:hover { background: #4a1f1f; color: #ff5252; }
+
+/* ---- Cuerpo ---- */
+
+.ir-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ir-hint {
+    font-size: 10.5px;
+    color: #7a82a8;
+    line-height: 1.4;
+}
+
+/* Cruz (flechas + OK) arriba, teclado numérico 3x3 (mas estrella,
+   cero, numeral) abajo -- mismo layout visual que trae el control
+   físico del KY-022. */
+.ir-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas:
+        ".     up    .     "
+        "left  ok    right "
+        ".     down  .     "
+        "k1    k2    k3    "
+        "k4    k5    k6    "
+        "k7    k8    k9    "
+        "kstar k0    khash ";
+    gap: 6px;
+}
+
+.ir-key {
+    background: #242442;
+    border: 1px solid #2d2d4e;
+    border-radius: 8px;
+    color: #e8ecff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 0;
+    cursor: pointer;
+    transition: background .08s, transform .08s;
+}
+
+.ir-key:hover { background: #2e2e52; }
+
+.ir-key.pressed,
+.ir-key:active {
+    background: #0a84ff;
+    color: #fff;
+    transform: scale(0.93);
+}
+
+.ir-key-ok {
+    background: #3a1f1f;
+    border-color: #5a2d2d;
+    color: #ff8a80;
+}
+.ir-key-ok:hover { background: #4a2626; }
+.ir-key-ok.pressed { background: #cc3333; color: #fff; }

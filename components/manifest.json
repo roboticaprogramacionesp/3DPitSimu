@@ -283,6 +283,11 @@
             "hasBehavior": true
         },
         {
+            "type": "ky-022",
+            "name": "KY-022 Receptor Infrarrojo",
+            "category": "Sensores"
+        },
+        {
             "type": "tcs34725",
             "name": "TCS34725 Sensor de Color (I2C)",
             "category": "Sensores",

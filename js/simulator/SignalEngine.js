@@ -1963,6 +1963,54 @@ class SignalEngine {
     return result;
   }
 
+  // ====================================================
+  // KY-022 (receptor IR, protocolo NEC) -- ver el comentario grande
+  // en components_wasm/_ir_rx_wasm.py sobre por qué no se simulan los
+  // pulsos reales: el "control remoto virtual" (IrRemotePanel.js) le
+  // manda el código del botón directo por "IRRX:<gpio>:<addr>:<cmd>".
+  // A diferencia del HC-06 (bidireccional, por UART), acá solo hace
+  // falta resolver UN sentido: encontrar a qué GPIO del ESP32 está
+  // cableado el pin "s" de cada KY-022.
+  // ====================================================
+
+  _resolveKy022Gpio(component) {
+    const net = this.getNet(`${component.id}:s`);
+    for (const key of net) {
+      const [cId, pId] = key.split(":");
+      const comp = this.simulator.componentManager.get(cId);
+      if (!comp || !comp.type.startsWith("esp32")) continue;
+      const match = pId.match(/^io(\d+)$/);
+      if (match) return { esp32Id: cId, gpio: parseInt(match[1], 10) };
+    }
+    return null;
+  }
+
+  // Llamado por IrRemotePanel.js al tocar un botón -- manda el código
+  // a ESTE receptor puntual.
+  sendIrCode(componentId, addr, cmd) {
+    const component = this.simulator.componentManager.get(componentId);
+    if (!component) return;
+    if (!this.isComponentPowered(component)) return;
+
+    const resolved = this._resolveKy022Gpio(component);
+    if (!resolved) return;
+
+    const bridge = this.simulator.bridges.get(resolved.esp32Id);
+    if (!bridge?.connected) return;
+
+    bridge.sendData(`IRRX:${resolved.gpio}:${addr}:${cmd}`);
+  }
+
+  // Un control remoto real es BROADCAST -- no hay "emparejamiento"
+  // como en BLE/HC-06, cualquier receptor en línea de vista lo recibe.
+  // Mismo criterio acá: el botón se manda a TODOS los KY-022 bien
+  // cableados y alimentados del lienzo, sin necesidad de "conectar" a
+  // uno en particular primero.
+  broadcastIrCode(addr, cmd) {
+    const receivers = this.simulator.componentManager.getAll().filter((c) => c.type === "ky-022");
+    receivers.forEach((comp) => this.sendIrCode(comp.id, addr, cmd));
+  }
+
    // ====================================================
   // Encoder rotativo KY-040 (CLK/DT en cuadratura + SW)
   //

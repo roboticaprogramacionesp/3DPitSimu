@@ -68,6 +68,7 @@ const OLED_WASM_URL      = new URL("../../components_wasm/_oled_wasm.py", import
 const KEYPAD_I2C_WASM_URL = new URL("../../components_wasm/_keypad_i2c_wasm.py", import.meta.url);
 const ADC_BUS_WASM_URL   = new URL("../../components_wasm/_adc_bus_wasm.py", import.meta.url);
 const UART_BUS_WASM_URL  = new URL("../../components_wasm/_uart_bus_wasm.py", import.meta.url);
+const IR_RX_WASM_URL     = new URL("../../components_wasm/_ir_rx_wasm.py", import.meta.url);
 const NEOPIXEL_WASM_URL  = new URL("../../components_wasm/_neopixel_wasm.py", import.meta.url);
 const DHT_WASM_URL       = new URL("../../components_wasm/_dht_wasm.py", import.meta.url);
 const ESPNOW_WASM_URL    = new URL("../../components_wasm/_espnow_wasm.py", import.meta.url);
@@ -296,6 +297,7 @@ self.onmessage = async (e) => {
             const keypadI2cP  = fetch(KEYPAD_I2C_WASM_URL, NO_CACHE).then((r) => r.text());
             const adcP        = fetch(ADC_BUS_WASM_URL, NO_CACHE).then((r) => r.text());
             const uartP       = fetch(UART_BUS_WASM_URL, NO_CACHE).then((r) => r.text());
+            const irRxP       = fetch(IR_RX_WASM_URL, NO_CACHE).then((r) => r.text());
             const neopixelP   = fetch(NEOPIXEL_WASM_URL, NO_CACHE).then((r) => r.text());
             const dhtP        = fetch(DHT_WASM_URL, NO_CACHE).then((r) => r.text());
             const espnowP     = fetch(ESPNOW_WASM_URL, NO_CACHE).then((r) => r.text());
@@ -324,6 +326,18 @@ self.onmessage = async (e) => {
             // de orden respecto a lo de arriba, más allá de necesitar
             // register_line_handler() de _base_wasm.py.
             await mp.runPython(await uartP);
+
+            // KY-022 (receptor IR) -- reemplaza la librería "ir_rx"
+            // ENTERA (ver el comentario grande en _ir_rx_wasm.py: el
+            // protocolo NEC real no se simula a nivel de pulsos, el
+            // "control remoto virtual" dispara el callback directo).
+            // Tiene que correr ANTES que cualquier código de usuario
+            // haga "from ir_rx import NEC_8" -- igual que todo lo
+            // demás de esta cadena, alcanza con que termine antes del
+            // primer "▶ Ejecutar", no hay orden real respecto a los
+            // otros bloques de acá.
+            await mp.runPython(await irRxP);
+
             await mp.runPython(await neopixelP);
             await mp.runPython(await dhtP);
 

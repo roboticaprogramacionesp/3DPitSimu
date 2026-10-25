@@ -60,6 +60,10 @@
     //     -- panel aparte, no depende de ReplPanel, solo del eventBus.
     const blePanel = new BlePanel(sim);
 
+    // 2c. Control remoto virtual IR (KY-022) -- mismo criterio que
+    //     blePanel, panel aparte, no depende de ReplPanel.
+    const irRemotePanel = new IrRemotePanel(sim);
+
     // 3. WasmBridge (modo 100% navegador, sin QEMU/servidor -- ver plan
     //    "PitSimulator en GitHub Pages") -- AHORA EL DEFAULT. Desde que
     //    el modo navegador llegó a cubrir prácticamente todo el
@@ -137,6 +141,7 @@
     window.replPanel       = replPanel;
     window.replWindowManager = replWindowManager;
     window.blePanel        = blePanel;
+    window.irRemotePanel   = irRemotePanel;
     window.tutorialManager = tutorialManager;
     window.toolbar         = toolbar;
     window.reportGenerator = reportGenerator;
