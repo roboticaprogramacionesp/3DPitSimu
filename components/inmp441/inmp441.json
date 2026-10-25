@@ -20,6 +20,6 @@
     ],
 
     "properties": {
-        "info": "Micrófono digital I2S (machine.I2S) -- la lectura de audio real por I2S todavía no está simulada en modo navegador (WASM), igual que la cámara o Bluetooth Clásico."
+        "info": "Micrófono digital I2S (machine.I2S) -- la lectura de audio real por I2S todavía no está simulada en modo navegador (WASM), igual que la cámara."
     }
 }

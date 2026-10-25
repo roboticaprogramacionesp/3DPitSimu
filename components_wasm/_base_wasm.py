@@ -381,9 +381,16 @@ _SLEEP_POLL_CHUNK_MS = 10
 
 def _pit_sleep_ms(ms):
     ms = int(ms)
-    if not _irq_handlers:
+    # Timer/WDT (ver sección grande al final del archivo) se
+    # definen DESPUÉS en este mismo módulo -- está bien, acá solo se
+    # los LLAMA (no se ejecutan hasta el primer sleep() real del
+    # código del alumno, momento en el que ya están definidos).
+    # Mismo criterio que _irq_handlers: si no hay ningún Timer activo
+    # ni WDT armado, no hace falta trocear el sleep en pasos de 10ms.
+    if not _irq_handlers and not _pit_timers and _pit_wdt_active[0] is None:
         _pit_real_time.sleep_ms(ms)
         _pit_dispatch_irqs()
+        _pit_dispatch_timers()
         return
     # Contra un deadline real (no "restar el paso"): cada sleep_ms()
     # corto duerme algo más de lo pedido (setTimeout), y sumado en un
@@ -391,6 +398,8 @@ def _pit_sleep_ms(ms):
     deadline = _pit_real_time.ticks_add(_pit_real_time.ticks_ms(), ms)
     while True:
         _pit_dispatch_irqs()
+        _pit_dispatch_timers()
+        _pit_check_wdt()
         remaining = _pit_real_time.ticks_diff(deadline, _pit_real_time.ticks_ms())
         if remaining <= 0:
             return
@@ -404,6 +413,8 @@ def _pit_sleep(seconds):
 def _pit_sleep_us(us):
     _pit_real_time.sleep_us(us)
     _pit_dispatch_irqs()
+    _pit_dispatch_timers()
+    _pit_check_wdt()
 
 
 class _PitTimeModule:
@@ -419,3 +430,257 @@ _pit_time.sleep_ms = _pit_sleep_ms
 _pit_time.sleep_us = _pit_sleep_us
 sys.modules["time"] = _pit_time
 sys.modules["utime"] = _pit_time
+
+
+# ─────────────────────────────────────────────────────────────
+# machine.Timer/WDT/RTC/deepsleep/reset_cause + machine.CAN --
+# faltaban ENTEROS en este runtime (BUG REAL encontrado en vivo
+# revisando qué bloques de Blockly rompían: wdt_init/wdt_feed,
+# timer_init/timer_stop, rtc_init/rtc_set_datetime/rtc_get_datetime,
+# machine_deepsleep/machine_reset_cause y can_init/can_send están
+# TODOS en el toolbox -- cualquier alumno los puede arrastrar sin
+# escribir una línea de código y le tiraba ImportError de una,
+# mismo motivo exacto que machine.UART antes de _uart_bus_wasm.py).
+#
+# _pit_sleep_ms()/_pit_sleep_us() (arriba) ya llaman a
+# _pit_dispatch_timers()/_pit_check_wdt() en cada yield de Asyncify
+# -- mismo mecanismo "se actualiza durante el sleep() del script"
+# que ya usan los IRQ de Pin. Igual que los IRQ: un bucle que JAMÁS
+# llama a sleep() no puede recibir ningún tick de Timer ni disparar
+# el WDT -- limitación conocida y documentada, no algo nuevo de acá.
+# ─────────────────────────────────────────────────────────────
+
+_pit_timers = {}          # id -> {period, mode, callback, next_due}
+_pit_wdt_active = [None]  # [WDT] o [None] -- como lista para mutar sin "global"
+
+
+def _pit_dispatch_timers():
+    if not _pit_timers:
+        return
+    now = _pit_real_time.ticks_ms()
+    # list(...) -- un callback puede deinit() OTRO timer (o el propio)
+    # desde adentro; iterar sobre una copia evita
+    # "RuntimeError: dictionary changed size during iteration".
+    for tid, t in list(_pit_timers.items()):
+        if _pit_real_time.ticks_diff(now, t["next_due"]) < 0:
+            continue
+        if t["mode"] == Timer.PERIODIC:
+            t["next_due"] = _pit_real_time.ticks_add(t["next_due"], t["period"])
+        else:
+            _pit_timers.pop(tid, None)
+        cb = t["callback"]
+        if cb is None:
+            continue
+        try:
+            cb(t["obj"])
+        except Exception as e:
+            # Igual que _pit_dispatch_irqs() -- un error en el
+            # callback del alumno tiene que verse para poder
+            # corregirlo, no tragarse en silencio.
+            sys.print_exception(e)
+
+
+class Timer:
+    ONE_SHOT = 0
+    PERIODIC = 1
+
+    def __init__(self, id=-1, *a, **kw):
+        self._id = id
+        if a or kw:
+            self.init(*a, **kw)
+
+    def init(self, period=1000, mode=PERIODIC, callback=None, *a, **kw):
+        _pit_timers[self._id] = {
+            "period": period,
+            "mode": mode,
+            "callback": callback,
+            "obj": self,
+            "next_due": _pit_real_time.ticks_add(_pit_real_time.ticks_ms(), period),
+        }
+
+    def deinit(self):
+        _pit_timers.pop(self._id, None)
+
+
+machine.Timer = Timer
+
+
+# ── WDT ──────────────────────────────────────────────────────
+# Alcance a propósito más chico que un WDT real: en vez de
+# simular un reinicio completo de la placa (reabrir el Worker,
+# reimportar todo, reimprimir el banner -- una reestructuración
+# bastante más grande, fuera de alcance de este cambio), levanta
+# una excepción clara cuando no se lo alimenta a tiempo. Desde la
+# perspectiva del alumno el efecto pedagógico es el mismo que
+# busca el bloque (el programa se corta y avisa "te olvidaste de
+# alimentar el WDT"), sin la complejidad de reiniciar el intérprete
+# entero.
+class WDT:
+    def __init__(self, id=0, timeout=5000):
+        self._timeout = timeout
+        self._last_feed = _pit_real_time.ticks_ms()
+        _pit_wdt_active[0] = self
+
+    def feed(self):
+        self._last_feed = _pit_real_time.ticks_ms()
+
+
+def _pit_check_wdt():
+    wdt = _pit_wdt_active[0]
+    if wdt is None:
+        return
+    elapsed = _pit_real_time.ticks_diff(_pit_real_time.ticks_ms(), wdt._last_feed)
+    if elapsed < wdt._timeout:
+        return
+    _pit_wdt_active[0] = None
+    raise RuntimeError(
+        "Reinicio simulado: el Watchdog Timer (WDT) no fue alimentado a tiempo "
+        "(sin feed() por mas de %dms) -- en un ESP32 real esto reinicia la placa. "
+        "Llama a wdt.feed() mas seguido dentro de tu bucle." % wdt._timeout
+    )
+
+
+machine.WDT = WDT
+
+
+# ── RTC (reloj interno del ESP32, sin pila -- a diferencia del
+# DS3231 EXTERNO, acá no hay ningún componente ni cableado de por
+# medio: es puro estado de este módulo, el propio código del alumno
+# lo lee/escribe directo). Sin backup de batería real, así que
+# arranca en una fecha fija "sin configurar" (mismo criterio y mismo
+# valor que _DS_DEFAULT_EPOCH en ds3231.hal.py: 2025-01-01) en vez de
+# la hora real de la compu -- a propósito: un ESP32 real NO sabe qué
+# hora es al arrancar, ese es justamente el motivo por el que los
+# tutoriales enseñan a sincronizar por WiFi/NTP o por un RTC externo.
+#
+# Días-desde-civil / civil-desde-días: algoritmo estándar de Howard
+# Hinnant (http://howardhinnant.github.io/date_algorithms.html),
+# válido para cualquier año del calendario gregoriano proléptico --
+# evita tener que traer una librería de calendario completa solo
+# para sumarle unos segundos a una fecha.
+def _pit_days_from_civil(y, m, d):
+    y = y - 1 if m <= 2 else y
+    era = (y if y >= 0 else y - 399) // 400
+    yoe = y - era * 400
+    doy = (153 * (m + (-3 if m > 2 else 9)) + 2) // 5 + d - 1
+    doe = yoe * 365 + yoe // 4 - yoe // 100 + doy
+    return era * 146097 + doe - 719468
+
+
+def _pit_civil_from_days(z):
+    z += 719468
+    era = (z if z >= 0 else z - 146096) // 146097
+    doe = z - era * 146097
+    yoe = (doe - doe // 1460 + doe // 36524 - doe // 146096) // 365
+    y = yoe + era * 400
+    doy = doe - (365 * yoe + yoe // 4 - yoe // 100)
+    mp = (5 * doy + 2) // 153
+    d = doy - (153 * mp + 2) // 5 + 1
+    m = mp + 3 if mp < 10 else mp - 9
+    y = y + 1 if m <= 2 else y
+    return y, m, d
+
+
+_PIT_RTC_DEFAULT_EPOCH = 1735689600  # 2025-01-01T00:00:00Z, igual que ds3231.hal.py
+
+
+def _pit_dt_to_epoch(y, mo, d, h, mi, s):
+    return _pit_days_from_civil(y, mo, d) * 86400 + h * 3600 + mi * 60 + s
+
+
+def _pit_epoch_to_dt(epoch):
+    days, rem = divmod(epoch, 86400)
+    y, mo, d = _pit_civil_from_days(days)
+    h, rem = divmod(rem, 3600)
+    mi, s = divmod(rem, 60)
+    return y, mo, d, h, mi, s
+
+
+_pit_rtc_anchor_epoch = [_PIT_RTC_DEFAULT_EPOCH]
+_pit_rtc_anchor_ms = [_pit_real_time.ticks_ms()]
+
+
+class RTC:
+    def __init__(self, id=0):
+        pass
+
+    def datetime(self, dt=None):
+        if dt is None:
+            elapsed_s = _pit_real_time.ticks_diff(_pit_real_time.ticks_ms(), _pit_rtc_anchor_ms[0]) // 1000
+            y, mo, d, h, mi, s = _pit_epoch_to_dt(_pit_rtc_anchor_epoch[0] + elapsed_s)
+            # weekday 0=lunes..6=domingo (mismo orden que machine.RTC
+            # real) -- 1970-01-01 (día 0 desde civil) fue jueves (3).
+            weekday = (_pit_days_from_civil(y, mo, d) + 3) % 7
+            return (y, mo, d, weekday, h, mi, s, 0)
+        y, mo, d = dt[0], dt[1], dt[2]
+        h, mi, s = dt[4], dt[5], dt[6]
+        _pit_rtc_anchor_epoch[0] = _pit_dt_to_epoch(y, mo, d, h, mi, s)
+        _pit_rtc_anchor_ms[0] = _pit_real_time.ticks_ms()
+
+
+machine.RTC = RTC
+
+
+# ── deepsleep()/reset_cause() -- alcance reducido a propósito (ver
+# nota grande de WDT arriba, mismo motivo): NO reinicia de verdad el
+# intérprete ni vuelve a correr el script desde el principio, así que
+# reset_cause() nunca va a devolver DEEPSLEEP_RESET en este runtime
+# (sería mentir -- el script nunca "reinició" de verdad). Se
+# simula como un sleep largo (en pasos de a 1s, mismo
+# _pit_sleep_ms() de siempre) para que al menos no rompa ni se
+# cuelgue -- el patrón típico de tutorial "if reset_cause() ==
+# DEEPSLEEP_RESET" simplemente nunca entra a esa rama, igual que en
+# un ESP32 recién encendido por primera vez.
+machine.POWERON_RESET = 1
+machine.HARD_RESET = 2
+machine.WDT_RESET = 3
+machine.DEEPSLEEP_RESET = 4
+machine.SOFT_RESET = 5
+
+
+def _pit_reset_cause():
+    return machine.POWERON_RESET
+
+
+def _pit_deepsleep(ms=0):
+    if ms:
+        _pit_sleep_ms(ms)
+    else:
+        while True:
+            _pit_sleep_ms(1000)
+
+
+machine.reset_cause = _pit_reset_cause
+machine.deepsleep = _pit_deepsleep
+
+
+# ── CAN -- stub seguro (no-op), no roto. No hay ningún bus CAN
+# compartido simulado en este proyecto (haría falta otro ESP32 "del
+# otro lado" escuchando, y no hay ninguna noción de eso todavía) --
+# a diferencia de ESP-NOW/BLE, que sí tienen a quién entregarle el
+# mensaje. send()/recv() no rompen, pero tampoco entregan nada: mismo
+# criterio que ble.gatts_set_buffer() (no-op documentado) en vez de
+# simular una mitad de la conversación que nunca se puede completar.
+class CAN:
+    NORMAL = 0
+    LOOPBACK = 1
+    SILENT = 2
+    SILENT_LOOPBACK = 3
+
+    def __init__(self, bus=0, *a, **kw):
+        self._bus = bus
+
+    def send(self, data, id, *a, **kw):
+        return None
+
+    def recv(self, *a, **kw):
+        raise OSError(116, "ETIMEDOUT")  # no hay nada que leer -- mismo que un bus real sin tráfico
+
+    def any(self):
+        return False
+
+    def deinit(self):
+        pass
+
+
+machine.CAN = CAN
