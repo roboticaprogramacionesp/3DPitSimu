@@ -4360,8 +4360,17 @@ Blockly.defineBlocksWithJsonArray([
     colour: 20,
   },
   {
+    // Suffijo visible (no solo tooltip) a propósito -- hay otros 2
+    // bloques "init" de L298N casi idénticos (init2_dc_motor_pwm/
+    // init3_dc_motor_pwm) y antes eran indistinguibles a simple vista
+    // en el flyout del Toolbox. BUG REAL encontrado revisando un
+    // reporte del usuario sobre el L298N: un alumno que arma su
+    // proyecto con ESTE bloque y después agrega un bloque de
+    // velocidad (move_dc_motor1_pwm, que necesita ENA/ENB) se
+    // encuentra con NameError, sin ninguna pista de por qué -- este
+    // bloque nunca definió esos pines.
     type: "init_dc_motor",
-    message0: "%1 %2 in1 %3 in2 %4 in3 %5 in4 %6",
+    message0: "%1 %2 in1 %3 in2 %4 in3 %5 in4 %6 %7",
     args0: [
       { type: "field_input", name: "NAME", text: "l298n" },
       {
@@ -4411,10 +4420,12 @@ Blockly.defineBlocksWithJsonArray([
           ["17", "17"],
         ],
       },
+      { type: "field_label", name: "HINT", text: "(dirección, sin velocidad)" },
     ],
     previousStatement: null,
     nextStatement: null,
     colour: 20,
+    tooltip: "Motor DC simple: prende/apaga IN1-4 (adelante/atrás/freno), sin control de velocidad. Si vas a usar un bloque de velocidad (0-100%) y querés que el simulador la refleje, usá el bloque 'con ENA/ENB' más abajo en vez de este.",
   },
   {
     type: "move_dc_motor1_on_off",
@@ -4565,8 +4576,15 @@ Blockly.defineBlocksWithJsonArray([
     colour: 20,
   },
   {
+    // Mismo motivo que el suffijo de init_dc_motor de arriba -- este
+    // bloque arma PWM DIRECTO sobre IN1-4 (sin ENA/ENB). Pensado para
+    // hardware real con el jumper de habilitación puesto, pero el
+    // SIMULADOR no lo reconoce como velocidad (SignalEngine solo lee
+    // PWM desde ENA/ENB, ver l298n.behavior.js/_computeL298nMotorState)
+    // -- el motor simulado queda "detenido" sin importar el duty que
+    // se mande acá. BUG REAL encontrado en el mismo reporte de arriba.
     type: "init2_dc_motor_pwm",
-    message0: "%1 %2 in1 %3 in2 %4 in3 %5 in4 %6",
+    message0: "%1 %2 in1 %3 in2 %4 in3 %5 in4 %6 %7",
     args0: [
       { type: "field_input", name: "NAME", text: "l298n" },
       {
@@ -4616,10 +4634,12 @@ Blockly.defineBlocksWithJsonArray([
           ["25", "25"],
         ],
       },
+      { type: "field_label", name: "HINT", text: "(PWM directo en IN -- sin velocidad en el simulador)" },
     ],
     previousStatement: null,
     nextStatement: null,
     colour: 20,
+    tooltip: "PWM directo sobre IN1-4, pensado para una placa real con el jumper de habilitación puesto. El simulador NO refleja la velocidad con este bloque (solo detecta encendido/apagado digital) -- para que la velocidad se vea en el simulador, usá el bloque 'con ENA/ENB' más abajo.",
   },
   {
     type: "move_dc_motor_pwm1",
@@ -4647,6 +4667,7 @@ Blockly.defineBlocksWithJsonArray([
     nextStatement: null,
     inputsInline: true,
     colour: 20,
+    tooltip: "PWM directo sobre IN1/IN2 (sin ENA/ENB) -- pensado para hardware real con el jumper de habilitación puesto. El simulador NO refleja la velocidad con este bloque. Para verla en el simulador, usá move_dc_motor1_pwm junto con el bloque de inicialización 'con ENA/ENB'.",
   },
   {
     type: "move_dc_motor_pwm2",
@@ -4683,7 +4704,7 @@ Blockly.defineBlocksWithJsonArray([
     nextStatement: null,
     inputsInline: true,
     colour: 20,
-    tooltip: "Velocidad de IN1/IN2 con deslizador (0-100%) para un solo motor.",
+    tooltip: "Velocidad de IN1/IN2 con deslizador (0-100%) para un solo motor. PWM directo sobre IN1/IN2 (sin ENA/ENB) -- el simulador NO refleja esta velocidad (solo hardware real con el jumper de habilitación puesto). Para verla en el simulador, usá move_dc_motor1_pwm junto con el bloque de inicialización 'con ENA/ENB'.",
   },
   {
     type: "move_dc_motor_pwm2_slider",
@@ -4699,9 +4720,13 @@ Blockly.defineBlocksWithJsonArray([
     nextStatement: null,
     inputsInline: true,
     colour: 20,
-    tooltip: "Velocidad de IN1-IN4 con deslizador (0-100%) para ambos motores.",
+    tooltip: "Velocidad de IN1-IN4 con deslizador (0-100%) para ambos motores. PWM directo sobre IN1-4 (sin ENA/ENB) -- el simulador NO refleja esta velocidad (solo hardware real con el jumper de habilitación puesto). Para verla en el simulador, usá move_dc_motor1_pwm junto con el bloque de inicialización 'con ENA/ENB'.",
   },
   {
+    // El único de los 3 "init" de L298N con control de velocidad real
+    // en el simulador (ver l298n.behavior.js/_computeL298nMotorState,
+    // que SOLO lee PWM desde las claves "ena"/"enb") -- recomendado
+    // para usar junto con move_dc_motor1_pwm/move_dc_motor1_pwm_var.
     type: "init3_dc_motor_pwm",
     message0: "%1 %2 ENA %3 in1 %4 in2 %5 in3 %6 in4 %7 ENB %8",
     args0: [
@@ -4771,6 +4796,7 @@ Blockly.defineBlocksWithJsonArray([
     previousStatement: null,
     nextStatement: null,
     colour: 20,
+    tooltip: "Motor DC CON control de velocidad real: ENA/ENB van por PWM (0-100%, bloque de velocidad más abajo) e IN1-4 solo marcan la dirección. Este es el bloque recomendado si vas a variar la velocidad y querés verla reflejada en el simulador.",
   },
 
   {
@@ -4807,7 +4833,7 @@ Blockly.defineBlocksWithJsonArray([
     nextStatement: null,
     inputsInline: true,
     colour: 20,
-    tooltip: "Velocidad 0–100%. Se mapea a 0–1023 (PWM 10-bit).",
+    tooltip: "Velocidad 0–100%. Se mapea a 0–1023 (PWM 10-bit). Requiere haber inicializado el L298N con el bloque 'con ENA/ENB' (init3_dc_motor_pwm) -- con los otros dos init la velocidad no se ve reflejada en el simulador.",
   },
   {
     type: "move_dc_motor1_pwm_var",
@@ -4837,7 +4863,7 @@ Blockly.defineBlocksWithJsonArray([
     nextStatement: null,
     inputsInline: true,
     colour: 20,
-    tooltip: "Como 'velocidad' (0–100%), pero se conecta como valor — puedes usar una variable.",
+    tooltip: "Como 'velocidad' (0–100%), pero se conecta como valor — puedes usar una variable. Requiere haber inicializado el L298N con el bloque 'con ENA/ENB' (init3_dc_motor_pwm).",
   },
 
   {
@@ -4904,7 +4930,7 @@ Blockly.defineBlocksWithJsonArray([
     nextStatement: null,
     inputsInline: true,
     colour: 20,
-    tooltip: "Como 'velocidad' (0–100%), pero se conecta como valor — puedes usar una variable.",
+    tooltip: "Como 'velocidad' (0–100%), pero se conecta como valor — puedes usar una variable. Requiere haber inicializado el L298N con el bloque 'con ENA/ENB' (init3_dc_motor_pwm).",
   },
 
   {
