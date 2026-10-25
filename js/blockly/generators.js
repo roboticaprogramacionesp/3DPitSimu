@@ -634,6 +634,19 @@ Blockly.Python["is_int"] = function (block) {
   return [`isinstance(${value}, int)`, Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
+// Ver el comentario grande en blocks.js (tipo "is_digit_string") --
+// ORDER_MEMBER en el valor (no ORDER_NONE como is_int de arriba)
+// porque esto se genera como "valor.isdigit()", un llamado a método:
+// sin esa precedencia, algo como texto1 + texto2 quedaría
+// "texto1 + texto2.isdigit()" (el método se pega SOLO al segundo
+// operando) en vez de "(texto1 + texto2).isdigit()".
+Blockly.Python["is_digit_string"] = function (block) {
+  const value =
+    Blockly.Python.valueToCode(block, "VALUE", Blockly.Python.ORDER_MEMBER) ||
+    "''";
+  return [`${value}.isdigit()`, Blockly.Python.ORDER_FUNCTION_CALL];
+};
+
 Blockly.Python["is_float"] = function (block) {
   const value =
     Blockly.Python.valueToCode(block, "VALUE", Blockly.Python.ORDER_NONE) ||

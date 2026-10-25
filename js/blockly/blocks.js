@@ -942,7 +942,24 @@ Blockly.defineBlocksWithJsonArray([
     args0: [{ type: "input_value", name: "VALUE" }],
     output: "Boolean",
     colour: 230,
-    tooltip: "Comprueba si el valor es entero",
+    tooltip: "Comprueba si el valor YA ES un número entero (isinstance) -- para texto que llega por BLE/UART/Serial (ej. de uart.read().decode()) esto SIEMPRE da False, aunque diga \"90\", porque sigue siendo texto. Para revisar si un TEXTO tiene solo dígitos antes de convertirlo con 'a entero', usá 'tiene solo dígitos' en vez de este.",
+    helpUrl: "",
+  },
+  {
+    // Agregado a pedido (BUG REAL reportado en vivo: un alumno usaba
+    // "es entero" sobre texto recibido por BLE -- isinstance(texto,
+    // int) da SIEMPRE False, así que su "if" nunca se cumplía y el
+    // servo nunca se movía, sin ningún error que avisara por qué).
+    // Bloque aparte en vez de agregarle un selector a "es entero" --
+    // son dos chequeos con significado distinto (tipo de dato vs.
+    // contenido de un texto), mezclarlos bajo un selector sería
+    // repetir la misma confusión que causó el bug original.
+    type: "is_digit_string",
+    message0: "tiene solo dígitos %1",
+    args0: [{ type: "input_value", name: "VALUE", check: "String" }],
+    output: "Boolean",
+    colour: 230,
+    tooltip: "Comprueba si un TEXTO tiene solo dígitos (ej. \"90\" -> True, \"abc\" o \"\" -> False) -- usalo para validar texto recibido por BLE/UART/Serial ANTES de convertirlo con 'a entero'. A diferencia de 'es entero' (que revisa el TIPO de dato), este revisa el CONTENIDO del texto.",
     helpUrl: "",
   },
   {
