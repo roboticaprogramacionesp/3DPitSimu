@@ -1817,6 +1817,7 @@ class Renderer {
     const blades = indicator.querySelectorAll('[data-motor-role="blade"]');
     const hub = indicator.querySelector('[data-motor-role="hub"]');
     const tick = indicator.querySelector('[data-motor-role="tick"]');
+    const dirArrow = indicator.querySelector('[data-motor-role="dir-arrow"]');
 
     const { state, enabled } = motorState || {};
     const spinning = enabled && (state === "adelante" || state === "atrás");
@@ -1828,6 +1829,14 @@ class Renderer {
     blades.forEach((b) => b.setAttribute("fill", color));
     if (hub) hub.setAttribute("fill", color);
     if (tick) tick.setAttribute("fill", color);
+
+    // ↻ (adelante) / ↺ (atrás) -- fija, no rota con el rotor, ver el
+    // comentario grande en motor.behavior.js sobre por qué hace
+    // falta esto además del color.
+    if (dirArrow) {
+      dirArrow.textContent = state === "adelante" ? "↻" : state === "atrás" ? "↺" : "";
+      dirArrow.setAttribute("fill", color);
+    }
 
     // El indicador queda visible mientras el puente esté
     // habilitado -- ya sea girando (color) o detenido (blanco) --

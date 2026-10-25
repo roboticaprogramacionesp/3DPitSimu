@@ -93,6 +93,28 @@ ComponentBehaviorRegistry.register("motor", {
             ring.setAttribute("stroke-width", "1");
             indicator.appendChild(ring);
 
+            // Flechita ↻/↺ fija (NO rota con el rotor) en una esquina --
+            // reportado en vivo: con 3 aspas simétricas (120° entre sí),
+            // a simple vista NO se nota si gira en un sentido u otro
+            // (ilusión óptica real con formas de simetría rotacional,
+            // ni el color -- MOTOR_FORWARD_COLOR/MOTOR_REVERSE_COLOR,
+            // ver applyMotorState() -- alcanzaba para que se notara el
+            // cambio de sentido mirando el motor en movimiento, no solo
+            // un frame quieto). Afuera del anillo para no competir
+            // visualmente con las aspas.
+            const dirArrow = document.createElementNS(NS, "text");
+            dirArrow.setAttribute("data-motor-role", "dir-arrow");
+            dirArrow.setAttribute("x", r * 0.95);
+            dirArrow.setAttribute("y", -r * 0.95);
+            dirArrow.setAttribute("text-anchor", "middle");
+            dirArrow.setAttribute("dominant-baseline", "central");
+            dirArrow.setAttribute("font-size", Math.max(10, r * 0.5));
+            dirArrow.setAttribute("font-weight", "bold");
+            dirArrow.setAttribute("stroke", "#000000");
+            dirArrow.setAttribute("stroke-width", "0.5");
+            dirArrow.setAttribute("paint-order", "stroke");
+            indicator.appendChild(dirArrow);
+
             wrapper.appendChild(indicator);
             graphic.appendChild(wrapper);
 
