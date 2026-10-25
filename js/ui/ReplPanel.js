@@ -4113,6 +4113,16 @@ class ReplPanel {
             // Worker ya cargó _base_wasm.py/_i2c_bus_wasm.py antes de
             // mandar "ready", así que queda listo de una.
             if (this.bridge?.isWasmBridge) {
+                // Pedido explícito del usuario: cada "▶ Simular" conecta
+                // un Worker nuevo de punta a punta (MicroPython arranca
+                // de cero) -- sin este clear(), el banner + "🔴 ESP32
+                // desconectada" de la corrida anterior se quedaban
+                // apilados arriba, cada vez más confuso con Simular/
+                // Detener seguidos. No afecta _switchActiveDevice() (ese
+                // camino no pasa por este listener -- tiene su propio
+                // clear()+header "── id ──" para no perder la salida del
+                // dispositivo que se deja de mirar).
+                this.terminal.clear();
                 // Multi-ESP32 (Fase 2): extraído a _activateWasmDeviceReady()
                 // -- este mismo camino (banner + marcar HAL "siempre
                 // presente" + _onReplReady + preloadHal + resync) se
