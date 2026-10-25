@@ -73,6 +73,7 @@ class BlePanel {
                 <span class="ble-icon">📱</span>
                 <span class="ble-title">Serial Bluetooth Terminal (simulado)</span>
             </div>
+            <button class="ble-btn ble-btn-close" title="Cerrar">✕</button>
         `;
 
         this.body = document.createElement("div");
@@ -132,6 +133,12 @@ class BlePanel {
     bindEvents() {
 
         document.getElementById("btnBlePanelToggle")?.addEventListener("click", () => this.toggle());
+
+        // Botón ✕ explícito a pedido -- el header entero ya cerraba al
+        // tocarlo (sigue así, no se le cambió nada), pero sin una X
+        // visible no quedaba claro que ESO era lo que hacía.
+        this.closeBtn = this.header.querySelector(".ble-btn-close");
+        this.closeBtn.addEventListener("click", () => this.toggle());
 
         this.header.addEventListener("click", (e) => {
             if (e.target.closest(".ble-btn, .ble-device-select")) return;

@@ -97,6 +97,17 @@
 }
 .ble-btn-send:hover { background: #0a74e0; }
 
+/* ✕ a la derecha de la cabecera -- mismo color/criterio que
+   .repl-btn-close en repl-window.css, para que se vea consistente
+   con el resto de los paneles flotantes del simulador. */
+.ble-btn-close {
+    margin-left: auto;
+    padding: 2px 8px;
+    color: #ff8a80;
+    border-color: #4a2d2d;
+}
+.ble-btn-close:hover { background: #4a1f1f; color: #ff5252; }
+
 /* ---- Cuerpo ---- */
 
 .ble-body {
