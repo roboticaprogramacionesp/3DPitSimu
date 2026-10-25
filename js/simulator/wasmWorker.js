@@ -143,7 +143,15 @@ async function _fetchLibsBundleWithRetry(maxAttempts = 3) {
 
         try {
 
-            const res = await fetch(LIBS_BUNDLE_URL, { cache: "no-store" });
+            // A diferencia de los .py de components_wasm/ (ver la nota
+            // grande junto a NO_CACHE más abajo -- esos SÍ cambian
+            // seguido durante el desarrollo), este bundle es código de
+            // terceros vendorizado que prácticamente nunca se edita --
+            // sin "no-store" el navegador lo puede servir de caché en
+            // el PRÓXIMO "▶ Simular" (Worker nuevo = se vuelve a pedir
+            // igual, pero con caché de por medio sale casi gratis en
+            // vez de volver a bajar 119kB por la red cada vez).
+            const res = await fetch(LIBS_BUNDLE_URL);
 
             if (!res.ok) {
                 throw new Error(`HTTP ${res.status} ${res.statusText}`);
@@ -180,11 +188,16 @@ async function _fetchLibsBundleWithRetry(maxAttempts = 3) {
 
 }
 
-async function _loadUserLibraries(mp) {
+// bundlePromise: por defecto arranca el fetch recién acá, pero el
+// llamador puede pasar una promesa YA EN VUELO (ver el "init" de
+// abajo, que la dispara en paralelo con los demás .py en vez de
+// esperar a que termine toda la cadena de HAL para recién ahí pedir
+// este archivo de 119kB).
+async function _loadUserLibraries(mp, bundlePromise = _fetchLibsBundleWithRetry()) {
 
     let bundle;
     try {
-        bundle = await _fetchLibsBundleWithRetry();
+        bundle = await bundlePromise;
     } catch (err) {
         console.warn("[wasmWorker] No se pudo cargar el paquete de librerías:", err);
         self.postMessage({
@@ -260,11 +273,38 @@ self.onmessage = async (e) => {
             // costo real en dejar de cachear.
             const NO_CACHE = { cache: "no-store" };
 
-            const baseCode = await (await fetch(BASE_WASM_URL, NO_CACHE)).text();
-            await mp.runPython(baseCode);
+            // BUG REAL encontrado en vivo (reportado: "demora mucho" --
+            // captura de red mostrando esta cadena entera en serie, una
+            // request atrás de la otra, en cada "▶ Simular"): antes de
+            // esto cada archivo se pedía y se corría de a uno, así que
+            // el tiempo total era la SUMA de las ~12 latencias de red
+            // (confirmado en la captura: ~5s solo en esta cadena, sin
+            // contar bundle.json). La ejecución con mp.runPython() SÍ
+            // tiene que respetar el orden (cada .py espera que el
+            // anterior ya haya corrido, ver los comentarios de cada
+            // uno más abajo) -- pero el FETCH en sí no tiene ninguna
+            // dependencia entre archivos, así que se piden los 12 a la
+            // red A LA VEZ y se van corriendo en orden a medida que
+            // cada uno (ya en vuelo) resuelve. bundle.json (el más
+            // pesado, 119kB) también arranca acá ya mismo en vez de
+            // recién al final de toda esta cadena (ver _loadUserLibraries
+            // más abajo, que ahora recibe esta promesa en vez de
+            // arrancar su propio fetch).
+            const baseP       = fetch(BASE_WASM_URL, NO_CACHE).then((r) => r.text());
+            const i2cP        = fetch(I2C_BUS_WASM_URL, NO_CACHE).then((r) => r.text());
+            const oledP       = fetch(OLED_WASM_URL, NO_CACHE).then((r) => r.text());
+            const keypadI2cP  = fetch(KEYPAD_I2C_WASM_URL, NO_CACHE).then((r) => r.text());
+            const adcP        = fetch(ADC_BUS_WASM_URL, NO_CACHE).then((r) => r.text());
+            const uartP       = fetch(UART_BUS_WASM_URL, NO_CACHE).then((r) => r.text());
+            const neopixelP   = fetch(NEOPIXEL_WASM_URL, NO_CACHE).then((r) => r.text());
+            const dhtP        = fetch(DHT_WASM_URL, NO_CACHE).then((r) => r.text());
+            const espnowP     = fetch(ESPNOW_WASM_URL, NO_CACHE).then((r) => r.text());
+            const requestsP   = fetch(REQUESTS_WASM_URL, NO_CACHE).then((r) => r.text());
+            const bluetoothP  = fetch(BLUETOOTH_WASM_URL, NO_CACHE).then((r) => r.text());
+            const libsBundleP = _fetchLibsBundleWithRetry();
 
-            const i2cCode = await (await fetch(I2C_BUS_WASM_URL, NO_CACHE)).text();
-            await mp.runPython(i2cCode);
+            await mp.runPython(await baseP);
+            await mp.runPython(await i2cP);
 
             // Después de i2cCode (define _oled_process_write(), que
             // I2C.writeto() de _i2c_bus_wasm.py llama por nombre vía
@@ -273,14 +313,9 @@ self.onmessage = async (e) => {
             // corra código del alumno) y antes de keypadI2cCode (sin
             // dependencia real entre ellos, pero así queda agrupado
             // con el resto de lo relacionado a I2C).
-            const oledCode = await (await fetch(OLED_WASM_URL, NO_CACHE)).text();
-            await mp.runPython(oledCode);
-
-            const keypadI2cCode = await (await fetch(KEYPAD_I2C_WASM_URL, NO_CACHE)).text();
-            await mp.runPython(keypadI2cCode);
-
-            const adcCode = await (await fetch(ADC_BUS_WASM_URL, NO_CACHE)).text();
-            await mp.runPython(adcCode);
+            await mp.runPython(await oledP);
+            await mp.runPython(await keypadI2cP);
+            await mp.runPython(await adcP);
 
             // FALTABA ENTERO (ver el comentario grande en
             // _uart_bus_wasm.py) -- machine.UART nunca se reemplazaba
@@ -288,14 +323,9 @@ self.onmessage = async (e) => {
             // verdad corriendo código de usuario real. Sin dependencia
             // de orden respecto a lo de arriba, más allá de necesitar
             // register_line_handler() de _base_wasm.py.
-            const uartCode = await (await fetch(UART_BUS_WASM_URL, NO_CACHE)).text();
-            await mp.runPython(uartCode);
-
-            const neopixelCode = await (await fetch(NEOPIXEL_WASM_URL, NO_CACHE)).text();
-            await mp.runPython(neopixelCode);
-
-            const dhtCode = await (await fetch(DHT_WASM_URL, NO_CACHE)).text();
-            await mp.runPython(dhtCode);
+            await mp.runPython(await uartP);
+            await mp.runPython(await neopixelP);
+            await mp.runPython(await dhtP);
 
             // MAC de ESTE ESP32 (ver plan ESP-NOW/Simulator multi-
             // dispositivo) -- inyectada ANTES de correr _espnow_wasm.py
@@ -305,23 +335,20 @@ self.onmessage = async (e) => {
             // "000000000000" si no hay ningún ESP32 (modo "sin placa",
             // ver Simulator.spawnBridgesForAllEsp32()).
             mp.globals.set("_pit_esp32_mac_hex", msg.macHex || "000000000000");
-            const espnowCode = await (await fetch(ESPNOW_WASM_URL, NO_CACHE)).text();
-            await mp.runPython(espnowCode);
+            await mp.runPython(await espnowP);
 
             // "requests"/"urequests" (ver plan ESP-NOW→WiFi→BLE, Fase
             // WiFi) -- depende de register_line_handler() de
             // _base_wasm.py, sin requisito de orden respecto a
             // _espnow_wasm.py más allá de eso.
-            const requestsCode = await (await fetch(REQUESTS_WASM_URL, NO_CACHE)).text();
-            await mp.runPython(requestsCode);
+            await mp.runPython(await requestsP);
 
             // BLE (ver plan ESP-NOW→WiFi→BLE, última fase) -- depende
             // de register_line_handler() de _base_wasm.py y de la MAC
             // ya inyectada arriba, sin más orden que eso.
-            const bluetoothCode = await (await fetch(BLUETOOTH_WASM_URL, NO_CACHE)).text();
-            await mp.runPython(bluetoothCode);
+            await mp.runPython(await bluetoothP);
 
-            await _loadUserLibraries(mp);
+            await _loadUserLibraries(mp, libsBundleP);
 
             baseLoaded = true;
 
