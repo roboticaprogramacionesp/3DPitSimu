@@ -337,6 +337,29 @@ class PWM:
         sys.stdout.write("PWM:%d:0:%d\n" % (self._pin_num, self._duty))
 
 
+# machine.DAC -- periférico real del ESP32 (salida analógica real,
+# 8 bits, SOLO en GPIO25/26), a diferencia de I2C/UART/etc no
+# necesita ningún componente externo para tener sentido (como el PWM
+# de arriba, el chip mismo lo provee). BUG REAL encontrado en vivo
+# revisando qué bloques de Blockly rompían: "dac_init"/"dac_write"
+# están en el Toolbox (categoría "DAC") y tiraban ImportError de
+# una -- faltaba la clase entera.
+#
+# A diferencia de Timer/WDT/RTC (que si tienen un efecto observable
+# real en este simulador), hoy NO hay ningún componente tipo
+# "voltímetro"/osciloscopio que pueda mostrar el voltaje de salida
+# -- se acepta write() sin romper (alcance reducido a propósito,
+# mismo criterio que machine.CAN más abajo), documentado acá en vez
+# de fingir que no hace falta decirlo.
+class DAC:
+    def __init__(self, pin):
+        self._pin_num = getattr(pin, "_pin_num", pin)
+        self._value = 0
+
+    def write(self, value):
+        self._value = max(0, min(255, value))
+
+
 # ─────────────────────────────────────────────────────────────
 # Módulo "machine" FALSO -- el puerto webassembly no trae ningún
 # módulo "machine" real (es específico de puertos con hardware de
@@ -358,6 +381,7 @@ class _FakeMachineModule:
 machine = _FakeMachineModule()
 machine.Pin = Pin
 machine.PWM = PWM
+machine.DAC = DAC
 sys.modules["machine"] = machine
 
 
