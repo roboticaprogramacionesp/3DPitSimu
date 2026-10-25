@@ -22,29 +22,61 @@
                   </shadow>
                 </value>
                 <next>
-                  <block type="move_servo" id="^A|G7f}KNdPr5KGw6)$`">
+                  <block type="move_servo" id="lL.k!Rg`6K,WJOCWpx5:">
                     <field name="PIN">26</field>
-                    <field name="ANGLE">90</field>
+                    <field name="ANGLE">45</field>
                     <next>
-                      <block type="time_sleep" id="b46_WANS-}4RqU#sjW9q">
+                      <block type="time_sleep" id="9T=fys%iBG}d,Q_|wp8;">
                         <field name="UNIT">S</field>
                         <value name="VALUE">
-                          <shadow type="math_number" id="Ge/ti4{[eS/~TwXPgb+z">
+                          <shadow type="math_number" id="eFk*fAawmM80Th64W|;I">
                             <field name="NUM">1</field>
                           </shadow>
                         </value>
                         <next>
-                          <block type="move_servo" id="_JsQmn;|TvHg?$|,.NI0">
+                          <block type="move_servo" id="^A|G7f}KNdPr5KGw6)$`">
                             <field name="PIN">26</field>
-                            <field name="ANGLE">180</field>
+                            <field name="ANGLE">90</field>
                             <next>
-                              <block type="time_sleep" id="U3,,tW0grP1o:l-8FCZm">
+                              <block type="time_sleep" id="b46_WANS-}4RqU#sjW9q">
                                 <field name="UNIT">S</field>
                                 <value name="VALUE">
-                                  <shadow type="math_number" id="(H)Fg8XkPQQ#9-mms6A4">
+                                  <shadow type="math_number" id="Ge/ti4{[eS/~TwXPgb+z">
                                     <field name="NUM">1</field>
                                   </shadow>
                                 </value>
+                                <next>
+                                  <block type="move_servo" id="=d}P4n76s|C{%]+(sYC`">
+                                    <field name="PIN">26</field>
+                                    <field name="ANGLE">135</field>
+                                    <next>
+                                      <block type="time_sleep" id="R|,t$CJ,#zR48C,.Sq%p">
+                                        <field name="UNIT">S</field>
+                                        <value name="VALUE">
+                                          <shadow type="math_number" id="u=c@caI*qUV@Lu;Z@rHD">
+                                            <field name="NUM">1</field>
+                                          </shadow>
+                                        </value>
+                                        <next>
+                                          <block type="move_servo" id="_JsQmn;|TvHg?$|,.NI0">
+                                            <field name="PIN">26</field>
+                                            <field name="ANGLE">180</field>
+                                            <next>
+                                              <block type="time_sleep" id="U3,,tW0grP1o:l-8FCZm">
+                                                <field name="UNIT">S</field>
+                                                <value name="VALUE">
+                                                  <shadow type="math_number" id="(H)Fg8XkPQQ#9-mms6A4">
+                                                    <field name="NUM">1</field>
+                                                  </shadow>
+                                                </value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
                               </block>
                             </next>
                           </block>

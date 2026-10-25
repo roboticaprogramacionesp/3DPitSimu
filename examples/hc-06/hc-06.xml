@@ -1,0 +1,72 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id="6Xgxxx:Ks)?~`Q1{/FBX">msg</variable>
+  </variables>
+  <block type="init_hc06" id="}`;ObjW;R2]J@H^q{jZO" x="10" y="10">
+    <field name="UART">2</field>
+    <field name="TX">17</field>
+    <field name="RX">16</field>
+    <field name="BAUD">9600</field>
+    <next>
+      <block type="controls_whileUntil" id="QZz#;3`Q?Y^DHB+ntQOz">
+        <field name="MODE">WHILE</field>
+        <value name="BOOL">
+          <block type="logic_boolean" id="=59:0Pa#^C_ls[D14XV,">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="controls_if" id="W.xNpEN9n8JuUN-:M/_A">
+            <value name="IF0">
+              <block type="hc06_any" id="JH1o9%r!Hj5^2$y/Or?F"></block>
+            </value>
+            <statement name="DO0">
+              <block type="variables_set" id="Pof}ord.bbQ@)m:|Qk?B">
+                <field name="VAR" id="6Xgxxx:Ks)?~`Q1{/FBX">msg</field>
+                <value name="VALUE">
+                  <block type="text_decode" id="Kc=JVSLtjmc`)F8hP/ws">
+                    <field name="STRIP">TRUE</field>
+                    <value name="BYTES">
+                      <block type="hc06_read" id="I}$#WtpJ(--yndsYScv-"></block>
+                    </value>
+                  </block>
+                </value>
+                <next>
+                  <block type="controls_if" id="T{/Y6Y:09mY2-oj@^]M2">
+                    <value name="IF0">
+                      <block type="variables_get" id="!G6I*~QU]{wX(87EeAc:">
+                        <field name="VAR" id="6Xgxxx:Ks)?~`Q1{/FBX">msg</field>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="text_print" id="Ai}?X~lf{O.a{-fk0*Nl">
+                        <value name="TEXT">
+                          <shadow type="text" id="1cQs.E]i/xh7nn;^l#?X">
+                            <field name="TEXT">3DPit</field>
+                          </shadow>
+                          <block type="variables_get" id="qyas+=UAv4cY;Xi[kP}j">
+                            <field name="VAR" id="6Xgxxx:Ks)?~`Q1{/FBX">msg</field>
+                          </block>
+                        </value>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="time_sleep" id=",QA|IHH=C_r/M,G6qQ6Q">
+                <field name="UNIT">S</field>
+                <value name="VALUE">
+                  <shadow type="math_number" id="tZ:*ymQbsdjN#qo1VfVB">
+                    <field name="NUM">1</field>
+                  </shadow>
+                </value>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </next>
+  </block>
+</xml>

@@ -1,0 +1,254 @@
+{
+  "version": "1.0",
+  "timestamp": 1792953455712,
+  "components": [
+    {
+      "id": "esp32_wroom_i2ckey1",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 300,
+      "y": 260,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "4A:1F:8C:92:7B:3D",
+        "espnowCode": "from machine import Pin, I2C\nfrom keypad4_i2c import Keypad4x4_I2C\nfrom time import sleep\n\ni2c = I2C(1, sda=Pin(21), scl=Pin(22))\nteclado_4x4_i2c = Keypad4x4_I2C(i2c, 0x20)\nwhile True:\n  key = teclado_4x4_i2c.get_key()\n  if key:\n    print(key)\n  sleep(1)\n"
+      },
+      "locked": false
+    },
+    {
+      "id": "keypad4x4_i2c_1",
+      "type": "keypad4x4_i2c",
+      "name": "Teclado matricial 4x4 (I2C)",
+      "x": 500,
+      "y": 130,
+      "width": 65,
+      "height": 79.4,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "address": "0x20"
+      },
+      "locked": false
+    },
+    {
+      "id": "lcd_16x2_i2c_q696v6m",
+      "type": "lcd_16x2_i2c",
+      "name": "LCD 16x2 I2C",
+      "x": 649.7565593442382,
+      "y": 278.67768503257025,
+      "width": 234.692,
+      "height": 102.047,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "LCD1602 + backpack PCF8574",
+        "i2cAddress": "0x27",
+        "colorScheme": "yellow_green"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_i2ckey_sda",
+      "from": {
+        "componentId": "keypad4x4_i2c_1",
+        "pinId": "sda"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "io21"
+      },
+      "points": [
+        {
+          "x": 512.5,
+          "y": 223.09842824598712
+        },
+        {
+          "x": 390.28,
+          "y": 223.09842824598712
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_i2ckey_scl",
+      "from": {
+        "componentId": "keypad4x4_i2c_1",
+        "pinId": "scl"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "io22"
+      },
+      "points": [
+        {
+          "x": 525.83,
+          "y": 217.18933960603476
+        },
+        {
+          "x": 380.28,
+          "y": 217.18933960603476
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_i2ckey_vcc",
+      "from": {
+        "componentId": "keypad4x4_i2c_1",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 539.17,
+          "y": 251.5307336286756
+        },
+        {
+          "x": 590.3312725857255,
+          "y": 251.5307336286756
+        },
+        {
+          "x": 590.3312725857255,
+          "y": 487.8029774484577
+        },
+        {
+          "x": 446.28,
+          "y": 487.8029774484577
+        }
+      ],
+      "color": "#e53935",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_i2ckey_gnd",
+      "from": {
+        "componentId": "keypad4x4_i2c_1",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "gnd_0"
+      },
+      "points": [
+        {
+          "x": 552.5,
+          "y": 235.31626926671024
+        },
+        {
+          "x": 410.28,
+          "y": 235.31626926671024
+        }
+      ],
+      "color": "#333333",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_043d19c",
+      "from": {
+        "componentId": "lcd_16x2_i2c_q696v6m",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 597.1679314034901,
+          "y": 293.07768503257023
+        },
+        {
+          "x": 597.1679314034901,
+          "y": 478.77021540575083
+        },
+        {
+          "x": 517.4865962758322,
+          "y": 478.77021540575083
+        },
+        {
+          "x": 476.28,
+          "y": 478.77021540575083
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_jp9gmin",
+      "from": {
+        "componentId": "lcd_16x2_i2c_q696v6m",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 604.5060923841178,
+          "y": 300.2776850325703
+        },
+        {
+          "x": 604.5060923841178,
+          "y": 495.13995913176643
+        },
+        {
+          "x": 487.4865962758322,
+          "y": 495.13995913176643
+        },
+        {
+          "x": 446.28,
+          "y": 495.13995913176643
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_bfj0t69",
+      "from": {
+        "componentId": "lcd_16x2_i2c_q696v6m",
+        "pinId": "sda"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "io21"
+      },
+      "points": [],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_we235o1",
+      "from": {
+        "componentId": "lcd_16x2_i2c_q696v6m",
+        "pinId": "scl"
+      },
+      "to": {
+        "componentId": "esp32_wroom_i2ckey1",
+        "pinId": "io22"
+      },
+      "points": [],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

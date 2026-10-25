@@ -1,0 +1,161 @@
+{
+  "version": "1.0",
+  "timestamp": 1792818026197,
+  "components": [
+    {
+      "id": "esp32_wroom_v0we5u8",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 340,
+      "y": 160,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "93:A4:89:25:A7:E4"
+      },
+      "locked": false
+    },
+    {
+      "id": "ky-016_vst69u5",
+      "type": "ky-016",
+      "name": "KY-016 LED RGB (orificio pasante)",
+      "x": 645.1315812508766,
+      "y": 164.1985664779899,
+      "width": 56.694,
+      "height": 89.736,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "modelo": "KY-016: LED RGB de orificio pasante (domo 5mm), cátodo común -- 'com' a GND. Cada canal (R/G/B) acepta digital ON/OFF (Pin) o PWM (machine.PWM/duty) para variar el brillo"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_u2a70xy",
+      "from": {
+        "componentId": "esp32_wroom_v0we5u8",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "ky-016_vst69u5",
+        "pinId": "com"
+      },
+      "points": [
+        {
+          "x": 516.28,
+          "y": 395.8975186252977
+        },
+        {
+          "x": 687.2135812508766,
+          "y": 395.8975186252977
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_bzo39wj",
+      "from": {
+        "componentId": "esp32_wroom_v0we5u8",
+        "pinId": "io26"
+      },
+      "to": {
+        "componentId": "ky-016_vst69u5",
+        "pinId": "r"
+      },
+      "points": [
+        {
+          "x": 576.28,
+          "y": 149.73987366254363
+        },
+        {
+          "x": 620.7918527393971,
+          "y": 149.73987366254363
+        },
+        {
+          "x": 620.7918527393971,
+          "y": 295.54533356720185
+        },
+        {
+          "x": 677.5325812508765,
+          "y": 295.54533356720185
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_n13epgu",
+      "from": {
+        "componentId": "esp32_wroom_v0we5u8",
+        "pinId": "io25"
+      },
+      "to": {
+        "componentId": "ky-016_vst69u5",
+        "pinId": "g"
+      },
+      "points": [
+        {
+          "x": 566.28,
+          "y": 140.6270324185025
+        },
+        {
+          "x": 630.9701949959301,
+          "y": 140.6270324185025
+        },
+        {
+          "x": 630.9701949959301,
+          "y": 287.834467899167
+        },
+        {
+          "x": 667.7985812508766,
+          "y": 287.834467899167
+        }
+      ],
+      "color": "#2ecc71",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_2871l2p",
+      "from": {
+        "componentId": "esp32_wroom_v0we5u8",
+        "pinId": "io17"
+      },
+      "to": {
+        "componentId": "ky-016_vst69u5",
+        "pinId": "b"
+      },
+      "points": [
+        {
+          "x": 556.28,
+          "y": 131.854165491231
+        },
+        {
+          "x": 641.1485372524634,
+          "y": 131.854165491231
+        },
+        {
+          "x": 641.1485372524634,
+          "y": 275.6232498647617
+        },
+        {
+          "x": 658.1715812508766,
+          "y": 275.6232498647617
+        }
+      ],
+      "color": "#f2994a",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

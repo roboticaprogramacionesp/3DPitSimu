@@ -1,0 +1,154 @@
+{
+  "version": "1.0",
+  "timestamp": 1792879498374,
+  "components": [
+    {
+      "id": "esp32_wroom_rib0fwb",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 400,
+      "y": 150,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "83:51:E7:5F:14:35",
+        "espnowCode": "from machine import Pin, UART\nfrom time import sleep\n\nhc06 = UART(2, tx=17, rx=16, baudrate=9600)\nwhile True:\n  if hc06.any():\n    msg = ((hc06.read() or b'') or b'').decode().strip()\n    if msg:\n      print(msg)\n  sleep(1)\n"
+      },
+      "locked": false
+    },
+    {
+      "id": "hc-06_366hph1",
+      "type": "hc-06",
+      "name": "HC-06 Módulo Bluetooth",
+      "x": 782,
+      "y": 149,
+      "width": 148.97397,
+      "height": 56.700003,
+      "rotation": 90,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "info": "Módulo Bluetooth clásico (SPP) -- se maneja como un UART más desde el código (machine.UART), igual que en una placa real."
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_cg92k1z",
+      "from": {
+        "componentId": "esp32_wroom_rib0fwb",
+        "pinId": "gnd_2"
+      },
+      "to": {
+        "componentId": "hc-06_366hph1",
+        "pinId": "gnd"
+      },
+      "points": [
+        {
+          "x": 576.28,
+          "y": 366.32832847504676
+        },
+        {
+          "x": 758.21,
+          "y": 366.32832847504676
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_lp5dyiq",
+      "from": {
+        "componentId": "hc-06_366hph1",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_rib0fwb",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 767.21,
+          "y": 375.4411697190879
+        },
+        {
+          "x": 546.28,
+          "y": 375.4411697190879
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_s96mbrh",
+      "from": {
+        "componentId": "esp32_wroom_rib0fwb",
+        "pinId": "io17"
+      },
+      "to": {
+        "componentId": "hc-06_366hph1",
+        "pinId": "rxd"
+      },
+      "points": [
+        {
+          "x": 616.28,
+          "y": 138.4181128816186
+        },
+        {
+          "x": 688.1561241366886,
+          "y": 138.4181128816186
+        },
+        {
+          "x": 688.1561241366886,
+          "y": 309.90522768550454
+        },
+        {
+          "x": 740.21,
+          "y": 309.90522768550454
+        }
+      ],
+      "color": "#4da3ff",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_23ay28n",
+      "from": {
+        "componentId": "hc-06_366hph1",
+        "pinId": "txd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_rib0fwb",
+        "pinId": "io16"
+      },
+      "points": [
+        {
+          "x": 749.21,
+          "y": 319.5513692561164
+        },
+        {
+          "x": 701.553554341903,
+          "y": 319.5513692561164
+        },
+        {
+          "x": 701.553554341903,
+          "y": 127.70016871744716
+        },
+        {
+          "x": 606.28,
+          "y": 127.70016871744716
+        }
+      ],
+      "color": "#4da3ff",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}
