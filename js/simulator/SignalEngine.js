@@ -1213,8 +1213,29 @@ class SignalEngine {
   }
 
   _computeL298nMotorState(component, inPinA, inPinB, enPin, jumperProp) {
-    const a = this.isKeyConnectedToHighDriver(`${component.id}:${inPinA}`);
-    const b = this.isKeyConnectedToHighDriver(`${component.id}:${inPinB}`);
+    const inKeyA = `${component.id}:${inPinA}`;
+    const inKeyB = `${component.id}:${inPinB}`;
+
+    // BUG REAL reportado: código real que maneja IN1/IN2 con
+    // machine.PWM directo (EN atado fijo a 5V por jumper, el duty
+    // cycle en el pin IN activo ES la velocidad -- técnica real de
+    // cableado, no rara) nunca movía el motor. isKeyConnectedToHighDriver
+    // no ve PWM (mismo motivo que el comentario de abajo sobre ENA/
+    // ENB) -- un IN1 en PWM con duty>0 pero NUNCA puesto en digital
+    // HIGH quedaba siempre "a=false", así que el estado nunca salía
+    // de "detenido" sin importar qué duty se mandara. Ahora un pin IN
+    // con PWM de duty>0 cuenta como "activo" igual que un HIGH
+    // digital -- OJO acá con duty>0 explícito: getPwmDutyForKey()
+    // devuelve el objeto PWM con solo que freq>0 (el canal existe),
+    // sin importar el duty actual -- si solo chequeáramos "existe
+    // PWM" (sin mirar duty), los 4 canales de un código como el del
+    // usuario (A/B/C/D, los 3 inactivos en duty(0)) quedarían TODOS
+    // "activos" a la vez (freq>0 en los 4), nunca "detenido"/
+    // "adelante" limpio, siempre "freno" (a=true Y b=true).
+    const pwmInA = this.getPwmDutyForKey(inKeyA);
+    const pwmInB = this.getPwmDutyForKey(inKeyB);
+    const a = this.isKeyConnectedToHighDriver(inKeyA) || !!(pwmInA && pwmInA.duty > 0);
+    const b = this.isKeyConnectedToHighDriver(inKeyB) || !!(pwmInB && pwmInB.duty > 0);
 
     const jumperInstalled = component.properties?.[jumperProp] !== false;
     const enKey = `${component.id}:${enPin}`;
@@ -1229,10 +1250,16 @@ class SignalEngine {
     const pwm = jumperInstalled ? null : this.getPwmDutyForKey(enKey);
     const enabledDigital = jumperInstalled || this.isKeyConnectedToHighDriver(enKey);
     const enabled = enabledDigital || !!pwm;
-    const speed = jumperInstalled
-      ? 1
-      : pwm
-        ? Math.max(0, Math.min(1, pwm.duty / 1023))
+
+    // Velocidad: normalmente la manda ENA/ENB (arriba). Pero con el
+    // jumper puesto (EN sin control de velocidad, fijo a 5V), si el
+    // pin IN que está activo ahora mismo (a o b) viene de un PWM real,
+    // ESE duty es la velocidad -- mismo técnica real de arriba.
+    const activeInPwm = jumperInstalled ? (a ? pwmInA : (b ? pwmInB : null)) : null;
+    const speed = pwm
+      ? Math.max(0, Math.min(1, pwm.duty / 1023))
+      : activeInPwm
+        ? Math.max(0, Math.min(1, activeInPwm.duty / 1023))
         : (enabledDigital ? 1 : 0);
 
     let state = "detenido";
