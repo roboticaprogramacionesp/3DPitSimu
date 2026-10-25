@@ -918,6 +918,25 @@ Blockly.defineBlocksWithJsonArray([
     helpUrl: "",
   },
   {
+    // BUG REAL encontrado revisando el fork original de AppBlock3: el
+    // generador (Blockly.Python["convert_to_float"], ver generators.js)
+    // y la referencia en el toolbox YA existían acá, pero faltaba esta
+    // definición del bloque en sí -- Blockly tiraba error al intentar
+    // dibujar <block type="convert_to_float"> sin tipo registrado.
+    type: "convert_to_float",
+    message0: "a decimal %1",
+    args0: [
+      {
+        type: "input_value",
+        name: "VALUE",
+      },
+    ],
+    output: "Number",
+    colour: 230,
+    tooltip: "Convierte un valor a número decimal (float)",
+    helpUrl: "",
+  },
+  {
     type: "is_int",
     message0: "es entero %1",
     args0: [{ type: "input_value", name: "VALUE" }],

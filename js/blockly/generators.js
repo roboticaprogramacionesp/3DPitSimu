@@ -782,8 +782,13 @@ Blockly.Python["pin_set_value"] = function (block) {
 Blockly.Python["adc_pin"] = function (block) {
   const pin = block.getFieldValue("PIN");
 
-  Blockly.Python.definitions_["import_machine"] =
-    "from machine import Pin, ADC";
+  // Clave propia ("import_adc", ya usada por otros bloques de ADC más
+  // abajo) -- "import_machine" (sin ADC) la usan muchos otros bloques,
+  // y si un programa combina ambos, la línea que se generara ultimo
+  // pisaria en silencio a la otra (BUG REAL encontrado revisando el
+  // fork original de AppBlock3, que ya lo habia corregido --
+  // PitSimulator se habia quedado con la version vieja).
+  Blockly.Python.definitions_["import_adc"] = "from machine import Pin, ADC";
 
   return `adc${pin} = ADC(Pin(${pin}))\n`;
 };
@@ -854,8 +859,10 @@ Blockly.Python["read_pwm_duty"] = function (block) {
 Blockly.Python["dac_init"] = function (block) {
   const pin = block.getFieldValue("PIN");
 
-  Blockly.Python.definitions_["import_machine"] =
-    "from machine import Pin, DAC";
+  // Clave propia -- mismo motivo que adc_pin() de arriba (evitar que
+  // otro bloque que comparta "import_machine" se pise en silencio
+  // contra este).
+  Blockly.Python.definitions_["import_dac"] = "from machine import Pin, DAC";
 
   return `dac${pin} = DAC(Pin(${pin}))\n`;
 };
@@ -1034,7 +1041,12 @@ Blockly.Python["wdt_feed"] = function (block) {
 Blockly.Python["machine_reset_cause"] = function (block) {
   const statements_do = Blockly.Python.statementToCode(block, "DO");
 
-  Blockly.Python.definitions_["import_machine"] = "import machine";
+  // Clave "import_machine_module" (ya usada por machine_reset()/
+  // machine_freq()/machine_unique_id()) -- necesita el módulo
+  // "machine" en sí (machine.reset_cause()), no Pin importado aparte.
+  // Compartir "import_machine" con esos otros bloques dejaba que la
+  // última línea generada pisara en silencio a la anterior.
+  Blockly.Python.definitions_["import_machine_module"] = "import machine";
 
   const code =
     `if machine.reset_cause() == machine.DEEPSLEEP_RESET:
@@ -1047,7 +1059,8 @@ Blockly.Python["machine_deepsleep"] = function (block) {
     Blockly.Python.valueToCode(block, "TIME", Blockly.Python.ORDER_NONE) ||
     "10000";
 
-  Blockly.Python.definitions_["import_machine"] = "import machine";
+  // Mismo motivo que machine_reset_cause() de arriba.
+  Blockly.Python.definitions_["import_machine_module"] = "import machine";
 
   return `machine.deepsleep(${time})\n`;
 };
@@ -1202,7 +1215,8 @@ Blockly.Python["ky005_init"] = function (block) {
   const name = block.getFieldValue("NAME");
   const pin = block.getFieldValue("PIN");
 
-  Blockly.Python.definitions_["import_machine"] = `from machine import Pin
+  // Clave propia -- mismo motivo que adc_pin()/dac_init() de arriba.
+  Blockly.Python.definitions_["import_ir_nec"] = `from machine import Pin
 from ir_tx import NEC`;
 
   return `${name} = NEC(Pin(${pin}, Pin.OUT))\n`;
@@ -1269,9 +1283,10 @@ Blockly.Python["buzzer_tone"] = function (block) {
   const time =
     Blockly.Python.valueToCode(block, "TIME", Blockly.Python.ORDER_ATOMIC) || 1;
 
-  // Imports arriba
-  Blockly.Python.definitions_["import_machine"] =
-    "from machine import Pin, PWM";
+  // Imports arriba -- clave "import_pwm" (ya usada por pwm_init() y
+  // otros bloques de PWM), mismo motivo que adc_pin()/dac_init() más
+  // arriba: evitar que otro bloque se pise en silencio contra este.
+  Blockly.Python.definitions_["import_pwm"] = "from machine import Pin, PWM";
   Blockly.Python.definitions_["import_sleep"] = "from time import sleep";
 
   return (
@@ -1286,8 +1301,7 @@ pwm${pin}.deinit()
 Blockly.Python["buzzer_stop"] = function (block) {
   const pin = block.getFieldValue("PIN");
 
-  Blockly.Python.definitions_["import_machine"] =
-    "from machine import Pin, PWM";
+  Blockly.Python.definitions_["import_pwm"] = "from machine import Pin, PWM";
 
   return (
     `
@@ -1395,8 +1409,9 @@ Blockly.Python["ky023_analog"] = function (block) {
   const width = block.getFieldValue("WIDTH");
   const pullSW = block.getFieldValue("PULL");
 
-  Blockly.Python.definitions_["import_machine"] =
-    "from machine import Pin, ADC";
+  // Mismo motivo que adc_pin() -- clave propia "import_adc" en vez
+  // de "import_machine" compartida.
+  Blockly.Python.definitions_["import_adc"] = "from machine import Pin, ADC";
 
   return `${name}_x = ADC(Pin(${pinX}))
 ${name}_x.atten(${atten})
@@ -4143,8 +4158,7 @@ Blockly.Python["shield_set_motor"] = function (block) {
   const pinB = block.getFieldValue("PINB");
   const pinSpeedB = block.getFieldValue("PINPWMB");
 
-  Blockly.Python.definitions_["import_machine"] =
-    "from machine import Pin, PWM";
+  Blockly.Python.definitions_["import_pwm"] = "from machine import Pin, PWM";
 
   return `
 motorA_dir = Pin(${pinA}, Pin.OUT)
