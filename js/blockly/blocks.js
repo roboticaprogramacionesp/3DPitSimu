@@ -942,7 +942,7 @@ Blockly.defineBlocksWithJsonArray([
     args0: [{ type: "input_value", name: "VALUE" }],
     output: "Boolean",
     colour: 230,
-    tooltip: "Comprueba si el valor YA ES un número entero (isinstance) -- para texto que llega por BLE/UART/Serial (ej. de uart.read().decode()) esto SIEMPRE da False, aunque diga \"90\", porque sigue siendo texto. Para revisar si un TEXTO tiene solo dígitos antes de convertirlo con 'a entero', usá 'tiene solo dígitos' en vez de este.",
+    tooltip: "Comprueba si el valor YA ES un número entero (isinstance) -- para texto que llega por BLE/UART/Serial (ej. de uart.read().decode()) esto SIEMPRE da False, aunque diga \"90\", porque sigue siendo texto. Para revisar si un TEXTO tiene solo dígitos antes de convertirlo con 'a entero', usá 'es un digito' en vez de este.",
     helpUrl: "",
   },
   {
@@ -955,7 +955,7 @@ Blockly.defineBlocksWithJsonArray([
     // contenido de un texto), mezclarlos bajo un selector sería
     // repetir la misma confusión que causó el bug original.
     type: "is_digit_string",
-    message0: "tiene solo dígitos %1",
+    message0: "es un digito %1",
     args0: [{ type: "input_value", name: "VALUE", check: "String" }],
     output: "Boolean",
     colour: 230,
