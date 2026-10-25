@@ -8,6 +8,24 @@
 
 (async () => {
 
+    // Precalienta en segundo plano la descarga del runtime WASM de
+    // MicroPython (~480kB comprimido) ni bien arranca la página --
+    // antes se pedía recién al apretar "▶ Simular" (ver
+    // Simulator.spawnBridgesForAllEsp32() -> WasmBridge -> wasmWorker.js
+    // -> assets/wasm/micropython.mjs), y en vivo (GitHub Pages,
+    // Cache-Control: max-age=600 + posible MISS de CDN) eso tardaba
+    // 9-20s en frío -- confirmado con el waterfall real que mandó el
+    // usuario. fetch() sin opciones = misma cache key que el fetch
+    // interno real del loader de Emscripten, así que para cuando el
+    // usuario llega a apretar Simular ya está en la cache HTTP del
+    // navegador. Fire-and-forget: si falla (sin conexión, etc.) el
+    // loader real de más adelante reintenta solo y reporta el error
+    // como siempre -- esto es optimización pura, no hace falta nada
+    // en modo QEMU (#modo=qemu), que no usa este runtime.
+    if (location.hash !== "#modo=qemu") {
+        fetch("assets/wasm/micropython.wasm").catch(() => {});
+    }
+
     // Flag global de debug -- apagado por default. En vez de andar
     // buscando console.log comentados en 3-4 archivos distintos cada
     // vez que hace falta diagnosticar algo (escaneo de teclado,
