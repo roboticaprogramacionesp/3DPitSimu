@@ -1,0 +1,142 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id="vHost">host</variable>
+    <variable id="vMsg">msg</variable>
+  </variables>
+  <block type="wifi_init" id="r_wifi" x="20" y="20">
+    <field name="VAR">sta_if</field>
+    <field name="MODE">STA_IF</field>
+    <next>
+      <block type="init_espnow_simple" id="r_espnow">
+        <next>
+          <block type="led_init" id="r_led">
+            <field name="NAME">led</field>
+            <field name="MODEL">LED RED</field>
+            <field name="PIN">2</field>
+            <next>
+              <block type="controls_try_except" id="r_try">
+                <statement name="TRY">
+                  <block type="espnow_add_peer" id="r_peer">
+                    <value name="PEER">
+                      <shadow type="peer" id="r_peer_s">
+                        <field name="PEER_BYTES">b'\xff\xff\xff\xff\xff\xff'</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </statement>
+                <statement name="EXCEPT">
+                  <block type="pass" id="r_pass"></block>
+                </statement>
+                <next>
+                  <block type="text_print" id="r_print_wait">
+                    <value name="TEXT">
+                      <block type="text" id="r_print_wait_t">
+                        <field name="TEXT">Esperando ordenes...</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="controls_whileUntil" id="r_while">
+                        <field name="MODE">WHILE</field>
+                        <value name="BOOL">
+                          <block type="logic_boolean" id="r_true">
+                            <field name="BOOL">TRUE</field>
+                          </block>
+                        </value>
+                        <statement name="DO">
+                          <block type="espnow_recv" id="r_recv">
+                            <field name="HOST" id="vHost">host</field>
+                            <field name="MSG" id="vMsg">msg</field>
+                            <next>
+                              <block type="variables_set" id="r_decode_set">
+                                <field name="VAR" id="vMsg">msg</field>
+                                <value name="VALUE">
+                                  <block type="text_decode" id="r_decode">
+                                    <field name="STRIP">TRUE</field>
+                                    <value name="BYTES">
+                                      <block type="variables_get" id="r_msg1">
+                                        <field name="VAR" id="vMsg">msg</field>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="controls_if" id="r_if">
+                                    <mutation elseif="1"></mutation>
+                                    <value name="IF0">
+                                      <block type="logic_compare" id="r_cmp_on">
+                                        <field name="OP">EQ</field>
+                                        <value name="A">
+                                          <block type="variables_get" id="r_msg2">
+                                            <field name="VAR" id="vMsg">msg</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <block type="text" id="r_on">
+                                            <field name="TEXT">on</field>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <statement name="DO0">
+                                      <block type="set_led" id="r_led_on">
+                                        <field name="NAME">led</field>
+                                        <field name="STATE">1</field>
+                                        <next>
+                                          <block type="text_print" id="r_print_on">
+                                            <value name="TEXT">
+                                              <block type="text" id="r_print_on_t">
+                                                <field name="TEXT">Recibido: on</field>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </statement>
+                                    <value name="IF1">
+                                      <block type="logic_compare" id="r_cmp_off">
+                                        <field name="OP">EQ</field>
+                                        <value name="A">
+                                          <block type="variables_get" id="r_msg3">
+                                            <field name="VAR" id="vMsg">msg</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <block type="text" id="r_off">
+                                            <field name="TEXT">off</field>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <statement name="DO1">
+                                      <block type="set_led" id="r_led_off">
+                                        <field name="NAME">led</field>
+                                        <field name="STATE">0</field>
+                                        <next>
+                                          <block type="text_print" id="r_print_off">
+                                            <value name="TEXT">
+                                              <block type="text" id="r_print_off_t">
+                                                <field name="TEXT">Recibido: off</field>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </statement>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>

@@ -1,0 +1,155 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id="vEstado">estado</variable>
+  </variables>
+  <block type="wifi_init" id="e_wifi" x="20" y="20">
+    <field name="VAR">sta_if</field>
+    <field name="MODE">STA_IF</field>
+    <next>
+      <block type="init_espnow_simple" id="e_espnow">
+        <next>
+          <block type="interruptor_init" id="e_btn">
+            <field name="MODEL">KY004</field>
+            <field name="PIN">4</field>
+            <field name="PULL">NONE</field>
+            <next>
+              <block type="controls_try_except" id="e_try">
+                <statement name="TRY">
+                  <block type="espnow_add_peer" id="e_peer">
+                    <value name="PEER">
+                      <shadow type="peer" id="e_peer_s">
+                        <field name="PEER_BYTES">b'\xff\xff\xff\xff\xff\xff'</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </statement>
+                <statement name="EXCEPT">
+                  <block type="pass" id="e_pass"></block>
+                </statement>
+                <next>
+                  <block type="variables_set" id="e_estado_init">
+                    <field name="VAR" id="vEstado">estado</field>
+                    <value name="VALUE">
+                      <block type="logic_boolean" id="e_false">
+                        <field name="BOOL">FALSE</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="controls_whileUntil" id="e_while">
+                        <field name="MODE">WHILE</field>
+                        <value name="BOOL">
+                          <block type="logic_boolean" id="e_true">
+                            <field name="BOOL">TRUE</field>
+                          </block>
+                        </value>
+                        <statement name="DO">
+                          <block type="controls_if" id="e_if_btn">
+                            <value name="IF0">
+                              <block type="interruptor_read" id="e_btn_read">
+                                <field name="PIN">4</field>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <block type="variables_set" id="e_toggle">
+                                <field name="VAR" id="vEstado">estado</field>
+                                <value name="VALUE">
+                                  <block type="logic_negate" id="e_not">
+                                    <value name="BOOL">
+                                      <block type="variables_get" id="e_estado1">
+                                        <field name="VAR" id="vEstado">estado</field>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="controls_if" id="e_if_estado">
+                                    <mutation else="1"></mutation>
+                                    <value name="IF0">
+                                      <block type="variables_get" id="e_estado2">
+                                        <field name="VAR" id="vEstado">estado</field>
+                                      </block>
+                                    </value>
+                                    <statement name="DO0">
+                                      <block type="espnow_send_peer" id="e_send_on">
+                                        <value name="PEER">
+                                          <shadow type="peer" id="e_send_on_p">
+                                            <field name="PEER_BYTES">b'\xff\xff\xff\xff\xff\xff'</field>
+                                          </shadow>
+                                        </value>
+                                        <value name="TEXT">
+                                          <block type="text" id="e_on">
+                                            <field name="TEXT">on</field>
+                                          </block>
+                                        </value>
+                                        <next>
+                                          <block type="text_print" id="e_print_on">
+                                            <value name="TEXT">
+                                              <block type="text" id="e_print_on_t">
+                                                <field name="TEXT">Mandado: on</field>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </statement>
+                                    <statement name="ELSE">
+                                      <block type="espnow_send_peer" id="e_send_off">
+                                        <value name="PEER">
+                                          <shadow type="peer" id="e_send_off_p">
+                                            <field name="PEER_BYTES">b'\xff\xff\xff\xff\xff\xff'</field>
+                                          </shadow>
+                                        </value>
+                                        <value name="TEXT">
+                                          <block type="text" id="e_off">
+                                            <field name="TEXT">off</field>
+                                          </block>
+                                        </value>
+                                        <next>
+                                          <block type="text_print" id="e_print_off">
+                                            <value name="TEXT">
+                                              <block type="text" id="e_print_off_t">
+                                                <field name="TEXT">Mandado: off</field>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </statement>
+                                    <next>
+                                      <block type="time_sleep" id="e_debounce">
+                                        <field name="UNIT">S</field>
+                                        <value name="VALUE">
+                                          <shadow type="math_number" id="e_debounce_n">
+                                            <field name="NUM">0.3</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="time_sleep" id="e_poll">
+                                <field name="UNIT">S</field>
+                                <value name="VALUE">
+                                  <shadow type="math_number" id="e_poll_n">
+                                    <field name="NUM">0.05</field>
+                                  </shadow>
+                                </value>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>

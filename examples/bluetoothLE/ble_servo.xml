@@ -1,0 +1,105 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id="D!rc8prI5:|q?B?/hXFI">rx_buffer</variable>
+  </variables>
+  <block type="init_servo" id="@{_*,=e;+Hqb3GI+[zU/" x="10" y="-90">
+    <field name="PIN">13</field>
+    <next>
+      <block type="ble_init_uart" id="Z]Z.D)~RU$oP7,Ot+a,2">
+        <next>
+          <block type="ble_set_name" id="]Hz`Y^dQoV%cT5go]Is$">
+            <field name="BLE_NAME">MiServo</field>
+            <next>
+              <block type="ble_on_receive" id="*VT0K_eNyf*zqQotoz%l">
+                <field name="FUNCION">datos_recibidos</field>
+                <field name="RX" id="D!rc8prI5:|q?B?/hXFI">rx_buffer</field>
+                <next>
+                  <block type="text_print" id="b_print_wait">
+                    <value name="TEXT">
+                      <block type="text" id="b_print_wait_t">
+                        <field name="TEXT">Esperando conexion BLE...</field>
+                      </block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+  <block type="procedures_defnoreturn" id="TtrwzFbjucTry.~;?@T8" x="410" y="-90">
+    <field name="NAME">datos_recibidos</field>
+    <statement name="STACK">
+      <block type="variables_set" id="+|L28Fduid)k}406f,eQ">
+        <field name="VAR" id="D!rc8prI5:|q?B?/hXFI">rx_buffer</field>
+        <value name="VALUE">
+          <block type="text_decode" id="55HX4lndSE:m:y/E9+4/">
+            <field name="STRIP">TRUE</field>
+            <value name="BYTES">
+              <block type="ble_read" id="-~fM+^;*4aG^s9D4p!]_"></block>
+            </value>
+          </block>
+        </value>
+        <next>
+          <block type="text_print" id="v`ifS`rqe1#L=%DBP:V1">
+            <value name="TEXT">
+              <shadow type="text" id="kM]j./@0=^C0!^},0!y+">
+                <field name="TEXT">3DPit</field>
+              </shadow>
+              <block type="variables_get" id="92GKk|LStcr+~FYBdUK(">
+                <field name="VAR" id="D!rc8prI5:|q?B?/hXFI">rx_buffer</field>
+              </block>
+            </value>
+            <next>
+              <block type="controls_if" id="(?`r|wwvFzVEA)E1L3Qf">
+                <value name="IF0">
+                  <block type="variables_get" id="mN2hL-dpN1dWl.:5vIV{">
+                    <field name="VAR" id="D!rc8prI5:|q?B?/hXFI">rx_buffer</field>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="controls_if" id="lPtJ7c:Poe:+!RGJCSN`">
+                    <value name="IF0">
+                      <block type="is_digit_string" id="QN4%puE|`HIe4onP_iD$">
+                        <value name="VALUE">
+                          <shadow type="text" id="_*0`!;0?!GGGOu7kH2h3">
+                            <field name="TEXT">90</field>
+                          </shadow>
+                          <block type="variables_get" id="?D`5Hh}JEUYpv=O0sD]k">
+                            <field name="VAR" id="D!rc8prI5:|q?B?/hXFI">rx_buffer</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="move_servo_var" id="1etCR?G_Bj6Ty_PGj{dJ">
+                        <field name="PIN">13</field>
+                        <value name="ANGLE">
+                          <shadow type="math_number" id="LaM{0#4bMimt6lAK6[^M">
+                            <field name="NUM">90</field>
+                          </shadow>
+                          <block type="convert_to_int" id=":S9,}?@FTx^*s_bg$d:9">
+                            <value name="VALUE">
+                              <shadow type="math_number" id="oo2v7R.bzU53x;/AG|F~">
+                                <field name="NUM">0</field>
+                              </shadow>
+                              <block type="variables_get" id="G7BXQei|rt#ft?~j?,e]">
+                                <field name="VAR" id="D!rc8prI5:|q?B?/hXFI">rx_buffer</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </statement>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

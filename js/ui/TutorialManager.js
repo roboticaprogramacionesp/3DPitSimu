@@ -51,6 +51,23 @@ class TutorialManager {
             });
         });
 
+        // Ejemplo en bloques (opcional): tutorial.blocksExample = "examples/…xml"
+        // agrega al paso "Escribe o carga tu código" un botón que abre ese
+        // programa ya armado en el editor de bloques. Como en estos
+        // tutoriales el alumno elige el GPIO, el texto le recuerda cambiar
+        // el pin del bloque por el que conectó.
+        this.tutorials.forEach((tutorial) => {
+            if (!tutorial.blocksExample || tutorial._blocksActionAdded) return;
+            const step = tutorial.steps.find((s) => /Escribe o carga tu código/.test(s.title));
+            if (!step) return;
+            tutorial._blocksActionAdded = true;
+            step.text += "\n\n¿Prefieres bloques? El botón de abajo abre un ejemplo ya armado en el editor de bloques: cambia el pin del bloque por el GPIO que conectaste y dale \"⬇ Insertar en el editor\".";
+            step.actions = [
+                ...(step.actions || []),
+                TutorialManager.blocksAction(tutorial.blocksExample, "🧩 Abrir un ejemplo en bloques"),
+            ];
+        });
+
         this.activeTutorial = null;
         this.stepIndex = -1;
 
@@ -72,6 +89,11 @@ class TutorialManager {
         this.buildDOM();
         this.bindEvents();
 
+    }
+
+    // Botón de paso (step.actions) que abre un programa .xml en el editor de bloques.
+    static blocksAction(url, label = "🧩 Abrir este programa en bloques") {
+        return { label, run: () => window.blocklyPanel?.openXmlFromUrl(url) };
     }
 
     // ====================================================
@@ -167,6 +189,7 @@ class TutorialManager {
         {
             id: "led_basico",
             title: "LED básico con ESP32",
+            blocksExample: "examples/led/led_infinito.xml",
             icon: "💡",
             category: "💡 LEDs · Salidas digitales",
             demoGif: "assets/tutorial-demos/led_basico.gif",
@@ -231,6 +254,7 @@ class TutorialManager {
         {
             id: "led_resistencia",
             title: "LED con resistencia (protegido)",
+            blocksExample: "examples/led/led_infinito.xml",
             icon: "Ω",
             category: "💡 LEDs · Salidas digitales",
             demoGif: "assets/tutorial-demos/led_resistencia.gif",
@@ -332,6 +356,7 @@ class TutorialManager {
         {
             id: "semaforo",
             title: "Semáforo con ESP32",
+            blocksExample: "examples/semaforo/semaforo.xml",
             icon: "🚦",
             category: "💡 LEDs · Salidas digitales",
             demoGif: "assets/tutorial-demos/semaforo.gif",
@@ -415,6 +440,7 @@ class TutorialManager {
         {
             id: "neopixel_ring",
             title: "Anillo NeoPixel con ESP32",
+            blocksExample: "examples/neopixel/neopixel.xml",
             icon: "🌈",
             category: "💡 LEDs · Salidas digitales",
             demoGif: "assets/tutorial-demos/neopixel_ring.gif",
@@ -510,6 +536,7 @@ class TutorialManager {
         {
             id: "display7",
             title: "Display 7 segmentos con ESP32",
+            blocksExample: "examples/display/display.xml",
             icon: "🔢",
             category: "💡 LEDs · Salidas digitales",
             demoGif: "assets/tutorial-demos/display7.gif",
@@ -1032,6 +1059,7 @@ class TutorialManager {
         {
             id: "boton",
             title: "Botón (KY-004) con ESP32",
+            blocksExample: "examples/boton/boton.xml",
             icon: "🔘",
             category: "🔧 Entradas · Actuadores",
             demoGif: "assets/tutorial-demos/boton.gif",
@@ -1127,6 +1155,7 @@ class TutorialManager {
         {
             id: "tcrt5000",
             title: "TCRT5000 — Infrarrojo (línea/obstáculo)",
+            blocksExample: "examples/seguilinea/seguilinea.xml",
             icon: "⬛",
             category: "🔧 Entradas · Actuadores",
             demoGif: "assets/tutorial-demos/tcrt5000.png",
@@ -1222,6 +1251,7 @@ class TutorialManager {
         {
             id: "fc_51",
             title: "FC-51 — Infrarrojo de obstáculos",
+            blocksExample: "examples/seguilinea/seguilinea.xml",
             icon: "🚧",
             category: "🔧 Entradas · Actuadores",
             demoGif: "assets/tutorial-demos/fc_51.png",
@@ -1317,6 +1347,7 @@ class TutorialManager {
         {
             id: "buzzer",
             title: "Buzzer con ESP32",
+            blocksExample: "examples/buzzer/buzzer.xml",
             icon: "🔊",
             category: "🔧 Entradas · Actuadores",
             demoGif: "assets/tutorial-demos/buzzer.gif",
@@ -1412,6 +1443,7 @@ class TutorialManager {
         {
             id: "servo",
             title: "Servo motor con ESP32",
+            blocksExample: "examples/servo/servo.xml",
             icon: "⚙️",
             category: "🔧 Entradas · Actuadores",
             demoGif: "assets/tutorial-demos/servo.gif",
@@ -1507,6 +1539,7 @@ class TutorialManager {
         {
             id: "motor_reductor",
             title: "Motor reductor (pilas + interruptor + puente H)",
+            blocksExample: "examples/motor/motor.xml",
             icon: "🔧",
             category: "🔧 Entradas · Actuadores",
             demoGif: "assets/tutorial-demos/motor_reductor.gif",
@@ -2141,6 +2174,7 @@ class TutorialManager {
         {
             id: "ky_001",
             title: "Sensor de temperatura KY-001",
+            blocksExample: "examples/ky-001/ky-001.xml",
             icon: "🌡️",
             category: "🌡️ Temperatura · Humedad",
             demoGif: "assets/tutorial-demos/ky_001.gif",
@@ -2236,6 +2270,7 @@ class TutorialManager {
         {
             id: "adkey",
             title: "Teclado analógico ADKEY",
+            blocksExample: "examples/adkey/adkey.xml",
             icon: "🎛️",
             category: "🎚️ Sensores · Analógicos",
             demoGif: "assets/tutorial-demos/adkey.gif",
@@ -2338,6 +2373,7 @@ class TutorialManager {
         {
             id: "joystick",
             title: "Joystick analógico con ESP32",
+            blocksExample: "examples/joystick/joystick.xml",
             icon: "🕹️",
             category: "🎚️ Sensores · Analógicos",
             demoGif: "assets/tutorial-demos/joystick.gif",
@@ -2433,6 +2469,7 @@ class TutorialManager {
         {
             id: "ky_023",
             title: "KY-023 Joystick con ESP32",
+            blocksExample: "examples/joystick/joystick.xml",
             icon: "🎮",
             category: "🎚️ Sensores · Analógicos",
             demoGif: "assets/tutorial-demos/ky_023.gif",
@@ -2718,6 +2755,7 @@ class TutorialManager {
         {
             id: "ky040",
             title: "KY-040 Encoder Rotativo con ESP32",
+            blocksExample: "examples/encoder/encoder.xml",
             icon: "🔄",
             category: "🎚️ Sensores · Analógicos",
             demoGif: "assets/tutorial-demos/ky040.gif",
@@ -3552,6 +3590,7 @@ class TutorialManager {
         {
             id: "tft_st7789",
             title: "TFT 1.54\" ST7789 con ESP32",
+            blocksExample: "examples/tft/tft.xml",
             icon: "🖼️",
             category: "🖥️ Pantallas y Módulos",
             demoGif: "assets/tutorial-demos/tft_st7789.png",
@@ -3813,6 +3852,7 @@ class TutorialManager {
         {
             id: "keypad4x4",
             title: "Teclado matricial 4x4 con ESP32",
+            blocksExample: "examples/keys/key4.xml",
             icon: "#️⃣",
             category: "🖥️ Pantallas y Módulos",
             demoGif: "assets/tutorial-demos/keypad4x4.gif",
@@ -3884,6 +3924,7 @@ class TutorialManager {
         {
             id: "keypad4x4_i2c",
             title: "Teclado 4x4 I2C con ESP32",
+            blocksExample: "examples/keys/key4_i2c.xml",
             icon: "🔣",
             category: "🖥️ Pantallas y Módulos",
             demoGif: "assets/tutorial-demos/keypad4x4_i2c.gif",
@@ -4454,6 +4495,7 @@ class TutorialManager {
         {
             id: "qmc5883l",
             title: "QMC5883L Brújula con ESP32",
+            blocksExample: "examples/qmc588l/qmc588I.xml",
             icon: "🧲",
             category: "🖥️ Pantallas y Módulos",
             demoGif: "assets/tutorial-demos/qmc5883l.gif",
@@ -4761,8 +4803,9 @@ class TutorialManager {
                 },
                 {
                     title: "Paso 13 — Elige la ESP32 del LED y programa el receptor",
-                    text: "Usa el selector de arriba del panel MicroPython para elegir la ESP32 que tiene el LED. Pega este código (fijate la MAC que imprime -- la vas a necesitar en el paso siguiente) y dale ▶ Ejecutar:\n\nimport network, espnow\nfrom machine import Pin\n\nled = Pin(2, Pin.OUT)  # cambia el 2 por el numero de tu GPIO\n\nsta = network.WLAN(network.WLAN.IF_STA)\nsta.active(True)\nprint('Mi MAC:', sta.config('mac').hex())\n\ne = espnow.ESPNow()\ne.active(True)\n\ndef on_recv(e):\n    mac, msg = e.recv()\n    if msg == b'on':\n        led.value(1)\n    elif msg == b'off':\n        led.value(0)\n\ne.irq(on_recv)\nprint('Esperando ordenes...')",
-                    highlight: (tm) => tm.highlightElements(["#replDeviceSelect", "#replPanel .repl-header", "#replBtnRun"]),
+                    text: "Usa el selector de arriba del panel MicroPython para elegir la ESP32 que tiene el LED. Pega este código (fijate la MAC que imprime -- la vas a necesitar en el paso siguiente) y dale ▶ Ejecutar:\n\nimport network, espnow\nfrom machine import Pin\n\nled = Pin(2, Pin.OUT)  # cambia el 2 por el numero de tu GPIO\n\nsta = network.WLAN(network.WLAN.IF_STA)\nsta.active(True)\nprint('Mi MAC:', sta.config('mac').hex())\n\ne = espnow.ESPNow()\ne.active(True)\n\ndef on_recv(e):\n    mac, msg = e.recv()\n    if msg == b'on':\n        led.value(1)\n    elif msg == b'off':\n        led.value(0)\n\ne.irq(on_recv)\nprint('Esperando ordenes...')\n\n¿Prefieres bloques? El botón de abajo abre el receptor armado en bloques (cambia el pin del LED por tu GPIO). Esa versión escucha la dirección de difusión FF:FF:FF:FF:FF:FF, así que con bloques no necesitas anotar la MAC.",
+                    actions: [TutorialManager.blocksAction("examples/espnow/espnow_receptor_on_off.xml")],
+                    highlight: (tm) => tm.highlightElements(["#replPanel .repl-device-select", "#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
                         if (tm.replPanel && !tm.replPanel.open) tm.replPanel.toggle();
                         tm.replPanel?.switchTab("editor");
@@ -4771,8 +4814,9 @@ class TutorialManager {
                 },
                 {
                     title: "Paso 14 — Elige la ESP32 del botón y programa el emisor",
-                    text: "Ahora cambia el selector a la OTRA ESP32 (la del botón) y pega este código -- reemplaza AABBCCDDEEFF por la MAC que te imprimió el receptor en el paso anterior (sin los \":\"):\n\nimport network, espnow\nfrom machine import Pin\nimport time\n\nboton = Pin(4, Pin.IN, Pin.PULL_DOWN)  # cambia el 4 por tu GPIO de señal\n\nsta = network.WLAN(network.WLAN.IF_STA)\nsta.active(True)\n\ne = espnow.ESPNow()\ne.active(True)\npeer = bytes.fromhex('AABBCCDDEEFF')\ne.add_peer(peer)\n\nestado = False\nwhile True:\n    if boton.value():\n        estado = not estado\n        e.send(peer, b'on' if estado else b'off')\n        print('Mandado:', 'on' if estado else 'off')\n        time.sleep(0.3)  # evita mandar muchas veces de un solo apreton\n    time.sleep(0.05)\n\nDale ▶ Ejecutar, apreta el botón del lienzo, y volvé a elegir la otra ESP32 en el selector para ver el LED prendido.",
-                    highlight: (tm) => tm.highlightElements(["#replDeviceSelect", "#replPanel .repl-header", "#replBtnRun"]),
+                    text: "Ahora cambia el selector a la OTRA ESP32 (la del botón) y pega este código -- reemplaza AABBCCDDEEFF por la MAC que te imprimió el receptor en el paso anterior (sin los \":\"):\n\nimport network, espnow\nfrom machine import Pin\nimport time\n\nboton = Pin(4, Pin.IN, Pin.PULL_DOWN)  # cambia el 4 por tu GPIO de señal\n\nsta = network.WLAN(network.WLAN.IF_STA)\nsta.active(True)\n\ne = espnow.ESPNow()\ne.active(True)\npeer = bytes.fromhex('AABBCCDDEEFF')\ne.add_peer(peer)\n\nestado = False\nwhile True:\n    if boton.value():\n        estado = not estado\n        e.send(peer, b'on' if estado else b'off')\n        print('Mandado:', 'on' if estado else 'off')\n        time.sleep(0.3)  # evita mandar muchas veces de un solo apreton\n    time.sleep(0.05)\n\nDale ▶ Ejecutar, apreta el botón del lienzo, y volvé a elegir la otra ESP32 en el selector para ver el LED prendido.\n\n¿Prefieres bloques? El botón de abajo abre el emisor armado en bloques (cambia el pin del botón por tu GPIO). Manda a la dirección de difusión, así que no hace falta pegar la MAC -- úsalo junto con el receptor en bloques.",
+                    actions: [TutorialManager.blocksAction("examples/espnow/espnow_emisor_on_off.xml")],
+                    highlight: (tm) => tm.highlightElements(["#replPanel .repl-device-select", "#replPanel .repl-header", "#replBtnRun"]),
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                     isLast: true,
                 },
@@ -4852,12 +4896,7 @@ class TutorialManager {
                     title: "Paso 8 — Escribe tu código",
                     text: "Elegí un nombre de canal único (ej. tuNombre-123) y pegá este código, cambiando CANAL por el tuyo:\n\nimport network, time, requests, json\nfrom machine import Pin\n\nled = Pin(2, Pin.OUT)  # cambia el 2 por tu GPIO\n\nwlan = network.WLAN(network.WLAN.IF_STA)\nwlan.active(True)\nwlan.connect('CualquierNombre', 'CualquierClave')\nwhile not wlan.isconnected():\n    time.sleep(0.1)\nprint('Conectado!')\n\nCANAL = 'tuNombre-123'\nvisto = set()\n\nwhile True:\n    r = requests.get('https://ntfy.sh/' + CANAL + '/json?poll=1')\n    for linea in r.text.strip().split('\\n'):\n        if not linea:\n            continue\n        msg = json.loads(linea)\n        if msg['id'] not in visto:\n            visto.add(msg['id'])\n            if msg['message'] == 'on':\n                led.value(1)\n            elif msg['message'] == 'off':\n                led.value(0)\n            print('Recibido:', msg['message'])\n    time.sleep(2)\n\n¿Prefieres bloques? Con el botón de abajo se abre este mismo programa armado en el editor de bloques; cambia el canal en el bloque \"CANAL\" y dale \"⬇ Insertar en el editor\".",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
-                    actions: [
-                        {
-                            label: "🧩 Abrir este programa en bloques",
-                            run: () => window.blocklyPanel?.openXmlFromUrl("examples/wifi/wifi_ntfy.xml"),
-                        },
-                    ],
+                    actions: [TutorialManager.blocksAction("examples/wifi/wifi_ntfy.xml")],
                     onEnter: (tm) => {
                         if (tm.replPanel && !tm.replPanel.open) tm.replPanel.toggle();
                         tm.replPanel?.switchTab("editor");
@@ -4957,7 +4996,8 @@ class TutorialManager {
                 },
                 {
                     title: "Paso 9 — Escribe tu código",
-                    text: "Pega este código (usa la librería BLEUART, la forma más simple de BLE) y dale ▶ Ejecutar:\n\nfrom BLE import BLEUART\nfrom machine import Pin, PWM\nimport bluetooth\n\nservo = PWM(Pin(13), freq=50)  # cambia el 13 por tu GPIO de señal\n\nble = bluetooth.BLE()\nuart = BLEUART(ble, 'MiServo')\n\ndef datos_recibidos():\n    msg = uart.read().decode().strip()\n    print('Recibido:', msg)\n    if msg == '0':\n        servo.duty(26)    # ~0 grados\n    elif msg == '90':\n        servo.duty(74)    # ~90 grados\n    elif msg == '180':\n        servo.duty(123)   # ~180 grados\n\nuart.irq(handler=datos_recibidos)\nprint('Esperando conexion BLE...')",
+                    text: "Pega este código (usa la librería BLEUART, la forma más simple de BLE) y dale ▶ Ejecutar:\n\nfrom BLE import BLEUART\nfrom machine import Pin, PWM\nimport bluetooth\n\nservo = PWM(Pin(13), freq=50)  # cambia el 13 por tu GPIO de señal\n\nble = bluetooth.BLE()\nuart = BLEUART(ble, 'MiServo')\n\ndef datos_recibidos():\n    msg = uart.read().decode().strip()\n    print('Recibido:', msg)\n    if msg == '0':\n        servo.duty(26)    # ~0 grados\n    elif msg == '90':\n        servo.duty(74)    # ~90 grados\n    elif msg == '180':\n        servo.duty(123)   # ~180 grados\n\nuart.irq(handler=datos_recibidos)\nprint('Esperando conexion BLE...')\n\n¿Prefieres bloques? El botón de abajo abre este programa armado en bloques (cambia el pin del servo por tu GPIO); acepta cualquier ángulo de 0 a 180, no solo 0, 90 y 180.",
+                    actions: [TutorialManager.blocksAction("examples/bluetoothLE/ble_servo.xml")],
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
                         if (tm.replPanel && !tm.replPanel.open) tm.replPanel.toggle();

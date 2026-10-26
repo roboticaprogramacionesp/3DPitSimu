@@ -15,12 +15,12 @@
         <field name="VAR" id="n1vzbSc^bo0MKY_sw6lb">i</field>
         <value name="FROM">
           <block type="math_number" id=")E?=MuB!H^D6)lvX3okL">
-            <field name="NUM">1</field>
+            <field name="NUM">0</field>
           </block>
         </value>
         <value name="TO">
           <block type="math_number" id="Rl|-8Ncbyo@MfdJ;IAx)">
-            <field name="NUM">8</field>
+            <field name="NUM">7</field>
           </block>
         </value>
         <value name="BY">
