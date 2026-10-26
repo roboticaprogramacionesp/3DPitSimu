@@ -60,6 +60,24 @@
     font-weight: 600;
 }
 
+.blockly-panel-board {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #b8b8b8;
+    font-size: 13px;
+}
+
+.blockly-panel-board-select {
+    cursor: pointer;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background: #33353a;
+    color: #e6e6e6;
+    font-size: 13px;
+    padding: 5px 8px;
+}
+
 .blockly-panel-insert,
 .blockly-panel-close {
     cursor: pointer;

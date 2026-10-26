@@ -61,6 +61,13 @@ class BlocklyPanel {
                     </div>
                 </div>
                 <span class="blockly-panel-title">🧩 Editor de bloques</span>
+                <label class="blockly-panel-board" title="Define qué pines ofrecen los bloques (ver js/blockly/boardPins.js)">
+                    Tarjeta
+                    <select class="blockly-panel-board-select">
+                        <option value="auto">Auto (la del lienzo)</option>
+                        ${Object.entries(PitBoards.BOARDS).map(([type, b]) => `<option value="${type}">${b.label}</option>`).join("")}
+                    </select>
+                </label>
                 <button type="button" class="blockly-panel-insert">⬇ Insertar en el editor</button>
                 <button type="button" class="blockly-panel-close" title="Cerrar">✕</button>
             </div>
@@ -69,6 +76,16 @@ class BlocklyPanel {
         document.body.appendChild(this.overlay);
 
         this._bindFileMenu();
+
+        // Selector de tarjeta -- solo cambia qué pines ofrecen los
+        // bloques con "field_pin" (ver boardPins.js); los pines ya
+        // elegidos en el workspace se conservan tal cual.
+        this.boardSelect = this.overlay.querySelector(".blockly-panel-board-select");
+        this.boardSelect.value = PitBoards.selected;
+        this.boardSelect.addEventListener("change", () => {
+            PitBoards.setSelected(this.boardSelect.value);
+            this._refreshBoardLabel();
+        });
 
         // Toolbox: mismo criterio que AppBlock3 (un <xml> real en el
         // DOM, oculto, referenciado por id) -- Blockly.inject() lo
@@ -251,9 +268,20 @@ class BlocklyPanel {
 
     }
 
+    // En "auto" muestra cuál se detectó en el lienzo, para que el
+    // alumno sepa de qué tarjeta salen los pines del menú.
+    _refreshBoardLabel() {
+        const autoOpt = this.boardSelect.querySelector('option[value="auto"]');
+        const detected = PitBoards.detectFromCanvas();
+        autoOpt.textContent = detected
+            ? `Auto (${PitBoards.BOARDS[detected].label})`
+            : "Auto (sin ESP32 en el lienzo: WROOM)";
+    }
+
     open() {
 
         this.overlay.classList.remove("hidden");
+        this._refreshBoardLabel();
 
         if (!this.workspace) {
 
