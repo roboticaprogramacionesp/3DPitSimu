@@ -309,6 +309,12 @@
     line-height: 1.5;
     color: #ccc;
     margin-bottom: 14px;
+    /* Los textos traen "\n" (código para pegar, con su indentación) --
+       sin esto todo se veía en un solo párrafo. */
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 50vh;
+    overflow-y: auto;
 }
 
 /* Demo visual (GIF) del "Paso 0" -- ver el comentario grande en el
@@ -328,6 +334,28 @@
    de otro CSS para que esto se oculte de verdad. */
 .tutorial-modal-media.hidden {
     display: none;
+}
+
+/* Botones propios de un paso (step.actions), ej. "Abrir este programa en bloques". */
+.tutorial-modal-step-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.tutorial-modal-step-action {
+    padding: 7px 10px;
+    border: 1px solid #4caf50;
+    border-radius: 6px;
+    background: #233025;
+    color: #8fdf93;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.tutorial-modal-step-action:hover {
+    background: #2c3d2d;
 }
 
 .tutorial-modal-actions {

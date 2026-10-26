@@ -4850,8 +4850,14 @@ class TutorialManager {
                 },
                 {
                     title: "Paso 8 — Escribe tu código",
-                    text: "Elegí un nombre de canal único (ej. tuNombre-123) y pegá este código, cambiando CANAL por el tuyo:\n\nimport network, time, requests, json\nfrom machine import Pin\n\nled = Pin(2, Pin.OUT)  # cambia el 2 por tu GPIO\n\nwlan = network.WLAN(network.WLAN.IF_STA)\nwlan.active(True)\nwlan.connect('CualquierNombre', 'CualquierClave')\nwhile not wlan.isconnected():\n    time.sleep(0.1)\nprint('Conectado!')\n\nCANAL = 'tuNombre-123'\nvisto = set()\n\nwhile True:\n    r = requests.get('https://ntfy.sh/' + CANAL + '/json?poll=1')\n    for linea in r.text.strip().split('\\n'):\n        if not linea:\n            continue\n        msg = json.loads(linea)\n        if msg['id'] not in visto:\n            visto.add(msg['id'])\n            if msg['message'] == 'on':\n                led.value(1)\n            elif msg['message'] == 'off':\n                led.value(0)\n            print('Recibido:', msg['message'])\n    time.sleep(2)",
+                    text: "Elegí un nombre de canal único (ej. tuNombre-123) y pegá este código, cambiando CANAL por el tuyo:\n\nimport network, time, requests, json\nfrom machine import Pin\n\nled = Pin(2, Pin.OUT)  # cambia el 2 por tu GPIO\n\nwlan = network.WLAN(network.WLAN.IF_STA)\nwlan.active(True)\nwlan.connect('CualquierNombre', 'CualquierClave')\nwhile not wlan.isconnected():\n    time.sleep(0.1)\nprint('Conectado!')\n\nCANAL = 'tuNombre-123'\nvisto = set()\n\nwhile True:\n    r = requests.get('https://ntfy.sh/' + CANAL + '/json?poll=1')\n    for linea in r.text.strip().split('\\n'):\n        if not linea:\n            continue\n        msg = json.loads(linea)\n        if msg['id'] not in visto:\n            visto.add(msg['id'])\n            if msg['message'] == 'on':\n                led.value(1)\n            elif msg['message'] == 'off':\n                led.value(0)\n            print('Recibido:', msg['message'])\n    time.sleep(2)\n\n¿Prefieres bloques? Con el botón de abajo se abre este mismo programa armado en el editor de bloques; cambia el canal en el bloque \"CANAL\" y dale \"⬇ Insertar en el editor\".",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
+                    actions: [
+                        {
+                            label: "🧩 Abrir este programa en bloques",
+                            run: () => window.blocklyPanel?.openXmlFromUrl("examples/wifi/wifi_ntfy.xml"),
+                        },
+                    ],
                     onEnter: (tm) => {
                         if (tm.replPanel && !tm.replPanel.open) tm.replPanel.toggle();
                         tm.replPanel?.switchTab("editor");
@@ -5048,6 +5054,7 @@ class TutorialManager {
                     <div class="tutorial-modal-step-title"></div>
                     <img class="tutorial-modal-media hidden" alt="Demostración animada del resultado esperado" />
                     <div class="tutorial-modal-text"></div>
+                    <div class="tutorial-modal-step-actions hidden"></div>
                     <div class="tutorial-modal-actions">
                         <button class="tutorial-modal-prev">← Anterior</button>
                         <button class="tutorial-modal-next">Siguiente →</button>
@@ -5075,7 +5082,8 @@ class TutorialManager {
             stepTitle:   this.modal.querySelector(".tutorial-modal-step-title"),
             media:       this.modal.querySelector(".tutorial-modal-media"),
             text:        this.modal.querySelector(".tutorial-modal-text"),
-            prev:        this.modal.querySelector(".tutorial-modal-prev"),
+            stepActions: this.modal.querySelector(".tutorial-modal-step-actions"),
+            prev:      this.modal.querySelector(".tutorial-modal-prev"),
             next:        this.modal.querySelector(".tutorial-modal-next"),
             complete:      this.modal.querySelector(".tutorial-modal-complete"),
             completeText:  this.modal.querySelector(".tutorial-modal-complete-text"),
@@ -5444,6 +5452,19 @@ class TutorialManager {
         } else {
             this._els.media.classList.add("hidden");
             this._els.media.removeAttribute("src"); // no seguir descargando/mostrando el gif anterior de fondo
+        }
+
+        // Botones propios del paso (opcional): step.actions = [{ label, run(tm) }]
+        // -- ej. "abrir este programa en bloques" en wifi_led.
+        this._els.stepActions.innerHTML = "";
+        this._els.stepActions.classList.toggle("hidden", !step.actions?.length);
+        for (const action of step.actions || []) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "tutorial-modal-step-action";
+            btn.textContent = action.label;
+            btn.addEventListener("click", () => action.run(this));
+            this._els.stepActions.appendChild(btn);
         }
 
         this._els.prev.disabled = index === 0;

@@ -210,6 +210,34 @@ class BlocklyPanel {
 
     }
 
+    // Reemplaza el workspace por el .xml dado (pide confirmación si ya
+    // hay bloques). Devuelve false si el usuario canceló.
+    _loadXmlText(text) {
+        if (this.workspace.getAllBlocks(false).length > 0) {
+            const ok = confirm("¿Reemplazar los bloques actuales por los del archivo elegido?");
+            if (!ok) return false;
+        }
+        const dom = Blockly.Xml.textToDom(text);
+        this.workspace.clear();
+        Blockly.Xml.domToWorkspace(dom, this.workspace);
+        return true;
+    }
+
+    // Abre el panel con un .xml del propio sitio ya cargado -- lo usan
+    // los tutoriales (ver "actions" de wifi_led en TutorialManager.js).
+    async openXmlFromUrl(url) {
+        try {
+            const res = await fetch(url, { cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const text = await res.text();
+            this.open();
+            this._loadXmlText(text);
+        } catch (err) {
+            console.warn("[BlocklyPanel] No se pudo abrir", url, err);
+            alert("❌ No se pudo abrir el programa en bloques: " + err.message);
+        }
+    }
+
     async _openWorkspaceXml() {
 
         if (!this.workspace) return;
@@ -248,14 +276,7 @@ class BlocklyPanel {
 
             if (!text) return;
 
-            if (this.workspace.getAllBlocks(false).length > 0) {
-                const ok = confirm("¿Reemplazar los bloques actuales por los del archivo elegido?");
-                if (!ok) return;
-            }
-
-            const dom = Blockly.Xml.textToDom(text);
-            this.workspace.clear();
-            Blockly.Xml.domToWorkspace(dom, this.workspace);
+            this._loadXmlText(text);
 
         } catch (err) {
 
