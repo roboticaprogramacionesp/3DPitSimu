@@ -46,6 +46,18 @@ let processLineBusy = false;
 const GPIO_IN_KEY_RE = /^_pit_gpio_in_(\d+)$/;
 const GPIO_EVENTS_MAX_LEN = 4000;
 
+// Mismo mecanismo que GPIO_IN_KEY_RE de arriba, pero para audio real
+// del INMP441 (ver WasmBridge.MIC_DATA_RE/inmp441.hal.py) -- acá el
+// límite es mucho más grande porque un solo chunk de audio (PCM16 en
+// hex) ya pesa miles de caracteres por sí solo, a diferencia de un
+// flanco de GPIO ("18:1,"). inmp441.hal.py drena esta cola directo
+// (lee "_pit_mic_events" del namespace global dentro de readinto()),
+// no hay ningún "_pit_dispatch_mic()" central como con los IRQ --
+// no hace falta: nada necesita "despertarse" al llegar audio, solo
+// acumularse hasta la próxima lectura.
+const MIC_IN_KEY_RE = /^_pit_mic_in_(\d+)$/;
+const MIC_EVENTS_MAX_LEN = 300000;
+
 // BUG REAL reportado (texto con tildes/ñ llegando corrupto -- "DÃ³nde"
 // en vez de "Dónde"): el stdout del puerto llega BYTE A BYTE (ver el
 // comentario de "stdout" más abajo), y un carácter no-ASCII en UTF-8
@@ -509,6 +521,16 @@ self.onmessage = async (e) => {
                     let events = mp.globals.get("_pit_gpio_events");
                     if (typeof events !== "string" || events.length > GPIO_EVENTS_MAX_LEN) events = "";
                     mp.globals.set("_pit_gpio_events", `${events}${gpioMatch[1]}:${msg.value},`);
+                }
+
+                // Cola de chunks de audio para el INMP441 -- mismo
+                // criterio que arriba, separador "|" en vez de "," (el
+                // payload hex nunca lo contiene, a diferencia de ":").
+                const micMatch = MIC_IN_KEY_RE.exec(msg.key);
+                if (micMatch) {
+                    let events = mp.globals.get("_pit_mic_events");
+                    if (typeof events !== "string" || events.length > MIC_EVENTS_MAX_LEN) events = "";
+                    mp.globals.set("_pit_mic_events", `${events}${micMatch[1]}:${msg.value}|`);
                 }
             } catch (err) {
                 self.postMessage({ type: "stdout", data: "\n" + String(err) + "\n" });

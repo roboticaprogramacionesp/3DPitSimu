@@ -518,6 +518,24 @@ class WasmBridge {
             return true;
         }
 
+        if (line.startsWith("MICREQ:")) {
+            // Formato: MICREQ:<gpio del pin "sd">:<rate> -- lo manda
+            // inmp441.hal.py al construir I2S(mode=I2S.RX, ...). Dispara
+            // que el navegador pida permiso de micrófono real (una sola
+            // vez, ver SignalEngine.requestMicCapture()/MicCapture.js) y
+            // empiece a mandarle audio real a ESTE bridge como
+            // "MIC:<gpio>:<hex PCM16>".
+            const parts = line.split(":");
+            if (parts.length >= 3) {
+                const gpio = parseInt(parts[1], 10);
+                const rate = parseInt(parts[2], 10);
+                if (!isNaN(gpio) && !isNaN(rate)) {
+                    this.simulator.signalEngine.requestMicCapture(this, gpio, rate);
+                }
+            }
+            return true;
+        }
+
         if (line.startsWith("OLED:")) {
             // Formato: OLED:<ancho>x<alto>:<framebuffer en hex> -- mismo
             // protocolo que QemuBridge.js (ver su propio comentario junto
@@ -1091,6 +1109,18 @@ class WasmBridge {
     // ya lo lee directo del namespace global, sin ejecutar nada.
     static GPIO_IN_RE = /^IN:(\d+):(-?\d+)$/;
 
+    // Mismo bug/mismo fix que GPIO_IN_RE de arriba, pero para audio
+    // real del INMP441 (ver inmp441.hal.py/MicCapture.js): un chunk de
+    // audio llega varias veces por segundo (bastante más seguido que
+    // un click ocasional), así que mandarlo por "processLine" choca
+    // tarde o temprano con el mp.runPython() del script principal
+    // suspendido en su propio sleep() -- confirmado en vivo,
+    // reproduciendo el mismo "Aborted ... already in flight" que ya
+    // documentó el teclado matricial arriba. Se manda por "setGlobal"
+    // en vez -- inmp441.hal.py lee la cola directo del namespace
+    // global dentro de readinto(), sin ejecutar nada nuevo.
+    static MIC_DATA_RE = /^MIC:(\d+):([0-9a-f]+)$/;
+
     sendData(data, { replEcho = false } = {}) {
 
         if (!this.worker || !this._connected) return Promise.resolve();
@@ -1101,6 +1131,16 @@ class WasmBridge {
                 type: "setGlobal",
                 key: `_pit_gpio_in_${gpioMatch[1]}`,
                 value: parseInt(gpioMatch[2], 10),
+            });
+            return Promise.resolve();
+        }
+
+        const micMatch = WasmBridge.MIC_DATA_RE.exec(data);
+        if (micMatch) {
+            this.worker.postMessage({
+                type: "setGlobal",
+                key: `_pit_mic_in_${micMatch[1]}`,
+                value: micMatch[2],
             });
             return Promise.resolve();
         }

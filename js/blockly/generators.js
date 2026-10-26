@@ -728,7 +728,7 @@ Blockly.Python["ky001_read_index"] = function (block) {
   const rom =
     Blockly.Python.valueToCode(block, "ROM", Blockly.Python.ORDER_NONE) ||
     "rom";
-  
+
   const index = Blockly.Python.valueToCode(block, "INDEX", Blockly.Python.ORDER_NONE) || 0;
 
   return [
@@ -736,6 +736,7 @@ Blockly.Python["ky001_read_index"] = function (block) {
     Blockly.Python.ORDER_FUNCTION_CALL,
   ];
 };
+
 
 Blockly.Python["pin_init"] = function (block) {
   const pin = block.getFieldValue("PIN");
@@ -4927,42 +4928,63 @@ Blockly.Python["inmp441_init"] = function (block) {
   const ws = block.getFieldValue("WS");
   const sd = block.getFieldValue("SD");
 
-  Blockly.Python.definitions_["import_i2s"] =
-    "from machine import I2S, Pin\nimport array";
+  Blockly.Python.definitions_["import_i2s"] = "from machine import I2S, Pin";
 
-  const code = `${name}_audio = I2S(
-    0,
-    sck=Pin(${sck}),
-    ws=Pin(${ws}),
-    sd=Pin(${sd}),
-    mode=I2S.RX,
-    bits=16,
-    format=I2S.MONO,
-    rate=16000,
-    ibuf=1024
-)
-
-${name}_buffer = array.array("h",[0]*256)
+  // bytearray, no array.array("h", ...) -- inmp441.hal.py llena el
+  // buffer byte a byte (igual que un I2S.readinto() real, que escribe
+  // bytes crudos sin importar el tipo del buffer) -- con array.array
+  // de 16 bits, buf[i]=byte_value hubiera escrito en la celda de 16
+  // bits equivocada en vez de en el byte correcto.
+  return `${name}_audio = I2S(0, sck=Pin(${sck}), ws=Pin(${ws}), sd=Pin(${sd}), mode=I2S.RX, bits=16, format=I2S.MONO, rate=16000, ibuf=20000)
+${name}_buffer = bytearray(512)
 `;
-
-  return code;
 };
 
+// Devuelve UNA muestra (entero con signo, -32768..32767) del audio
+// real más reciente -- el side-effect (el .readinto()) va adentro de
+// un helper para que esto siga siendo una sola EXPRESIÓN (un bloque
+// de valor de Blockly no puede generar dos líneas sueltas, que es lo
+// que hacía la versión vieja -- nunca llegaba a actualizar nada
+// cuando se usaba inline, ej. dentro de un print()).
 Blockly.Python["inmp441_read"] = function (block) {
   const name = block.getFieldValue("NAME");
 
-  const code = `${name}_audio.readinto(${name}_buffer)
-${name}_buffer[0]`;
+  Blockly.Python.definitions_["func_inmp441_sample"] = `def _inmp441_sample(i2s_obj, buf):
+    i2s_obj.readinto(buf)
+    v = buf[0] | (buf[1] << 8)
+    return v - 65536 if v >= 32768 else v`;
 
-  return [code, Blockly.Python.ORDER_ATOMIC];
+  return [
+    `_inmp441_sample(${name}_audio, ${name}_buffer)`,
+    Blockly.Python.ORDER_FUNCTION_CALL,
+  ];
 };
 
+// "Volumen" 0-100 -- promedio de amplitud absoluta sobre TODO el
+// bloque leído (no un solo sample como inmp441_read), escalado a
+// 0-100. No hace falta una raíz cuadrada de verdad (RMS real) para
+// que sirva como "qué tan fuerte" -- mismo criterio de simplicidad
+// que el resto de los bloques de sensores (un número para comparar
+// con "mayor que", no una medición de laboratorio).
 Blockly.Python["inmp441_volume"] = function (block) {
   const name = block.getFieldValue("NAME");
 
-  const code = `abs(${name}_buffer[0])`;
+  Blockly.Python.definitions_["func_inmp441_level"] = `def _inmp441_level(i2s_obj, buf):
+    i2s_obj.readinto(buf)
+    total = 0
+    n = len(buf) // 2
+    for i in range(0, len(buf) - 1, 2):
+        v = buf[i] | (buf[i + 1] << 8)
+        if v >= 32768:
+            v -= 65536
+        total += abs(v)
+    avg = (total / n) if n else 0
+    return min(100, int(avg * 100 / 32768))`;
 
-  return [code, Blockly.Python.ORDER_ATOMIC];
+  return [
+    `_inmp441_level(${name}_audio, ${name}_buffer)`,
+    Blockly.Python.ORDER_FUNCTION_CALL,
+  ];
 };
 
 Blockly.Python["bmp_sensor_init"] = function (block) {

@@ -49,6 +49,12 @@
     const sim = new Simulator();
     await sim.start();
 
+    // Micrófono real (INMP441, ver inmp441.hal.py/SignalEngine.js) --
+    // se instancia acá pero NO pide permiso todavía, eso recién pasa
+    // al primer I2S(mode=I2S.RX) que construya el firmware (ver
+    // MicCapture.start(), llamado desde SignalEngine.requestMicCapture()).
+    sim.micCapture = new MicCapture(sim);
+
     // 1b. Si se entró con un link compartido (botón 🔗, ver
     //     ShareProject.js), reemplaza lo que acaba de restaurar
     //     sim.start() desde localStorage por el proyecto que viajó en

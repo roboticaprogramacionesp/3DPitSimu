@@ -20,6 +20,6 @@
     ],
 
     "properties": {
-        "info": "Micrófono digital I2S (machine.I2S) -- la lectura de audio real por I2S todavía no está simulada en modo navegador (WASM), igual que la cámara."
+        "info": "Micrófono digital I2S (machine.I2S, modo RX) -- usa el micrófono REAL de tu PC (con tu permiso) para alimentar I2S.readinto() en modo navegador. Ver inmp441.hal.py."
     }
 }

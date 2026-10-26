@@ -2038,6 +2038,51 @@ class SignalEngine {
     receivers.forEach((comp) => this.sendIrCode(comp.id, addr, cmd));
   }
 
+  // ====================================================
+  // Micrófono I2S (INMP441) -- audio REAL de la PC del alumno, no un
+  // valor sintético. Ver inmp441.hal.py (protocolo MICREQ:/MIC:) y
+  // MicCapture.js (getUserMedia + AudioContext real del navegador).
+  //
+  // A diferencia de IR (broadcast ciego a todo lo que haya en el
+  // lienzo) o KY-001 (un valor por componente), acá hay UN SOLO
+  // micrófono real compartido -- no tiene sentido pedir permiso de
+  // micrófono una vez por cada INMP441 del proyecto. _micSubscribers
+  // es la lista de {bridge, gpio} que están esperando ese audio
+  // compartido, una entrada por cada I2S(mode=I2S.RX) que el firmware
+  // construyó (ver requestMicCapture(), llamado desde
+  // WasmBridge._tryParseProtocolLine() al ver "MICREQ:").
+  // ====================================================
+
+  requestMicCapture(bridge, gpio, rate) {
+    this._micSubscribers = this._micSubscribers || [];
+
+    // Mismo bridge+gpio pidiendo de nuevo (ej. el alumno corrió el
+    // script dos veces) -- no apilar entradas duplicadas.
+    const already = this._micSubscribers.some(
+      (s) => s.bridge === bridge && s.gpio === gpio,
+    );
+    if (!already) this._micSubscribers.push({ bridge, gpio });
+
+    if (!this.simulator.micCapture) return;
+    this.simulator.micCapture.start(rate);
+  }
+
+  // Llamado por MicCapture.js en cada bloque de audio capturado --
+  // hexChunk ya viene como PCM16 mono en hex, listo para pegar al
+  // protocolo "MIC:<gpio>:<hex>" de inmp441.hal.py.
+  broadcastMicChunk(hexChunk) {
+    if (!this._micSubscribers || this._micSubscribers.length === 0) return;
+
+    // Poda perezosa de bridges muertos (▶ Simular -> ⏹ Detener deja
+    // el Worker terminado) -- sin esto, _micSubscribers crecería para
+    // siempre entre corridas sucesivas del mismo proyecto.
+    this._micSubscribers = this._micSubscribers.filter((s) => s.bridge?.connected);
+
+    this._micSubscribers.forEach(({ bridge, gpio }) => {
+      bridge.sendData(`MIC:${gpio}:${hexChunk}`);
+    });
+  }
+
    // ====================================================
   // Encoder rotativo KY-040 (CLK/DT en cuadratura + SW)
   //

@@ -360,7 +360,8 @@
         {
             "type": "inmp441",
             "name": "INMP441 Micrófono I2S",
-            "category": "Sensores"
+            "category": "Sensores",
+            "hasBehavior": true
         }
     ]
 }
