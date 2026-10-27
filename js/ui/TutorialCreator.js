@@ -143,18 +143,57 @@ class TutorialCreator {
         return steps.slice(0, TutorialFormat.LIMITS.steps);
     }
 
+    // Código que hay AHORA en el editor ("" si vacío o demasiado largo).
+    _editorCode() {
+        const rp = this.tm.replPanel;
+        const code = (rp?.codeMirror ? rp.codeMirror.getValue() : rp?.editor?.value) || "";
+        return code.trim() && code.length <= TutorialFormat.LIMITS.code ? code : "";
+    }
+
+    // Bloques que hay AHORA en el editor de bloques ("" si no hay).
+    _workspaceXml() {
+        const ws = window.blocklyPanel?.workspace;
+        if (!ws || !ws.getAllBlocks(false).length || typeof Blockly === "undefined") return "";
+        const xml = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(ws));
+        return xml.length <= TutorialFormat.LIMITS.xml ? xml : "";
+    }
+
+    static _sameCode(a, b) {
+        const norm = (s) => (s || "").replace(/\r\n?/g, "\n").split("\n").map((l) => l.trimEnd()).join("\n").trim();
+        return norm(a) === norm(b);
+    }
+
+    // Dos programas de bloques son "iguales" si generan el mismo Python
+    // (mover un bloque de lugar en la pantalla no cuenta como cambio).
+    static _xmlToPython(xml) {
+        if (!xml || typeof Blockly === "undefined") return "";
+        const ws = new Blockly.Workspace();
+        try {
+            Blockly.Xml.domToWorkspace(Blockly.Xml.textToDom(xml), ws);
+            return Blockly.Python.workspaceToCode(ws);
+        } catch (e) {
+            return xml;
+        } finally {
+            ws.dispose();
+        }
+    }
+
+    // ¿El editor / los bloques tienen algo distinto de lo que va en el tutorial?
+    _diffs() {
+        const { extras } = this.draft;
+        const editor = this._editorCode();
+        const xml = this._workspaceXml();
+        return {
+            code: !!editor && !TutorialCreator._sameCode(editor, extras.code),
+            editorCode: editor,
+            xml: !!xml && TutorialCreator._xmlToPython(xml) !== TutorialCreator._xmlToPython(extras.xml),
+            currentXml: xml,
+        };
+    }
+
     async _captureExtras() {
 
-        const extras = { code: "", xml: "", photo: "" };
-
-        const code = this.tm.replPanel?.editor?.value || "";
-        if (code.trim() && code.length <= TutorialFormat.LIMITS.code) extras.code = code;
-
-        const ws = window.blocklyPanel?.workspace;
-        if (ws && ws.getAllBlocks(false).length && typeof Blockly !== "undefined") {
-            const xml = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(ws));
-            if (xml.length <= TutorialFormat.LIMITS.xml) extras.xml = xml;
-        }
+        const extras = { code: this._editorCode(), xml: this._workspaceXml(), photo: "" };
 
         try {
             extras.photo = await this._capturePhoto();
@@ -351,7 +390,17 @@ class TutorialCreator {
                         <label class="tc-check"><input type="checkbox" class="tc-use-photo"> <span class="tc-photo-label"></span></label>
                         <img class="tc-photo-preview hidden" alt="Foto del circuito terminado">
                         <label class="tc-check"><input type="checkbox" class="tc-use-code"> <span class="tc-code-label"></span></label>
+                        <p class="tc-hint tc-code-caption hidden">Este es EXACTAMENTE el código que recibirán tus alumnos:</p>
+                        <pre class="tc-code-preview hidden"></pre>
+                        <div class="tc-diff tc-code-diff hidden">
+                            <span class="tc-code-diff-text"></span>
+                            <button type="button" class="tutorial-import-btn tc-use-editor-code">📝 Usar el código que tengo ahora en el editor</button>
+                        </div>
                         <label class="tc-check"><input type="checkbox" class="tc-use-xml"> <span class="tc-xml-label"></span></label>
+                        <div class="tc-diff tc-xml-diff hidden">
+                            <span class="tc-xml-diff-text"></span>
+                            <button type="button" class="tutorial-import-btn tc-use-current-xml">🧩 Usar mis bloques actuales</button>
+                        </div>
                         <button type="button" class="tutorial-import-btn tutorial-import-secondary tc-recapture">↻ Volver a tomar foto, código y bloques del simulador</button>
                     </div>
 
@@ -361,6 +410,22 @@ class TutorialCreator {
                         <button type="button" class="tutorial-import-btn tutorial-import-secondary tc-regenerate" title="Vuelve a crear los pasos desde el circuito actual">↻ Rehacer pasos</button>
                         <button type="button" class="tutorial-import-btn tutorial-import-secondary tc-try">▶ Probarlo</button>
                         <button type="button" class="tutorial-import-btn tc-share">📤 Guardar y compartir</button>
+                    </div>
+                </div>
+
+                <div class="tc-section tc-choose hidden">
+                    <p class="tc-big tc-choose-title"></p>
+                    <p class="tc-hint tc-choose-hint"></p>
+                    <button type="button" class="tc-choice tc-choice-current">
+                        <span class="tc-choice-label"></span>
+                        <pre class="tc-choice-code"></pre>
+                    </button>
+                    <button type="button" class="tc-choice tc-choice-saved">
+                        <span class="tc-choice-label"></span>
+                        <pre class="tc-choice-code"></pre>
+                    </button>
+                    <div class="tutorial-import-actions">
+                        <button type="button" class="tutorial-import-btn tutorial-import-secondary tc-choose-cancel">← Volver sin guardar</button>
                     </div>
                 </div>
 
@@ -391,7 +456,28 @@ class TutorialCreator {
             usePhoto: q(".tc-use-photo"), useCode: q(".tc-use-code"), useXml: q(".tc-use-xml"),
             photoLabel: q(".tc-photo-label"), codeLabel: q(".tc-code-label"), xmlLabel: q(".tc-xml-label"),
             photoPreview: q(".tc-photo-preview"), shareNote: q(".tc-share-note"),
+            codeCaption: q(".tc-code-caption"), codePreview: q(".tc-code-preview"),
+            codeDiff: q(".tc-code-diff"), codeDiffText: q(".tc-code-diff-text"),
+            xmlDiff: q(".tc-xml-diff"), xmlDiffText: q(".tc-xml-diff-text"),
+            choose: q(".tc-choose"), chooseTitle: q(".tc-choose-title"), chooseHint: q(".tc-choose-hint"),
+            choiceCurrent: q(".tc-choice-current"), choiceSaved: q(".tc-choice-saved"),
         };
+
+        q(".tc-use-editor-code").addEventListener("click", () => {
+            this.draft.extras.code = this._editorCode();
+            this.draft.use.code = !!this.draft.extras.code;
+            this._saveDraft();
+            this._renderExtras();
+        });
+        q(".tc-use-current-xml").addEventListener("click", () => {
+            this.draft.extras.xml = this._workspaceXml();
+            this.draft.use.xml = !!this.draft.extras.xml;
+            this._saveDraft();
+            this._renderExtras();
+        });
+        q(".tc-choose-cancel").addEventListener("click", () => this._choiceResolve?.(null));
+        this._els.choiceCurrent.addEventListener("click", () => this._choiceResolve?.("current"));
+        this._els.choiceSaved.addEventListener("click", () => this._choiceResolve?.("saved"));
 
         this.overlay.querySelectorAll(".tc-close").forEach((b) => b.addEventListener("click", () => this.close()));
         q(".tc-generate").addEventListener("click", () => this._startFromSimulator());
@@ -467,7 +553,7 @@ class TutorialCreator {
     }
 
     _section(name) {
-        for (const s of ["intro", "resume", "editor", "shared"]) {
+        for (const s of ["intro", "resume", "editor", "choose", "shared"]) {
             this._els[s].classList.toggle("hidden", s !== name);
         }
         this.overlay.classList.remove("hidden");
@@ -486,6 +572,7 @@ class TutorialCreator {
 
     close() {
         this._saveDraft();
+        this._choiceResolve?.(null); // si estaba preguntando "¿cuál código?", cuenta como volver
         this.overlay.classList.add("hidden");
     }
 
@@ -664,13 +751,84 @@ class TutorialCreator {
         set(this._els.usePhoto, this._els.photoLabel, !!extras.photo,
             "Una foto del circuito terminado (la ven al empezar)", "Foto del circuito (no hay circuito en el lienzo)");
         set(this._els.useCode, this._els.codeLabel, !!extras.code,
-            `Mi código del editor (${extras.code.split("\n").length} líneas), con un botón para ponerlo en su editor`, "Código (el editor estaba vacío)");
+            `Código para tus alumnos (${extras.code.trimEnd().split("\n").length} líneas), con un botón para ponerlo en su editor`, "Código (el editor estaba vacío)");
         set(this._els.useXml, this._els.xmlLabel, !!extras.xml,
             "Mis bloques 🧩, con un botón para abrirlos", "Bloques (no armaste bloques en 🧩)");
         const show = extras.photo && use.photo;
         this._els.photoPreview.classList.toggle("hidden", !show);
         if (show) this._els.photoPreview.src = extras.photo;
         else this._els.photoPreview.removeAttribute("src");
+
+        // El código que va en el tutorial, a la vista (textContent).
+        const showCode = !!extras.code && use.code;
+        this._els.codeCaption.classList.toggle("hidden", !showCode);
+        this._els.codePreview.classList.toggle("hidden", !showCode);
+        this._els.codePreview.textContent = showCode ? extras.code : "";
+
+        const diff = this._diffs();
+        this._els.codeDiff.classList.toggle("hidden", !diff.code);
+        this._els.codeDiffText.textContent = extras.code
+            ? "⚠ El código que tienes ahora en el editor es DISTINTO del que va en el tutorial."
+            : "Tienes código en el editor que todavía no está en el tutorial.";
+        this._els.xmlDiff.classList.toggle("hidden", !diff.xml);
+        this._els.xmlDiffText.textContent = extras.xml
+            ? "⚠ Tus bloques 🧩 de ahora son DISTINTOS de los que van en el tutorial."
+            : "Tienes bloques 🧩 que todavía no están en el tutorial.";
+    }
+
+    // Pantalla "¿cuál código reciben tus alumnos?" -- devuelve
+    // "current" | "saved" | null (volver sin guardar).
+    _askWhich({ title, hint, currentLabel, savedLabel, currentPreview, savedPreview }) {
+        const firstLines = (s) => (s || "").split("\n").slice(0, 8).join("\n") + ((s || "").split("\n").length > 8 ? "\n…" : "");
+        this._els.chooseTitle.textContent = title;
+        this._els.chooseHint.textContent = hint;
+        for (const [btn, label, preview] of [
+            [this._els.choiceCurrent, currentLabel, currentPreview],
+            [this._els.choiceSaved, savedLabel, savedPreview],
+        ]) {
+            btn.querySelector(".tc-choice-label").textContent = label;
+            const pre = btn.querySelector(".tc-choice-code");
+            pre.textContent = firstLines(preview);
+            pre.classList.toggle("hidden", !preview);
+        }
+        this._section("choose");
+        return new Promise((resolve) => {
+            this._choiceResolve = (v) => { this._choiceResolve = null; resolve(v); };
+        });
+    }
+
+    // Antes de guardar: si el editor o los bloques cambiaron desde que se
+    // tomó la copia, el docente decide cuál va. false = canceló.
+    async _confirmCodeChoices() {
+        const d = this._diffs();
+        const { extras, use } = this.draft;
+        if (d.code && (use.code || !extras.code)) {
+            const pick = await this._askWhich({
+                title: "¿Qué código reciben tus alumnos?",
+                hint: "El código que tienes ahora en el editor no es el mismo que guardaste en el tutorial. Elige cuál va:",
+                currentLabel: "📝 El que tengo AHORA en el editor",
+                savedLabel: extras.code ? "📦 El que ya estaba en el tutorial" : "🚫 Ninguno (sin código)",
+                currentPreview: d.editorCode,
+                savedPreview: extras.code,
+            });
+            if (!pick) { if (!this.overlay.classList.contains("hidden")) this._section("editor"); return false; }
+            if (pick === "current") { extras.code = d.editorCode; use.code = true; }
+        }
+        if (d.xml && (use.xml || !extras.xml)) {
+            const pick = await this._askWhich({
+                title: "¿Qué bloques reciben tus alumnos?",
+                hint: "Tus bloques 🧩 de ahora no son los mismos que guardaste en el tutorial. Elige cuáles van (abajo se ve el código que generan):",
+                currentLabel: "🧩 Mis bloques de AHORA",
+                savedLabel: extras.xml ? "📦 Los que ya estaban en el tutorial" : "🚫 Ninguno (sin bloques)",
+                currentPreview: TutorialCreator._xmlToPython(d.currentXml),
+                savedPreview: TutorialCreator._xmlToPython(extras.xml),
+            });
+            if (!pick) { if (!this.overlay.classList.contains("hidden")) this._section("editor"); return false; }
+            if (pick === "current") { extras.xml = d.currentXml; use.xml = true; }
+        }
+        this._saveDraft();
+        this._renderExtras();
+        return true;
     }
 
     // ====================================================
@@ -723,7 +881,8 @@ class TutorialCreator {
         return tutorial;
     }
 
-    _try() {
+    async _try() {
+        if (!(await this._confirmCodeChoices())) return;
         const t = this._saveTutorial();
         if (!t) return;
         this.close();
@@ -731,6 +890,7 @@ class TutorialCreator {
     }
 
     async _shareStep() {
+        if (!(await this._confirmCodeChoices())) return;
         const t = this._saveTutorial();
         if (!t) return;
         const link = await TutorialImport.buildLink(t.source);
