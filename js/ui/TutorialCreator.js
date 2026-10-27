@@ -2,7 +2,7 @@
 ==========================================================
  PitSimulator
  Archivo: TutorialCreator.js
- "✏️ Crear mi propio tutorial" -- pensado para docentes que NO
+ "✏️ Crear tutorial" -- pensado para docentes que NO
  programan: arman el circuito en el lienzo (y, si quieren, el
  código), y este asistente genera solo los pasos:
    colocar cada componente -> cada cable (con el nombre de sus
@@ -389,7 +389,7 @@ class TutorialCreator {
         this.overlay.innerHTML = `
             <div class="tutorial-import-dialog tutorial-creator-dialog" role="dialog" aria-modal="true" aria-labelledby="tutorialCreatorTitle">
                 <div class="tutorial-import-header">
-                    <h3 id="tutorialCreatorTitle">✏️ Crear mi propio tutorial</h3>
+                    <h3 id="tutorialCreatorTitle">✏️ Crear tutorial</h3>
                     <button type="button" class="tutorial-import-close tc-close" title="Cerrar (tu avance se guarda solo)">✕</button>
                 </div>
 
@@ -491,7 +491,7 @@ class TutorialCreator {
 
                 <div class="tc-section tc-shared hidden">
                     <p class="tc-big">✅ ¡Listo! Tu tutorial ya está en el menú 🎓.</p>
-                    <p class="tc-hint">Para dárselo a tus alumnos elige una opción y envíalo por correo, WhatsApp o Classroom. Ellos lo abren en 🎓 → <b>Importar tutorial de un docente</b>.</p>
+                    <p class="tc-hint">Para dárselo a tus alumnos elige una opción y envíalo por correo, WhatsApp o Classroom. Ellos lo abren en 🎓 → <b>📥 Abrir tutorial</b>.</p>
                     <div class="tc-share-buttons">
                         <button type="button" class="tutorial-import-btn tc-share-file">📄 Descargar archivo</button>
                         <button type="button" class="tutorial-import-btn tc-share-link">🔗 Copiar link</button>

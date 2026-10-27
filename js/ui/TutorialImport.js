@@ -106,7 +106,7 @@ class TutorialImport {
         this.overlay.innerHTML = `
             <div class="tutorial-import-dialog" role="dialog" aria-modal="true" aria-labelledby="tutorialImportTitle">
                 <div class="tutorial-import-header">
-                    <h3 id="tutorialImportTitle">📥 Importar tutorial</h3>
+                    <h3 id="tutorialImportTitle">📥 Abrir tutorial</h3>
                     <button type="button" class="tutorial-import-close" title="Cerrar">✕</button>
                 </div>
                 <div class="tutorial-import-pick">

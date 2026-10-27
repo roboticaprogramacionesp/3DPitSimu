@@ -5119,7 +5119,7 @@ class TutorialManager {
         if (this.creatorHooks) {
             const createBtn = document.createElement("button");
             createBtn.className = "tutorial-menu-item tutorial-menu-create project-drawer-item";
-            createBtn.textContent = "✏️ Crear mi propio tutorial";
+            createBtn.textContent = "✏️ Crear tutorial";
             createBtn.addEventListener("click", closeAnd(() => this.creatorHooks.create()));
             this.menu.appendChild(createBtn);
         }
@@ -5127,7 +5127,7 @@ class TutorialManager {
         if (this.importHooks) {
             const importBtn = document.createElement("button");
             importBtn.className = "tutorial-menu-item tutorial-menu-import project-drawer-item";
-            importBtn.textContent = "📥 Importar tutorial de un docente…";
+            importBtn.textContent = "📥 Abrir tutorial";
             importBtn.addEventListener("click", closeAnd(() => this.importHooks.openImport()));
             this.menu.appendChild(importBtn);
         }
