@@ -142,6 +142,10 @@
     //    después de él.
     const tutorialManager = new TutorialManager(sim, replPanel);
 
+    // 7b. Tutoriales importados por docentes (archivo .json o link
+    //     #tutorial=...) -- ver TutorialImport.js / TutorialFormat.js.
+    const tutorialImport = new TutorialImport(tutorialManager);
+
     // 8. Generador de reporte de la práctica (botón 📄 junto al nombre
     //    del proyecto) -- necesita toolbar (captura del circuito) y
     //    replPanel (código del editor), por eso se crea después de ambos.
@@ -167,6 +171,7 @@
     window.blePanel        = blePanel;
     window.irRemotePanel   = irRemotePanel;
     window.tutorialManager = tutorialManager;
+    window.tutorialImport  = tutorialImport;
     window.toolbar         = toolbar;
     window.reportGenerator = reportGenerator;
     window.shareProject    = shareProject;
@@ -189,6 +194,10 @@
     //     que vuelve a pasar por acá solo, sin necesitar ningún código
     //     aparte en Toolbar.js para el caso "recargar".
     tutorialManager.start("recorrido_interfaz");
+
+    // 12. Si se entró con un link de tutorial (#tutorial=...), mostrar
+    //     qué contiene y pedir confirmación -- nunca se agrega solo.
+    await tutorialImport.tryLoadFromHash();
 
     console.log("✅ 3DPitSimu listo. REPL panel activo.");
     console.log("   Atajo: Ctrl+` para abrir/cerrar el REPL");

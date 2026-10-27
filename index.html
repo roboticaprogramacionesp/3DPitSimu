@@ -4,6 +4,12 @@
 <head>
 
     <meta charset="UTF-8">
+    <!-- Seguridad (alumnos y docentes): solo se ejecutan scripts del propio
+         sitio -- ni scripts en línea ni de otros dominios, aunque algún día
+         se colara HTML desde un proyecto/tutorial compartido. connect-src
+         queda abierto porque los programas de WiFi de los alumnos hacen
+         peticiones reales a internet (ver WasmBridge._handleHttpRequest). -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https: http: wss: ws:; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="3DPit.ico" />
     <title>3DPitSimu</title>
@@ -260,7 +266,9 @@
     <script src="js/ui/BlePanel.js"></script>
     <script src="js/ui/IrRemotePanel.js"></script>
     <script src="js/ui/ContextMenu.js"></script>
+    <script src="js/ui/TutorialFormat.js"></script>
     <script src="js/ui/TutorialManager.js"></script>
+    <script src="js/ui/TutorialImport.js"></script>
     <script src="js/ui/ReportGenerator.js"></script>
     <script src="js/ui/ShareProject.js"></script>
     <script src="js/ui/BlocklyPanel.js"></script>

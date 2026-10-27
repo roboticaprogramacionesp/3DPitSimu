@@ -1,0 +1,137 @@
+{
+  "format": "pitsim-tutorial",
+  "formatVersion": 1,
+  "id": "servo-barrido",
+  "title": "Servo: barrido de 0 a 180°",
+  "author": "Ejemplo PitSimulator",
+  "icon": "⚙️",
+  "description": "Conecta un servo SG90 y muévelo de 0 a 180 grados en pasos de 45.",
+  "steps": [
+    {
+      "preset": "newProject"
+    },
+    {
+      "title": "Coloca la ESP32",
+      "text": "Arrastra la placa ESP32 WeMos D1 R32 hasta el lienzo.",
+      "highlight": {
+        "type": "component",
+        "component": "esp32_wroom"
+      },
+      "check": {
+        "type": "component",
+        "component": "esp32_wroom"
+      }
+    },
+    {
+      "title": "Toma el servo",
+      "text": "Arrastra el Servo SG90 hasta el lienzo.",
+      "highlight": {
+        "type": "component",
+        "component": "sg90"
+      },
+      "check": {
+        "type": "component",
+        "component": "sg90"
+      }
+    },
+    {
+      "title": "Conecta el GND",
+      "text": "Une un GND de la ESP32 con el cable café/negro (GND) del servo.",
+      "highlight": {
+        "type": "pins",
+        "pins": [
+          {
+            "component": "esp32_wroom",
+            "pinType": "ground"
+          },
+          {
+            "component": "sg90",
+            "pinType": "ground"
+          }
+        ]
+      },
+      "check": {
+        "type": "wire",
+        "from": {
+          "component": "esp32_wroom",
+          "pinType": "ground"
+        },
+        "to": {
+          "component": "sg90",
+          "pinType": "ground"
+        }
+      }
+    },
+    {
+      "title": "Conecta la alimentación",
+      "text": "Une el 3V3 de la ESP32 con el cable rojo (VCC) del servo.",
+      "highlight": {
+        "type": "pins",
+        "pins": [
+          {
+            "component": "esp32_wroom",
+            "pin": "3v3"
+          },
+          {
+            "component": "sg90",
+            "pinType": "power"
+          }
+        ]
+      },
+      "check": {
+        "type": "wire",
+        "from": {
+          "component": "esp32_wroom",
+          "pin": "3v3"
+        },
+        "to": {
+          "component": "sg90",
+          "pinType": "power"
+        }
+      }
+    },
+    {
+      "title": "Conecta la señal",
+      "text": "Une el GPIO26 de la ESP32 con el cable naranja (SIGNAL) del servo.",
+      "highlight": {
+        "type": "pins",
+        "pins": [
+          {
+            "component": "esp32_wroom",
+            "gpioOutput": true
+          },
+          {
+            "component": "sg90",
+            "pinType": "signal"
+          }
+        ]
+      },
+      "check": {
+        "type": "wire",
+        "from": {
+          "component": "esp32_wroom",
+          "gpioOutput": true
+        },
+        "to": {
+          "component": "sg90",
+          "pinType": "signal"
+        }
+      }
+    },
+    {
+      "preset": "save"
+    },
+    {
+      "preset": "simulate"
+    },
+    {
+      "preset": "code",
+      "actions": [
+        {
+          "type": "openBlocks",
+          "xml": "<xml xmlns=\"https://developers.google.com/blockly/xml\">\n  <block type=\"init_servo\" id=\"*gVQ~^17*5.6)#fYUR/`\" x=\"-10\" y=\"10\">\n    <field name=\"PIN\">26</field>\n    <next>\n      <block type=\"controls_whileUntil\" id=\"HK0@x2Q~6Tp(Z},sMMbC\">\n        <field name=\"MODE\">WHILE</field>\n        <value name=\"BOOL\">\n          <block type=\"logic_boolean\" id=\"W)[YN:KB8dJg,E`opd6|\">\n            <field name=\"BOOL\">TRUE</field>\n          </block>\n        </value>\n        <statement name=\"DO\">\n          <block type=\"move_servo\" id=\"{gucumm#34U!N?yHy)x4\">\n            <field name=\"PIN\">26</field>\n            <field name=\"ANGLE\">0</field>\n            <next>\n              <block type=\"time_sleep\" id=\"8L)8Z;^EN.}I8#P;d`G?\">\n                <field name=\"UNIT\">S</field>\n                <value name=\"VALUE\">\n                  <shadow type=\"math_number\" id=\"%FQ,Xi8U6^V7J},psFo-\">\n                    <field name=\"NUM\">1</field>\n                  </shadow>\n                </value>\n                <next>\n                  <block type=\"move_servo\" id=\"lL.k!Rg`6K,WJOCWpx5:\">\n                    <field name=\"PIN\">26</field>\n                    <field name=\"ANGLE\">45</field>\n                    <next>\n                      <block type=\"time_sleep\" id=\"9T=fys%iBG}d,Q_|wp8;\">\n                        <field name=\"UNIT\">S</field>\n                        <value name=\"VALUE\">\n                          <shadow type=\"math_number\" id=\"eFk*fAawmM80Th64W|;I\">\n                            <field name=\"NUM\">1</field>\n                          </shadow>\n                        </value>\n                        <next>\n                          <block type=\"move_servo\" id=\"^A|G7f}KNdPr5KGw6)$`\">\n                            <field name=\"PIN\">26</field>\n                            <field name=\"ANGLE\">90</field>\n                            <next>\n                              <block type=\"time_sleep\" id=\"b46_WANS-}4RqU#sjW9q\">\n                                <field name=\"UNIT\">S</field>\n                                <value name=\"VALUE\">\n                                  <shadow type=\"math_number\" id=\"Ge/ti4{[eS/~TwXPgb+z\">\n                                    <field name=\"NUM\">1</field>\n                                  </shadow>\n                                </value>\n                                <next>\n                                  <block type=\"move_servo\" id=\"=d}P4n76s|C{%]+(sYC`\">\n                                    <field name=\"PIN\">26</field>\n                                    <field name=\"ANGLE\">135</field>\n                                    <next>\n                                      <block type=\"time_sleep\" id=\"R|,t$CJ,#zR48C,.Sq%p\">\n                                        <field name=\"UNIT\">S</field>\n                                        <value name=\"VALUE\">\n                                          <shadow type=\"math_number\" id=\"u=c@caI*qUV@Lu;Z@rHD\">\n                                            <field name=\"NUM\">1</field>\n                                          </shadow>\n                                        </value>\n                                        <next>\n                                          <block type=\"move_servo\" id=\"_JsQmn;|TvHg?$|,.NI0\">\n                                            <field name=\"PIN\">26</field>\n                                            <field name=\"ANGLE\">180</field>\n                                            <next>\n                                              <block type=\"time_sleep\" id=\"U3,,tW0grP1o:l-8FCZm\">\n                                                <field name=\"UNIT\">S</field>\n                                                <value name=\"VALUE\">\n                                                  <shadow type=\"math_number\" id=\"(H)Fg8XkPQQ#9-mms6A4\">\n                                                    <field name=\"NUM\">1</field>\n                                                  </shadow>\n                                                </value>\n                                              </block>\n                                            </next>\n                                          </block>\n                                        </next>\n                                      </block>\n                                    </next>\n                                  </block>\n                                </next>\n                              </block>\n                            </next>\n                          </block>\n                        </next>\n                      </block>\n                    </next>\n                  </block>\n                </next>\n              </block>\n            </next>\n          </block>\n        </statement>\n      </block>\n    </next>\n  </block>\n</xml>"
+        }
+      ]
+    }
+  ]
+}

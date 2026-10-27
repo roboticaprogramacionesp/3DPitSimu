@@ -1,0 +1,42 @@
+{
+  "format": "pitsim-tutorial",
+  "formatVersion": 1,
+  "id": "led-parpadeo",
+  "title": "LED que parpadea (GPIO2)",
+  "author": "Ejemplo PitSimulator",
+  "icon": "💡",
+  "description": "El tutorial más corto posible: la ESP32 sola y su LED integrado.",
+  "steps": [
+    {
+      "preset": "newProject"
+    },
+    {
+      "title": "Coloca la ESP32",
+      "text": "Arrastra la placa ESP32 WeMos D1 R32 hasta el lienzo. Su LED integrado está en el GPIO2.",
+      "highlight": {
+        "type": "component",
+        "component": "esp32_wroom"
+      },
+      "check": {
+        "type": "component",
+        "component": "esp32_wroom"
+      }
+    },
+    {
+      "preset": "simulate"
+    },
+    {
+      "preset": "code",
+      "actions": [
+        {
+          "type": "insertCode",
+          "code": "from machine import Pin\nfrom time import sleep\n\nled = Pin(2, Pin.OUT)\n\nwhile True:\n    led.value(1)\n    sleep(0.5)\n    led.value(0)\n    sleep(0.5)\n"
+        },
+        {
+          "type": "openBlocks",
+          "xml": "<xml xmlns=\"https://developers.google.com/blockly/xml\">\n  <block type=\"led_init\" id=\"`m5}ha)RP-aZ$iM09m#K\" x=\"-50\" y=\"-30\">\n    <field name=\"NAME\">led</field>\n    <field name=\"MODEL\">LED RED</field>\n    <field name=\"PIN\">2</field>\n    <next>\n      <block type=\"controls_whileUntil\" id=\"r6B2{6Lwh%{lB6m}B`}}\">\n        <field name=\"MODE\">WHILE</field>\n        <value name=\"BOOL\">\n          <block type=\"logic_boolean\" id=\"?c5jzG|6A5K=1-IVfBm=\">\n            <field name=\"BOOL\">TRUE</field>\n          </block>\n        </value>\n        <statement name=\"DO\">\n          <block type=\"set_led\" id=\"I?#_SO|S(I+hvr[L4{.D\">\n            <field name=\"NAME\">led</field>\n            <field name=\"STATE\">1</field>\n            <next>\n              <block type=\"time_sleep\" id=\"88};3j~Lt/7MNb2[JA[~\">\n                <field name=\"UNIT\">S</field>\n                <value name=\"VALUE\">\n                  <shadow type=\"math_number\" id=\"?P*?6[o3HcM)Q7h,?72C\">\n                    <field name=\"NUM\">1</field>\n                  </shadow>\n                </value>\n                <next>\n                  <block type=\"set_led\" id=\";SvE@_[$hX/_dtR`7oai\">\n                    <field name=\"NAME\">led</field>\n                    <field name=\"STATE\">0</field>\n                    <next>\n                      <block type=\"time_sleep\" id=\"6{;m]*H4!Je2-Q`}rKnt\">\n                        <field name=\"UNIT\">S</field>\n                        <value name=\"VALUE\">\n                          <shadow type=\"math_number\" id=\"nH;HO}L_b-hs}c.I:ic`\">\n                            <field name=\"NUM\">1</field>\n                          </shadow>\n                        </value>\n                      </block>\n                    </next>\n                  </block>\n                </next>\n              </block>\n            </next>\n          </block>\n        </statement>\n      </block>\n    </next>\n  </block>\n</xml>"
+        }
+      ]
+    }
+  ]
+}

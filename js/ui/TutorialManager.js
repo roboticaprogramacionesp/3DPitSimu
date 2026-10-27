@@ -22,51 +22,10 @@ class TutorialManager {
         this.simulator = simulator;
         this.replPanel = replPanel;
 
-        this.tutorials = TutorialManager.TUTORIALS;
-
-        // ====================================================
-        // Demo visual (GIF) como "Paso 0" -- pedido del usuario: antes
-        // de arrancar el recorrido paso a paso, mostrar primero "esto
-        // es lo que vas a lograr" (el circuito ya armado y funcionando
-        // en el simulador), así el alumno sabe hacia dónde va antes de
-        // empezar a armar nada. Se arma UNA sola vez acá (no en cada
-        // start(), que reinsertaría el paso cada vez que se abre el
-        // mismo tutorial) insertando un step sintético al principio de
-        // tutorial.steps, en vez de tocar a mano cada tutorial.steps
-        // existente (evita renumerar "Paso 1, 2, 3..." de los que ya
-        // había). Son .gif reales del propio simulador (no fotos/video
-        // de hardware físico -- ver assets/tutorial-demos/), generados
-        // armando el circuito con Playwright y capturando el resultado
-        // -- se van sumando de a poco, no todos los tutoriales tienen
-        // demoGif todavía.
-        this.tutorials.forEach((tutorial) => {
-            if (!tutorial.demoGif || tutorial._demoStepInserted) return;
-            tutorial._demoStepInserted = true; // TUTORIALS es static (compartido) -- sin esto, una 2ª instancia de TutorialManager duplicaría el paso
-            tutorial.steps.unshift({
-                title: "🎬 Esto es lo que vas a lograr",
-                text: tutorial.demoCaption || `Así se ve "${tutorial.title}" funcionando en el simulador -- segui los pasos de abajo para armarlo vos mismo.`,
-                media: tutorial.demoGif,
-                highlight: () => {},
-                isDone: () => true,
-            });
-        });
-
-        // Ejemplo en bloques (opcional): tutorial.blocksExample = "examples/…xml"
-        // agrega al paso "Escribe o carga tu código" un botón que abre ese
-        // programa ya armado en el editor de bloques. Como en estos
-        // tutoriales el alumno elige el GPIO, el texto le recuerda cambiar
-        // el pin del bloque por el que conectó.
-        this.tutorials.forEach((tutorial) => {
-            if (!tutorial.blocksExample || tutorial._blocksActionAdded) return;
-            const step = tutorial.steps.find((s) => /Escribe o carga tu código/.test(s.title));
-            if (!step) return;
-            tutorial._blocksActionAdded = true;
-            step.text += "\n\n¿Prefieres bloques? El botón de abajo abre un ejemplo ya armado en el editor de bloques: cambia el pin del bloque por el GPIO que conectaste y dale \"⬇ Insertar en el editor\".";
-            step.actions = [
-                ...(step.actions || []),
-                TutorialManager.blocksAction(tutorial.blocksExample, "🧩 Abrir un ejemplo en bloques"),
-            ];
-        });
+        // Copia: los tutoriales importados por docentes (ver TutorialImport.js)
+        // se agregan a esta lista, nunca al TUTORIALS estático.
+        this.tutorials = TutorialManager.TUTORIALS.slice();
+        this.tutorials.forEach((tutorial) => this._prepareTutorial(tutorial));
 
         this.activeTutorial = null;
         this.stepIndex = -1;
@@ -88,6 +47,51 @@ class TutorialManager {
 
         this.buildDOM();
         this.bindEvents();
+
+    }
+
+    _prepareTutorial(tutorial) {
+
+        // ====================================================
+        // Demo visual (GIF) como "Paso 0" -- pedido del usuario: antes
+        // de arrancar el recorrido paso a paso, mostrar primero "esto
+        // es lo que vas a lograr" (el circuito ya armado y funcionando
+        // en el simulador), así el alumno sabe hacia dónde va antes de
+        // empezar a armar nada. Se arma UNA sola vez acá (no en cada
+        // start(), que reinsertaría el paso cada vez que se abre el
+        // mismo tutorial) insertando un step sintético al principio de
+        // tutorial.steps, en vez de tocar a mano cada tutorial.steps
+        // existente (evita renumerar "Paso 1, 2, 3..." de los que ya
+        // había). Son .gif reales del propio simulador (no fotos/video
+        // de hardware físico -- ver assets/tutorial-demos/), generados
+        // armando el circuito con Playwright y capturando el resultado
+        // -- se van sumando de a poco, no todos los tutoriales tienen
+        // demoGif todavía.
+        if (tutorial.demoGif && !tutorial._demoStepInserted) {
+            tutorial._demoStepInserted = true; // TUTORIALS es static (compartido) -- sin esto, una 2ª instancia de TutorialManager duplicaría el paso
+            tutorial.steps.unshift({
+                title: "🎬 Esto es lo que vas a lograr",
+                text: tutorial.demoCaption || `Así se ve "${tutorial.title}" funcionando en el simulador -- segui los pasos de abajo para armarlo vos mismo.`,
+                media: tutorial.demoGif,
+                highlight: () => {},
+                isDone: () => true,
+            });
+        }
+
+        // Ejemplo en bloques (opcional): tutorial.blocksExample = "examples/…xml"
+        // agrega al paso "Escribe o carga tu código" un botón que abre ese
+        // programa ya armado en el editor de bloques. Como en estos
+        // tutoriales el alumno elige el GPIO, el texto le recuerda cambiar
+        // el pin del bloque por el que conectó.
+        if (!tutorial.blocksExample || tutorial._blocksActionAdded) return;
+        const step = tutorial.steps.find((s) => /Escribe o carga tu código/.test(s.title));
+        if (!step) return;
+        tutorial._blocksActionAdded = true;
+        step.text += "\n\n¿Prefieres bloques? El botón de abajo abre un ejemplo ya armado en el editor de bloques: cambia el pin del bloque por el GPIO que conectaste y dale \"⬇ Insertar en el editor\".";
+        step.actions = [
+            ...(step.actions || []),
+            TutorialManager.blocksAction(tutorial.blocksExample, "🧩 Abrir un ejemplo en bloques"),
+        ];
 
     }
 
@@ -5037,39 +5041,7 @@ class TutorialManager {
         this.trigger = document.getElementById("btnTutorial");
         this.menu    = document.getElementById("tutorialMenu");
 
-        if (this.menu) {
-
-            // Agrupados por categoría (mismo orden/nombres que el
-            // <select id="tutorialSelect"> de referencia en Blocks/
-            // AppBlock3) -- se apoya en que TUTORIALS ya viene
-            // ordenado por categoría (ver el campo category de cada
-            // tutorial), así que alcanza con detectar el cambio de
-            // valor para saber cuándo insertar un encabezado nuevo.
-            let lastCategory = null;
-
-            this.tutorials.forEach((tutorial) => {
-
-                if (tutorial.category && tutorial.category !== lastCategory) {
-                    lastCategory = tutorial.category;
-                    const label = document.createElement("div");
-                    label.className = "tutorial-menu-category";
-                    label.textContent = tutorial.category;
-                    this.menu.appendChild(label);
-                }
-
-                const item = document.createElement("button");
-                item.className = "tutorial-menu-item project-drawer-item";
-                item.textContent = `${tutorial.icon} ${tutorial.title}`;
-                item.addEventListener("click", () => {
-                    this.menu.classList.add("hidden");
-                    this.start(tutorial.id);
-                });
-
-                this.menu.appendChild(item);
-
-            });
-
-        }
+        this.renderMenu();
 
         this.modal = document.createElement("div");
         this.modal.className = "tutorial-modal hidden";
@@ -5132,6 +5104,91 @@ class TutorialManager {
 
         this._fontSizeBtns = Array.from(this.modal.querySelectorAll(".tutorial-font-btn"));
 
+    }
+
+    // Menú 🎓 -- se vuelve a armar cada vez que se importa/quita un
+    // tutorial. Todo con createElement + textContent (los títulos de los
+    // importados los escribió otra persona: nunca pasan por innerHTML).
+    renderMenu() {
+
+        if (!this.menu) return;
+        this.menu.textContent = "";
+
+        const closeAnd = (fn) => () => { this.menu.classList.add("hidden"); fn(); };
+
+        if (this.importHooks) {
+            const importBtn = document.createElement("button");
+            importBtn.className = "tutorial-menu-item tutorial-menu-import project-drawer-item";
+            importBtn.textContent = "📥 Importar tutorial de un docente…";
+            importBtn.addEventListener("click", closeAnd(() => this.importHooks.openImport()));
+            this.menu.appendChild(importBtn);
+        }
+
+        // Agrupados por categoría (mismo orden/nombres que el
+        // <select id="tutorialSelect"> de referencia en Blocks/
+        // AppBlock3) -- se apoya en que TUTORIALS ya viene
+        // ordenado por categoría (ver el campo category de cada
+        // tutorial), así que alcanza con detectar el cambio de
+        // valor para saber cuándo insertar un encabezado nuevo.
+        // Los importados van al final, en su propia categoría.
+        let lastCategory = null;
+
+        this.tutorials.forEach((tutorial) => {
+
+            if (tutorial.category && tutorial.category !== lastCategory) {
+                lastCategory = tutorial.category;
+                const label = document.createElement("div");
+                label.className = "tutorial-menu-category";
+                label.textContent = tutorial.category;
+                this.menu.appendChild(label);
+            }
+
+            const item = document.createElement("button");
+            item.className = "tutorial-menu-item project-drawer-item";
+            item.textContent = `${tutorial.icon} ${tutorial.title}`;
+            item.addEventListener("click", closeAnd(() => this.start(tutorial.id)));
+
+            if (!tutorial.imported) {
+                this.menu.appendChild(item);
+                return;
+            }
+
+            if (tutorial.author) item.title = `Creado por: ${tutorial.author}`;
+            const row = document.createElement("div");
+            row.className = "tutorial-menu-imported-row";
+            row.appendChild(item);
+            for (const [icon, title, fn] of [
+                ["🔗", "Copiar link para compartir", () => this.importHooks?.copyLink(tutorial)],
+                ["⬇", "Descargar como archivo .json", () => this.importHooks?.exportFile(tutorial)],
+                ["🗑", "Quitar este tutorial", () => this.importHooks?.remove(tutorial)],
+            ]) {
+                const b = document.createElement("button");
+                b.type = "button";
+                b.className = "tutorial-menu-imported-btn";
+                b.textContent = icon;
+                b.title = title;
+                b.addEventListener("click", closeAnd(fn));
+                row.appendChild(b);
+            }
+            this.menu.appendChild(row);
+
+        });
+
+    }
+
+    // Tutoriales importados (ver TutorialImport.js) -- "tutorial" ya
+    // viene de TutorialFormat.compile(), con id "import:<id>".
+    addImportedTutorial(tutorial) {
+        this.removeImportedTutorial(tutorial.id, { rerender: false });
+        this._prepareTutorial(tutorial);
+        this.tutorials.push(tutorial);
+        this.renderMenu();
+    }
+
+    removeImportedTutorial(id, { rerender = true } = {}) {
+        if (this.activeTutorial?.id === id) this.stop();
+        this.tutorials = this.tutorials.filter((t) => !(t.imported && t.id === id));
+        if (rerender) this.renderMenu();
     }
 
     // ====================================================
@@ -5480,7 +5537,10 @@ class TutorialManager {
         const step = steps[index];
 
         this._els.title.textContent    = `${this.activeTutorial.icon} ${this.activeTutorial.title}`;
-        this._els.progress.textContent = `Paso ${index + 1} de ${steps.length}`;
+        this._els.progress.textContent = `Paso ${index + 1} de ${steps.length}` +
+            (this.activeTutorial.imported
+                ? ` · 📥 Importado${this.activeTutorial.author ? " · " + this.activeTutorial.author : ""}`
+                : "");
         this._els.text.textContent      = step.text;
 
         // Demo visual (GIF) -- ver el "Paso 0" sintético armado en el

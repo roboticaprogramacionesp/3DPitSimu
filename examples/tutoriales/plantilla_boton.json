@@ -1,0 +1,144 @@
+{
+  "format": "pitsim-tutorial",
+  "formatVersion": 1,
+  "id": "boton-contador",
+  "title": "Botón contador (ejemplo de docente)",
+  "author": "Plantilla PitSimulator",
+  "icon": "🔘",
+  "description": "Arma un botón KY-004 con la ESP32 y cuenta cuántas veces se presiona. Sirve como plantilla: cambia textos, componentes y pines para crear tu propio tutorial.",
+  "steps": [
+    {
+      "preset": "newProject"
+    },
+    {
+      "title": "Coloca la ESP32",
+      "text": "Arrastra la placa ESP32 WeMos D1 R32 desde el panel de componentes hasta el lienzo.",
+      "highlight": {
+        "type": "component",
+        "component": "esp32_wroom"
+      },
+      "check": {
+        "type": "component",
+        "component": "esp32_wroom"
+      }
+    },
+    {
+      "title": "Toma el botón",
+      "text": "Arrastra el botón KY-004 desde el panel de componentes hasta el lienzo.",
+      "highlight": {
+        "type": "component",
+        "component": "ky_004"
+      },
+      "check": {
+        "type": "component",
+        "component": "ky_004"
+      }
+    },
+    {
+      "title": "Conecta el GND",
+      "text": "Traza un cable desde un pin GND de la ESP32 hasta el GND del botón.",
+      "highlight": {
+        "type": "pins",
+        "pins": [
+          {
+            "component": "esp32_wroom",
+            "pinType": "ground"
+          },
+          {
+            "component": "ky_004",
+            "pin": "gnd"
+          }
+        ]
+      },
+      "check": {
+        "type": "wire",
+        "from": {
+          "component": "esp32_wroom",
+          "pinType": "ground"
+        },
+        "to": {
+          "component": "ky_004",
+          "pin": "gnd"
+        }
+      }
+    },
+    {
+      "title": "Conecta la alimentación",
+      "text": "Conecta el pin 3V3 de la ESP32 al VCC del botón.",
+      "highlight": {
+        "type": "pins",
+        "pins": [
+          {
+            "component": "esp32_wroom",
+            "pin": "3v3"
+          },
+          {
+            "component": "ky_004",
+            "pin": "vcc"
+          }
+        ]
+      },
+      "check": {
+        "type": "wire",
+        "from": {
+          "component": "esp32_wroom",
+          "pin": "3v3"
+        },
+        "to": {
+          "component": "ky_004",
+          "pin": "vcc"
+        }
+      }
+    },
+    {
+      "title": "Conecta la señal",
+      "text": "Conecta la S (señal) del botón al GPIO12 de la ESP32 (o a otro GPIO libre, cambiando después el pin en el código).",
+      "highlight": {
+        "type": "pins",
+        "pins": [
+          {
+            "component": "esp32_wroom",
+            "gpioOutput": true
+          },
+          {
+            "component": "ky_004",
+            "pin": "senal"
+          }
+        ]
+      },
+      "check": {
+        "type": "wire",
+        "from": {
+          "component": "esp32_wroom",
+          "gpioOutput": true
+        },
+        "to": {
+          "component": "ky_004",
+          "pin": "senal"
+        }
+      }
+    },
+    {
+      "preset": "save"
+    },
+    {
+      "preset": "simulate"
+    },
+    {
+      "preset": "code",
+      "text": "Pon el programa en el editor con uno de los botones de abajo (en Python o en bloques), revisa que el pin sea el que conectaste y dale ▶ Ejecutar. Cada vez que presiones el botón del lienzo, la terminal mostrará el contador.",
+      "actions": [
+        {
+          "type": "insertCode",
+          "label": "📝 Poner el código Python en el editor",
+          "code": "from machine import Pin\nfrom time import sleep\n\nboton = Pin(12, Pin.IN, Pin.PULL_UP)  # cambia el 12 por tu GPIO\ncontador = 0\n\nwhile True:\n    if not boton.value():\n        contador += 1\n        print('Contador:', contador)\n        sleep(0.3)\n    sleep(0.05)\n"
+        },
+        {
+          "type": "openBlocks",
+          "label": "🧩 Abrir el programa en bloques",
+          "xml": "<xml xmlns=\"https://developers.google.com/blockly/xml\">\n  <variables>\n    <variable id=\":IlPz{:,ppuDRc,jLJcB\">contador</variable>\n    <variable id=\"Rq|9vTTC-mNFIhhzK-wF\">btn</variable>\n  </variables>\n  <block type=\"interruptor_init\" id=\",|_K2iF^P~r9AhF#f_3I\" x=\"-30\" y=\"-10\">\n    <field name=\"MODEL\">KY004</field>\n    <field name=\"PIN\">12</field>\n    <field name=\"PULL\">PULL_UP</field>\n    <next>\n      <block type=\"variables_set\" id=\"+Up{^LQm]kh5U2Fa!%^?\">\n        <field name=\"VAR\" id=\":IlPz{:,ppuDRc,jLJcB\">contador</field>\n        <value name=\"VALUE\">\n          <block type=\"math_number\" id=\"r279(ZEI6!:T@gIgUZ/}\">\n            <field name=\"NUM\">0</field>\n          </block>\n        </value>\n        <next>\n          <block type=\"variables_set\" id=\"AC.5veJ_-LjIlOA@d{4^\">\n            <field name=\"VAR\" id=\"Rq|9vTTC-mNFIhhzK-wF\">btn</field>\n            <value name=\"VALUE\">\n              <block type=\"math_number\" id=\"q7*e*Ckq7Y6#@wJjaRlw\">\n                <field name=\"NUM\">0</field>\n              </block>\n            </value>\n            <next>\n              <block type=\"controls_whileUntil\" id=\"/Ne4/$3WKLFT(^(-*?.6\">\n                <field name=\"MODE\">WHILE</field>\n                <value name=\"BOOL\">\n                  <block type=\"logic_boolean\" id=\"5}AB]/P4^0M8bX1n=%77\">\n                    <field name=\"BOOL\">TRUE</field>\n                  </block>\n                </value>\n                <statement name=\"DO\">\n                  <block type=\"variables_set\" id=\"q+ewWGyRL8{EsEawriZ}\">\n                    <field name=\"VAR\" id=\"Rq|9vTTC-mNFIhhzK-wF\">btn</field>\n                    <value name=\"VALUE\">\n                      <block type=\"logic_negate\" id=\"cO3YR*9P#.)E^aBr1|Sh\">\n                        <value name=\"BOOL\">\n                          <block type=\"interruptor_read\" id=\"-~i4lOv8NW3aEX-AO(j]\">\n                            <field name=\"PIN\">12</field>\n                          </block>\n                        </value>\n                      </block>\n                    </value>\n                    <next>\n                      <block type=\"controls_if\" id=\"suqb`EF*`P#!;]4[HMm(\">\n                        <value name=\"IF0\">\n                          <block type=\"logic_compare\" id=\"b6k=yPQc]C(Faj`Wamr{\">\n                            <field name=\"OP\">EQ</field>\n                            <value name=\"A\">\n                              <block type=\"variables_get\" id=\"s!5xqO!^;+$ssv~cHT7{\">\n                                <field name=\"VAR\" id=\"Rq|9vTTC-mNFIhhzK-wF\">btn</field>\n                              </block>\n                            </value>\n                            <value name=\"B\">\n                              <block type=\"math_number\" id=\"hYb5rSCgQSr/@YAbV2G!\">\n                                <field name=\"NUM\">1</field>\n                              </block>\n                            </value>\n                          </block>\n                        </value>\n                        <statement name=\"DO0\">\n                          <block type=\"text_print\" id=\"/9oIp{%LgYqEkOfpUF1G\">\n                            <value name=\"TEXT\">\n                              <shadow type=\"text\" id=\"3vW8v)Y4fJS+7zWP]S^K\">\n                                <field name=\"TEXT\">3DPit</field>\n                              </shadow>\n                              <block type=\"text_join\" id=\"i-0Fl?rgRA~ZSMgtPUpM\">\n                                <mutation items=\"2\"></mutation>\n                                <value name=\"ADD0\">\n                                  <block type=\"text\" id=\"11`-17W2P}mU_[h]SLVm\">\n                                    <field name=\"TEXT\">Contador: </field>\n                                  </block>\n                                </value>\n                                <value name=\"ADD1\">\n                                  <block type=\"variables_get\" id=\"*V=0Q/I9rh16F;5Jeh1X\">\n                                    <field name=\"VAR\" id=\":IlPz{:,ppuDRc,jLJcB\">contador</field>\n                                  </block>\n                                </value>\n                              </block>\n                            </value>\n                            <next>\n                              <block type=\"math_change\" id=\"%-m6/3b8[mWB%468KvP$\">\n                                <field name=\"VAR\" id=\":IlPz{:,ppuDRc,jLJcB\">contador</field>\n                                <value name=\"DELTA\">\n                                  <shadow type=\"math_number\" id=\"{o0yx$*fccndN2d{e9#X\">\n                                    <field name=\"NUM\">1</field>\n                                  </shadow>\n                                </value>\n                              </block>\n                            </next>\n                          </block>\n                        </statement>\n                        <next>\n                          <block type=\"time_sleep\" id=\"6kVG#!B#uUi7}y1BBVp3\">\n                            <field name=\"UNIT\">S</field>\n                            <value name=\"VALUE\">\n                              <shadow type=\"math_number\" id=\"(@oD}xt#]l8m[vI7df!0\">\n                                <field name=\"NUM\">1</field>\n                              </shadow>\n                            </value>\n                          </block>\n                        </next>\n                      </block>\n                    </next>\n                  </block>\n                </statement>\n              </block>\n            </next>\n          </block>\n        </next>\n      </block>\n    </next>\n  </block>\n</xml>"
+        }
+      ]
+    }
+  ]
+}

@@ -223,6 +223,24 @@ class BlocklyPanel {
         return true;
     }
 
+    // Abre el panel con un programa .xml que viene como TEXTO (tutoriales
+    // importados, ver TutorialFormat.js). Antes de tocar el workspace se
+    // revisa que todos los tipos de bloque existan en este simulador.
+    openXmlText(text) {
+        const unknown = TutorialFormat.blockTypesOf(text).filter((t) => !Blockly.Blocks[t]);
+        if (unknown.length) {
+            alert("❌ El programa usa bloques que este simulador no tiene: " + unknown.slice(0, 5).join(", "));
+            return;
+        }
+        try {
+            this.open();
+            this._loadXmlText(text);
+        } catch (err) {
+            console.warn("[BlocklyPanel] Programa de bloques inválido", err);
+            alert("❌ No se pudo abrir el programa en bloques: " + err.message);
+        }
+    }
+
     // Abre el panel con un .xml del propio sitio ya cargado -- lo usan
     // los tutoriales (ver "actions" de wifi_led en TutorialManager.js).
     async openXmlFromUrl(url) {
