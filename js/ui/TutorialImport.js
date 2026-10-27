@@ -323,19 +323,36 @@ class TutorialImport {
     // Compartir / exportar / quitar
     // ====================================================
 
+    // Link para compartir. Si la foto lo hace demasiado largo (los chats
+    // y correos cortan links muy largos), va sin la foto: el archivo .json
+    // sí la conserva. Devuelve { url, withoutImage } o null.
+    static LINK_COMFORT_CHARS = 24_000;
+
+    static async buildLink(source) {
+        const enc = async (data) => TutorialImport._deflate(TutorialFormat.toJSON(data, false));
+        let encoded = await enc(source);
+        let withoutImage = false;
+        if (source.demoImage && encoded.length > TutorialImport.LINK_COMFORT_CHARS) {
+            const { demoImage, demoCaption, ...rest } = source;
+            encoded = await enc(rest);
+            withoutImage = true;
+        }
+        if (encoded.length > TutorialFormat.LIMITS.linkChars) return null;
+        return { url: location.origin + location.pathname + TutorialImport.HASH_PREFIX + encoded, withoutImage };
+    }
+
     async copyLink(tutorial) {
-        const json = TutorialFormat.toJSON(tutorial.source, false);
-        const encoded = await TutorialImport._deflate(json);
-        if (encoded.length > TutorialFormat.LIMITS.linkChars) {
-            alert("Este tutorial es demasiado grande para un link (seguramente por la imagen). Compártelo como archivo con el botón ⬇.");
+        const link = await TutorialImport.buildLink(tutorial.source);
+        if (!link) {
+            alert("Este tutorial es demasiado grande para un link. Compártelo como archivo con el botón ⬇.");
             return;
         }
-        const url = location.origin + location.pathname + TutorialImport.HASH_PREFIX + encoded;
+        const note = link.withoutImage ? "\n\nEl link va sin la foto del circuito (la foto haría el link demasiado largo); el archivo ⬇ sí la incluye." : "";
         try {
-            await navigator.clipboard.writeText(url);
-            alert("🔗 Link copiado. Quien lo abra verá primero qué contiene el tutorial y decidirá si lo agrega.");
+            await navigator.clipboard.writeText(link.url);
+            alert("🔗 Link copiado. Quien lo abra verá primero qué contiene el tutorial y decidirá si lo agrega." + note);
         } catch (e) {
-            prompt("Copia este link:", url);
+            prompt("Copia este link:" + note, link.url);
         }
     }
 

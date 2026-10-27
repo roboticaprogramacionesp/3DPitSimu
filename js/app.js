@@ -146,6 +146,10 @@
     //     #tutorial=...) -- ver TutorialImport.js / TutorialFormat.js.
     const tutorialImport = new TutorialImport(tutorialManager);
 
+    // 7c. "✏️ Crear mi propio tutorial" -- genera los pasos desde el
+    //     circuito del lienzo, para docentes (ver TutorialCreator.js).
+    const tutorialCreator = new TutorialCreator(tutorialManager, tutorialImport);
+
     // 8. Generador de reporte de la práctica (botón 📄 junto al nombre
     //    del proyecto) -- necesita toolbar (captura del circuito) y
     //    replPanel (código del editor), por eso se crea después de ambos.
@@ -172,6 +176,7 @@
     window.irRemotePanel   = irRemotePanel;
     window.tutorialManager = tutorialManager;
     window.tutorialImport  = tutorialImport;
+    window.tutorialCreator = tutorialCreator;
     window.toolbar         = toolbar;
     window.reportGenerator = reportGenerator;
     window.shareProject    = shareProject;

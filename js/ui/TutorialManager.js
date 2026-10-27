@@ -5116,6 +5116,14 @@ class TutorialManager {
 
         const closeAnd = (fn) => () => { this.menu.classList.add("hidden"); fn(); };
 
+        if (this.creatorHooks) {
+            const createBtn = document.createElement("button");
+            createBtn.className = "tutorial-menu-item tutorial-menu-create project-drawer-item";
+            createBtn.textContent = "✏️ Crear mi propio tutorial";
+            createBtn.addEventListener("click", closeAnd(() => this.creatorHooks.create()));
+            this.menu.appendChild(createBtn);
+        }
+
         if (this.importHooks) {
             const importBtn = document.createElement("button");
             importBtn.className = "tutorial-menu-item tutorial-menu-import project-drawer-item";
@@ -5158,6 +5166,7 @@ class TutorialManager {
             row.className = "tutorial-menu-imported-row";
             row.appendChild(item);
             for (const [icon, title, fn] of [
+                ...(this.creatorHooks ? [["✏️", "Editar este tutorial", () => this.creatorHooks.edit(tutorial)]] : []),
                 ["🔗", "Copiar link para compartir", () => this.importHooks?.copyLink(tutorial)],
                 ["⬇", "Descargar como archivo .json", () => this.importHooks?.exportFile(tutorial)],
                 ["🗑", "Quitar este tutorial", () => this.importHooks?.remove(tutorial)],

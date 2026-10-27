@@ -1,8 +1,22 @@
 # Crear tutoriales para tus alumnos
 
+## La forma fácil (sin escribir nada técnico)
+
+1. Arma el circuito en el lienzo, tal como quieres que lo armen tus alumnos. Si quieres, escribe también el código o arma los bloques 🧩.
+2. Abre 🎓 → **✏️ Crear mi propio tutorial** → **✨ Crear tutorial desde mi circuito**.
+3. El simulador escribe los pasos solo: colocar cada componente, cada cable, guardar, simular y el código. Ponle un título y tu nombre, y cambia los textos con tus palabras. Puedes mover pasos (↑ ↓), borrarlos (🗑) o agregar explicaciones.
+4. Elige si incluir una foto del circuito terminado, tu código y tus bloques.
+5. **▶ Probarlo** para verlo como lo verán tus alumnos, y **📤 Guardar y compartir** para descargar el archivo o copiar el link.
+
+Tu avance se guarda solo. Para cambiar un tutorial ya hecho, usa el botón ✏️ junto a él en el menú 🎓.
+
+El resto de esta guía es para quien quiera escribir el archivo a mano.
+
+## El archivo por dentro
+
 Un tutorial es un archivo `.json` con pasos. El simulador lo muestra igual que sus tutoriales propios: resalta lo que hay que tocar y marca ✓ cuando el alumno completa el paso.
 
-## Cómo empezar
+## Escribirlo a mano
 
 1. En el simulador abre 🎓 → **📥 Importar tutorial de un docente…** → **⬇ Descargar plantilla**.
 2. Abre el archivo con cualquier editor de texto (Bloc de notas, VS Code…) y cambia textos, componentes y pines.
