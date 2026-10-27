@@ -1025,3 +1025,21 @@
     font-size: 15px;
     font-weight: 600;
 }
+
+/* Foto de los bloques (en vez del Python que generan) */
+.tc-blocks-img {
+    display: block;
+    max-width: 100%;
+    max-height: 280px;
+    object-fit: contain;
+    align-self: flex-start;
+    padding: 6px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #ffffff;
+}
+
+.tc-blocks-img.hidden,
+.tc-xml-caption.hidden {
+    display: none;
+}

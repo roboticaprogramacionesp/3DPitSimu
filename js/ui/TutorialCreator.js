@@ -237,7 +237,7 @@ class TutorialCreator {
 
     static _newId(title) {
         const slug = (title || "tutorial").toLowerCase()
-            .normalize("NFD").replace(/[̀-ͯ]/g, "")
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
             .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 28) || "tutorial";
         const rand = Math.random().toString(36).slice(2, 7);
         return `${slug}-${rand}`.replace(/^[^a-z0-9]+/, "t");
@@ -257,9 +257,64 @@ class TutorialCreator {
                 steps: this._generateSteps(),
             },
             extras,
-            use: { code: !!extras.code, xml: !!extras.xml, photo: !!extras.photo },
+            use: this._defaultUse(extras),
         };
         this._saveDraft();
+    }
+
+    // Qué se marca solo al tomar foto/código/bloques. Los bloques solo si
+    // son los del código del editor (o el editor está vacío): el editor
+    // de bloques puede tener cargado otro programa (ej. el que abrió el
+    // botón de un tutorial), y ese NO debe colarse en el tutorial.
+    _defaultUse(extras) {
+        let xml = !!extras.xml;
+        if (xml && extras.code) {
+            const py = TutorialCreator._xmlToPython(extras.xml);
+            const clean = window.blocklyPanel?._cleanCodeForDisplay?.(py) ?? py;
+            xml = TutorialCreator._sameCode(clean, extras.code);
+        }
+        return { code: !!extras.code, xml, photo: !!extras.photo };
+    }
+
+    // Foto de un programa de bloques (para que el docente VEA qué bloques
+    // van, en vez de leer el Python que generan). Se dibuja en un
+    // workspace de Blockly fuera de pantalla, de solo lectura, que se
+    // descarta enseguida -- no toca el editor de bloques del docente.
+    static _imageCache = new Map();
+
+    static async _blocksImage(xml) {
+        if (!xml || typeof Blockly === "undefined" || typeof pitWorkspaceToSvg !== "function") return null;
+        if (TutorialCreator._imageCache.has(xml)) return TutorialCreator._imageCache.get(xml);
+        const host = document.createElement("div");
+        host.style.cssText = "position:fixed;left:-10000px;top:0;width:1000px;height:800px;";
+        document.body.appendChild(host);
+        let ws = null;
+        try {
+            ws = Blockly.inject(host, { readOnly: true, media: "assets/blockly-media/", trashcan: false, scrollbars: false });
+            Blockly.Xml.domToWorkspace(Blockly.Xml.textToDom(xml), ws);
+            const svg = await pitWorkspaceToSvg(ws);
+            const img = await pitSvgToPng(svg);
+            const url = img?.dataUrl || null;
+            if (TutorialCreator._imageCache.size > 20) TutorialCreator._imageCache.clear();
+            TutorialCreator._imageCache.set(xml, url);
+            return url;
+        } catch (e) {
+            console.warn("[TutorialCreator] No se pudo dibujar los bloques", e);
+            return null;
+        } finally {
+            ws?.dispose();
+            host.remove();
+        }
+    }
+
+    // Pone la foto de "xml" en <img> (async; ignora resultados viejos).
+    async _showBlocksImage(imgEl, xml) {
+        const token = (imgEl._pitToken = (imgEl._pitToken || 0) + 1);
+        if (!xml) { imgEl.classList.add("hidden"); imgEl.removeAttribute("src"); return; }
+        const url = await TutorialCreator._blocksImage(xml);
+        if (imgEl._pitToken !== token) return;
+        imgEl.classList.toggle("hidden", !url);
+        if (url) imgEl.src = url;
     }
 
     // ====================================================
@@ -397,8 +452,11 @@ class TutorialCreator {
                             <button type="button" class="tutorial-import-btn tc-use-editor-code">📝 Usar el código que tengo ahora en el editor</button>
                         </div>
                         <label class="tc-check"><input type="checkbox" class="tc-use-xml"> <span class="tc-xml-label"></span></label>
+                        <p class="tc-hint tc-xml-caption hidden">Estos son EXACTAMENTE los bloques que recibirán tus alumnos:</p>
+                        <img class="tc-blocks-img tc-xml-preview hidden" alt="Bloques que van en el tutorial">
                         <div class="tc-diff tc-xml-diff hidden">
                             <span class="tc-xml-diff-text"></span>
+                            <img class="tc-blocks-img tc-xml-current hidden" alt="Bloques que tienes ahora en 🧩">
                             <button type="button" class="tutorial-import-btn tc-use-current-xml">🧩 Usar mis bloques actuales</button>
                         </div>
                         <button type="button" class="tutorial-import-btn tutorial-import-secondary tc-recapture">↻ Volver a tomar foto, código y bloques del simulador</button>
@@ -419,10 +477,12 @@ class TutorialCreator {
                     <button type="button" class="tc-choice tc-choice-current">
                         <span class="tc-choice-label"></span>
                         <pre class="tc-choice-code"></pre>
+                        <img class="tc-blocks-img tc-choice-img hidden" alt="">
                     </button>
                     <button type="button" class="tc-choice tc-choice-saved">
                         <span class="tc-choice-label"></span>
                         <pre class="tc-choice-code"></pre>
+                        <img class="tc-blocks-img tc-choice-img hidden" alt="">
                     </button>
                     <div class="tutorial-import-actions">
                         <button type="button" class="tutorial-import-btn tutorial-import-secondary tc-choose-cancel">← Volver sin guardar</button>
@@ -459,6 +519,7 @@ class TutorialCreator {
             codeCaption: q(".tc-code-caption"), codePreview: q(".tc-code-preview"),
             codeDiff: q(".tc-code-diff"), codeDiffText: q(".tc-code-diff-text"),
             xmlDiff: q(".tc-xml-diff"), xmlDiffText: q(".tc-xml-diff-text"),
+            xmlCaption: q(".tc-xml-caption"), xmlPreview: q(".tc-xml-preview"), xmlCurrent: q(".tc-xml-current"),
             choose: q(".tc-choose"), chooseTitle: q(".tc-choose-title"), chooseHint: q(".tc-choose-hint"),
             choiceCurrent: q(".tc-choice-current"), choiceSaved: q(".tc-choice-saved"),
         };
@@ -521,11 +582,20 @@ class TutorialCreator {
         });
 
         for (const [el, key] of [[this._els.usePhoto, "photo"], [this._els.useCode, "code"], [this._els.useXml, "xml"]]) {
-            el.addEventListener("change", () => { this.draft.use[key] = el.checked; this._saveDraft(); this._renderExtras(); });
+            el.addEventListener("change", () => {
+                this.draft.use[key] = el.checked;
+                // Marcar algo que todavía no estaba guardado: se toma lo de ahora.
+                if (el.checked && !this.draft.extras[key]) {
+                    if (key === "code") this.draft.extras.code = this._editorCode();
+                    if (key === "xml") this.draft.extras.xml = this._workspaceXml();
+                }
+                this._saveDraft();
+                this._renderExtras();
+            });
         }
         q(".tc-recapture").addEventListener("click", async () => {
             this.draft.extras = await this._captureExtras();
-            for (const k of ["photo", "code", "xml"]) this.draft.use[k] = !!this.draft.extras[k];
+            this.draft.use = this._defaultUse(this.draft.extras);
             this._saveDraft();
             this._renderExtras();
         });
@@ -743,17 +813,24 @@ class TutorialCreator {
 
     _renderExtras() {
         const { extras, use } = this.draft;
-        const set = (input, label, has, yes, no) => {
+        const diff = this._diffs();
+        const set = (input, label, key, has, yes, no) => {
             input.disabled = !has;
-            input.checked = has && use[input === this._els.usePhoto ? "photo" : input === this._els.useCode ? "code" : "xml"];
+            input.checked = has && use[key];
             label.textContent = has ? yes : no;
         };
-        set(this._els.usePhoto, this._els.photoLabel, !!extras.photo,
+        set(this._els.usePhoto, this._els.photoLabel, "photo", !!extras.photo,
             "Una foto del circuito terminado (la ven al empezar)", "Foto del circuito (no hay circuito en el lienzo)");
-        set(this._els.useCode, this._els.codeLabel, !!extras.code,
-            `Código para tus alumnos (${extras.code.trimEnd().split("\n").length} líneas), con un botón para ponerlo en su editor`, "Código (el editor estaba vacío)");
-        set(this._els.useXml, this._els.xmlLabel, !!extras.xml,
-            "Mis bloques 🧩, con un botón para abrirlos", "Bloques (no armaste bloques en 🧩)");
+        const lines = (extras.code || diff.editorCode).trimEnd().split("\n").length;
+        set(this._els.useCode, this._els.codeLabel, "code", !!(extras.code || diff.editorCode),
+            `Código para tus alumnos (${lines} líneas), con un botón para ponerlo en su editor`, "Código (el editor está vacío)");
+        set(this._els.useXml, this._els.xmlLabel, "xml", !!(extras.xml || diff.currentXml),
+            "Bloques 🧩 para tus alumnos, con un botón para abrirlos", "Bloques (no hay bloques en 🧩)");
+
+        // Foto de los bloques que van en el tutorial.
+        const showXml = !!extras.xml && use.xml;
+        this._els.xmlCaption.classList.toggle("hidden", !showXml);
+        this._showBlocksImage(this._els.xmlPreview, showXml ? extras.xml : "");
         const show = extras.photo && use.photo;
         this._els.photoPreview.classList.toggle("hidden", !show);
         if (show) this._els.photoPreview.src = extras.photo;
@@ -765,31 +842,35 @@ class TutorialCreator {
         this._els.codePreview.classList.toggle("hidden", !showCode);
         this._els.codePreview.textContent = showCode ? extras.code : "";
 
-        const diff = this._diffs();
-        this._els.codeDiff.classList.toggle("hidden", !diff.code);
-        this._els.codeDiffText.textContent = extras.code
-            ? "⚠ El código que tienes ahora en el editor es DISTINTO del que va en el tutorial."
-            : "Tienes código en el editor que todavía no está en el tutorial.";
-        this._els.xmlDiff.classList.toggle("hidden", !diff.xml);
-        this._els.xmlDiffText.textContent = extras.xml
-            ? "⚠ Tus bloques 🧩 de ahora son DISTINTOS de los que van en el tutorial."
-            : "Tienes bloques 🧩 que todavía no están en el tutorial.";
+        // Avisos solo para lo que está marcado: si el docente desmarcó el
+        // código o los bloques, no se le insiste.
+        const codeDiff = diff.code && use.code && !!extras.code;
+        this._els.codeDiff.classList.toggle("hidden", !codeDiff);
+        this._els.codeDiffText.textContent = "⚠ El código que tienes ahora en el editor es DISTINTO del que va en el tutorial.";
+        const xmlDiff = diff.xml && use.xml && !!extras.xml;
+        this._els.xmlDiff.classList.toggle("hidden", !xmlDiff);
+        this._els.xmlDiffText.textContent = "⚠ Los bloques que tienes ahora en 🧩 (abajo) son DISTINTOS de los que van en el tutorial (arriba).";
+        this._showBlocksImage(this._els.xmlCurrent, xmlDiff ? diff.currentXml : "");
     }
 
     // Pantalla "¿cuál código reciben tus alumnos?" -- devuelve
     // "current" | "saved" | null (volver sin guardar).
-    _askWhich({ title, hint, currentLabel, savedLabel, currentPreview, savedPreview }) {
+    // currentXml/savedXml: si vienen, se muestra la FOTO de los bloques
+    // en vez del texto.
+    _askWhich({ title, hint, currentLabel, savedLabel, currentPreview, savedPreview, currentXml, savedXml }) {
         const firstLines = (s) => (s || "").split("\n").slice(0, 8).join("\n") + ((s || "").split("\n").length > 8 ? "\n…" : "");
         this._els.chooseTitle.textContent = title;
         this._els.chooseHint.textContent = hint;
-        for (const [btn, label, preview] of [
-            [this._els.choiceCurrent, currentLabel, currentPreview],
-            [this._els.choiceSaved, savedLabel, savedPreview],
+        const blocksMode = currentXml !== undefined;
+        for (const [btn, label, preview, xml] of [
+            [this._els.choiceCurrent, currentLabel, currentPreview, currentXml],
+            [this._els.choiceSaved, savedLabel, savedPreview, savedXml],
         ]) {
             btn.querySelector(".tc-choice-label").textContent = label;
             const pre = btn.querySelector(".tc-choice-code");
-            pre.textContent = firstLines(preview);
-            pre.classList.toggle("hidden", !preview);
+            pre.textContent = blocksMode ? "" : firstLines(preview);
+            pre.classList.toggle("hidden", blocksMode || !preview);
+            this._showBlocksImage(btn.querySelector(".tc-choice-img"), blocksMode ? xml : "");
         }
         this._section("choose");
         return new Promise((resolve) => {
@@ -802,7 +883,8 @@ class TutorialCreator {
     async _confirmCodeChoices() {
         const d = this._diffs();
         const { extras, use } = this.draft;
-        if (d.code && (use.code || !extras.code)) {
+        // Solo se pregunta por lo que está marcado para incluir.
+        if (d.code && use.code && extras.code) {
             const pick = await this._askWhich({
                 title: "¿Qué código reciben tus alumnos?",
                 hint: "El código que tienes ahora en el editor no es el mismo que guardaste en el tutorial. Elige cuál va:",
@@ -814,14 +896,14 @@ class TutorialCreator {
             if (!pick) { if (!this.overlay.classList.contains("hidden")) this._section("editor"); return false; }
             if (pick === "current") { extras.code = d.editorCode; use.code = true; }
         }
-        if (d.xml && (use.xml || !extras.xml)) {
+        if (d.xml && use.xml && extras.xml) {
             const pick = await this._askWhich({
                 title: "¿Qué bloques reciben tus alumnos?",
-                hint: "Tus bloques 🧩 de ahora no son los mismos que guardaste en el tutorial. Elige cuáles van (abajo se ve el código que generan):",
-                currentLabel: "🧩 Mis bloques de AHORA",
-                savedLabel: extras.xml ? "📦 Los que ya estaban en el tutorial" : "🚫 Ninguno (sin bloques)",
-                currentPreview: TutorialCreator._xmlToPython(d.currentXml),
-                savedPreview: TutorialCreator._xmlToPython(extras.xml),
+                hint: "Los bloques que tienes ahora en 🧩 no son los mismos que guardaste en el tutorial. Elige cuáles van:",
+                currentLabel: "🧩 Los que tengo AHORA en 🧩",
+                savedLabel: "📦 Los que ya estaban en el tutorial",
+                currentXml: d.currentXml,
+                savedXml: extras.xml,
             });
             if (!pick) { if (!this.overlay.classList.contains("hidden")) this._section("editor"); return false; }
             if (pick === "current") { extras.xml = d.currentXml; use.xml = true; }
