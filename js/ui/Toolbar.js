@@ -960,8 +960,7 @@ class Toolbar {
 
     validateCircuit() {
 
-        const report = this.simulator.validationEngine.getReport();
-        alert(report);
+        this.simulator.validationPanel.show();
 
     }
 

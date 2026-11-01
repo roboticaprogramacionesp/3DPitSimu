@@ -55,6 +55,10 @@
     // MicCapture.start(), llamado desde SignalEngine.requestMicCapture()).
     sim.micCapture = new MicCapture(sim);
 
+    // Panel de "✓ Validar circuito" (menú 📁 Archivo, o F12) -- ver
+    // ValidationPanel.js/ValidationEngine.js.
+    sim.validationPanel = new ValidationPanel(sim);
+
     // 1b. Si se entró con un link compartido (botón 🔗, ver
     //     ShareProject.js), reemplaza lo que acaba de restaurar
     //     sim.start() desde localStorage por el proyecto que viajó en

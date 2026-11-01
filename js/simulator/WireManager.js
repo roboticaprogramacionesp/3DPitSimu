@@ -1088,7 +1088,7 @@ class WireManager {
         // varias veces porque nada avisaba en el momento del cableado.
         const mismatch = this.simulator.validationEngine?._groundPowerMismatch(wire);
         if (mismatch) {
-            this.simulator.eventBus.emit("wire:invalidPolarity", { wire, message: mismatch });
+            this.simulator.eventBus.emit("wire:invalidPolarity", { wire, message: mismatch.message });
         }
 
         return wire;

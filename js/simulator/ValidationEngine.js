@@ -17,6 +17,11 @@ class ValidationEngine {
     // Validar que todas las conexiones sean válidas
     //------------------------------------------------------
 
+    // Cada error/warning es { message, componentIds } -- componentIds
+    // (puede ser []) es lo que ValidationPanel.js usa para resaltar/
+    // ubicar el componente señalado al hacer clic en el hallazgo (ver
+    // Renderer.locateComponent()). message es el texto de siempre, por
+    // compatibilidad con getReport() de más abajo.
     validateCircuit() {
 
         const errors = [];
@@ -29,21 +34,21 @@ class ValidationEngine {
             const toComp = this.simulator.componentManager.get(wire.to.componentId);
 
             if (!fromComp) {
-                errors.push(`Cable conecta componente inexistente: ${wire.from.componentId}`);
+                errors.push({ message: `Cable conecta componente inexistente: ${wire.from.componentId}`, componentIds: [] });
                 continue;
             }
 
             if (!toComp) {
-                errors.push(`Cable conecta componente inexistente: ${wire.to.componentId}`);
+                errors.push({ message: `Cable conecta componente inexistente: ${wire.to.componentId}`, componentIds: [] });
                 continue;
             }
 
             if (!fromComp.getPin(wire.from.pinId)) {
-                errors.push(`Pin inexistente en ${fromComp.name}: ${wire.from.pinId}`);
+                errors.push({ message: `Pin inexistente en ${fromComp.name}: ${wire.from.pinId}`, componentIds: [fromComp.id] });
             }
 
             if (!toComp.getPin(wire.to.pinId)) {
-                errors.push(`Pin inexistente en ${toComp.name}: ${wire.to.pinId}`);
+                errors.push({ message: `Pin inexistente en ${toComp.name}: ${wire.to.pinId}`, componentIds: [toComp.id] });
             }
 
         }
@@ -58,18 +63,18 @@ class ValidationEngine {
         // posición, ver el chequeo 6 más abajo) y el sensor nunca se
         // detectaba como alimentado, sin ningún aviso que lo señalara.
         for (const wire of this.simulator.wireManager.wires) {
-            const msg = this._groundPowerMismatch(wire);
-            if (msg) errors.push(msg);
+            const found = this._groundPowerMismatch(wire);
+            if (found) errors.push(found);
         }
 
         // 2. Verificar que hay al menos un componente
         if (this.simulator.componentManager.getAll().length === 0) {
-            warnings.push("No hay componentes en el circuito");
+            warnings.push({ message: "No hay componentes en el circuito", componentIds: [] });
         }
 
         // 3. Verificar que hay al menos un cable (si hay más de 1 componente)
         if (this.simulator.componentManager.getAll().length > 1 && this.simulator.wireManager.wires.length === 0) {
-            warnings.push("Hay múltiples componentes pero ningún cable los conecta");
+            warnings.push({ message: "Hay múltiples componentes pero ningún cable los conecta", componentIds: [] });
         }
 
         // 4. Advertencias sobre componentes no conectados
@@ -92,7 +97,7 @@ class ValidationEngine {
             // reconocer cualquier placa ESP32, no solo la WROOM.
             if (comp.type.startsWith("esp32")) continue; // ESP32 es central
             if (!connectedComponents.has(comp.id) && this.simulator.componentManager.getAll().length > 1) {
-                warnings.push(`${comp.name || comp.type} no está conectado a nada`);
+                warnings.push({ message: `${comp.name || comp.type} no está conectado a nada`, componentIds: [comp.id] });
             }
         }
 
@@ -104,7 +109,9 @@ class ValidationEngine {
         // sigue funcionando igual (ver SignalEngine.getVoltageWarnings).
         if (this.simulator.signalEngine?.getVoltageWarnings) {
             for (const comp of this.simulator.componentManager.getAll()) {
-                warnings.push(...this.simulator.signalEngine.getVoltageWarnings(comp));
+                this.simulator.signalEngine.getVoltageWarnings(comp).forEach((message) => {
+                    warnings.push({ message, componentIds: [comp.id] });
+                });
             }
         }
 
@@ -125,9 +132,10 @@ class ValidationEngine {
         for (const group of byPosition.values()) {
             if (group.length > 1) {
                 const name = group[0].name || group[0].type;
-                warnings.push(
-                    `Hay ${group.length} componentes "${name}" superpuestos en la misma posición -- si no es intencional, revisá que no sea un duplicado accidental (fácil de cablear al equivocado)`,
-                );
+                warnings.push({
+                    message: `Hay ${group.length} componentes "${name}" superpuestos en la misma posición -- si no es intencional, revisá que no sea un duplicado accidental (fácil de cablear al equivocado)`,
+                    componentIds: group.map((c) => c.id),
+                });
             }
         }
 
@@ -162,7 +170,10 @@ class ValidationEngine {
 
         const groundName = groundSide.comp.name || groundSide.comp.type;
         const powerName = powerSide.comp.name || powerSide.comp.type;
-        return `GND de ${groundName} (${groundSide.pin.name || groundSide.pin.id}) está conectado a un pin de ALIMENTACIÓN en ${powerName} (${powerSide.pin.name || powerSide.pin.id}) -- nunca es correcto, revisá ese cable`;
+        return {
+            message: `GND de ${groundName} (${groundSide.pin.name || groundSide.pin.id}) está conectado a un pin de ALIMENTACIÓN en ${powerName} (${powerSide.pin.name || powerSide.pin.id}) -- nunca es correcto, revisá ese cable`,
+            componentIds: [groundSide.comp.id, powerSide.comp.id],
+        };
 
     }
 
@@ -177,12 +188,12 @@ class ValidationEngine {
 
         if (result.errors.length > 0) {
             text += "❌ Errores:\n";
-            result.errors.forEach(e => text += `  - ${e}\n`);
+            result.errors.forEach(e => text += `  - ${e.message}\n`);
         }
 
         if (result.warnings.length > 0) {
             text += (result.errors.length > 0 ? "\n" : "") + "⚠️ Advertencias:\n";
-            result.warnings.forEach(w => text += `  - ${w}\n`);
+            result.warnings.forEach(w => text += `  - ${w.message}\n`);
         }
 
         if (result.errors.length === 0 && result.warnings.length === 0) {
