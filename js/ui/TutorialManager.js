@@ -3493,19 +3493,37 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 7 — Conecta A (luz de fondo)",
-                    text: "Conecta A del LCD (ánodo de la luz de fondo) a un pin 3V3 de la ESP32.",
+                    title: "Paso 7 — Toma una resistencia",
+                    text: "Arrastra la Resistencia (categoría Componentes básicos) hasta el lienzo. La luz de fondo del LCD (pin A) es, eléctricamente, un LED -- sin una resistencia en serie, un GPIO o 3V3 conectado directo le deja pasar más corriente de la que soporta. Déjala en 220 Ω.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("resistencia"),
+                    isDone: (tm) => tm.hasComponent("resistencia"),
+                },
+                {
+                    title: "Paso 8 — Conecta 3V3 a la resistencia",
+                    text: "Conecta un pin 3V3 de la ESP32 a cualquiera de los dos terminales de la resistencia -- no importa cuál, no tiene polaridad.",
                     highlight: (tm) => tm.highlightPins([
                         { type: "esp32_wroom", match: (p) => p.id === "3v3" },
+                        { type: "resistencia", match: () => true },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetweenComponents(
+                        (comp, pin) => comp.type === "esp32_wroom" && pin.id === "3v3",
+                        (comp) => comp.type === "resistencia",
+                    ),
+                },
+                {
+                    title: "Paso 9 — Conecta la resistencia a A",
+                    text: "Ahora conecta el otro terminal de la resistencia (el que quedó libre) a A del LCD (ánodo de la luz de fondo).",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "resistencia", match: () => true },
                         { type: "lcd16x2", match: (p) => p.id === "a" },
                     ]),
-                    isDone: (tm) => tm.hasWireBetween(
-                        (pin) => pin.id === "3v3",
+                    isDone: (tm) => tm.hasWireBetweenComponents(
+                        (comp) => comp.type === "resistencia",
                         (comp, pin) => comp.type === "lcd16x2" && pin.id === "a",
                     ),
                 },
                 {
-                    title: "Paso 8 — Conecta K",
+                    title: "Paso 10 — Conecta K",
                     text: "Conecta K del LCD (cátodo de la luz de fondo) a un GND de la ESP32.",
                     highlight: (tm) => tm.highlightPins([
                         { type: "esp32_wroom", match: (p) => p.type === "ground" },
@@ -3527,7 +3545,7 @@ class TutorialManager {
                     // modo de 4 bits -- solo D4-D7, D0-D3 quedan sin
                     // conectar. Se separó en 3 pasos más chicos,
                     // reflejando ese cableado real.
-                    title: "Paso 9 — Conecta RW a GND",
+                    title: "Paso 11 — Conecta RW a GND",
                     text: "Conecta RW del LCD a un GND de la ESP32 -- el código típico solo ESCRIBE al LCD (nunca lee su estado), así que RW se deja fijo en modo escritura atándolo a GND en vez de a un GPIO.",
                     highlight: (tm) => tm.highlightPins([
                         { type: "esp32_wroom", match: (p) => p.type === "ground" },
@@ -3539,7 +3557,7 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 10 — Conecta RS y E",
+                    title: "Paso 12 — Conecta RS y E",
                     text: "Conecta RS y E del LCD, cada uno a su propio pin GPIO de la ESP32.",
                     highlight: (tm) => tm.highlightPins([
                         { type: "esp32_wroom", match: (p) => p.type === "gpio" && !p.inputOnly && p.signal !== "uart" },
@@ -3551,7 +3569,7 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 11 — Conecta D4-D7 (modo 4 bits)",
+                    title: "Paso 13 — Conecta D4-D7 (modo 4 bits)",
                     text: "Conecta D4, D5, D6 y D7 del LCD, cada uno a su propio pin GPIO de la ESP32 -- este es el modo de 4 bits, el que usa la enorme mayoría del código real (ej. la librería lcd_api/CharLCD). D0-D3 no hace falta conectarlos.",
                     highlight: (tm) => tm.highlightPins([
                         { type: "esp32_wroom", match: (p) => p.type === "gpio" && !p.inputOnly && p.signal !== "uart" },
@@ -3563,7 +3581,7 @@ class TutorialManager {
                     )),
                 },
                 {
-                    title: "Paso 12 — Guarda tu proyecto",
+                    title: "Paso 14 — Guarda tu proyecto",
                     text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
                     highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
                     onEnter: () => {
@@ -3573,13 +3591,13 @@ class TutorialManager {
                     isDone: (tm) => !tm.simulator.projectManager.dirty,
                 },
                 {
-                    title: "Paso 13 — Simula el circuito",
+                    title: "Paso 15 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación y correr el firmware.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 14 — Escribe o carga tu código",
+                    title: "Paso 16 — Escribe o carga tu código",
                     text: "Se abrió el panel MicroPython, pestaña Editor -- escribe tu código ahí o ábrelo con 📂 Abrir. Después dale clic al botón verde ▶ Ejecutar (abajo a la derecha del Editor) para correrlo -- cargar el código solo no alcanza.",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     onEnter: (tm) => {
