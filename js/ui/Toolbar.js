@@ -645,6 +645,18 @@ class Toolbar {
 
             }
 
+            // Advertencias (sin error): NO bloquean -- la simulación
+            // arranca igual, más abajo -- pero a pedido explícito del
+            // usuario SÍ se muestran solas, para no depender de que se
+            // acuerde de abrir "✓ Validar circuito" a mano (reportado
+            // en vivo con un motor con un solo terminal cableado: la
+            // simulación arrancaba sin avisar nada). Se abre el panel
+            // y se sigue de largo -- el alumno puede cerrarlo y seguir,
+            // la simulación ya está en marcha atrás.
+            if (validation.warnings.length > 0) {
+                this.simulator.validationPanel.show();
+            }
+
             // 2+ ESP32 no bloquea. En modo QEMU (#modo=qemu) sigue
             // siendo cierto que solo se usa la primera (QemuBridge.
             // getEsp32() -- multi-instancia de QEMU queda fuera de
