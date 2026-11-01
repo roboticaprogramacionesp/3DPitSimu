@@ -606,6 +606,45 @@ class Toolbar {
 
             }
 
+            // Candado: errores de ValidationEngine (GND atado a
+            // alimentación, cable a un pin inexistente, etc.) -- a
+            // pedido explícito del usuario: no tiene sentido dejar que
+            // arranque la simulación de un circuito que ya sabemos que
+            // está mal armado, mejor cortarlo acá y mostrar bien claro
+            // qué hay que arreglar (mismo panel de "✓ Validar
+            // circuito", ver ValidationPanel.js) que dejar que el
+            // alumno/docente se pregunte por qué no anda nada.
+            // Las ADVERTENCIAS (componente sin conectar, voltaje
+            // distinto al esperado, etc.) NO bloquean a propósito --
+            // son sospechas, no certezas de que algo está mal (ej. un
+            // componente de sobra en el lienzo que todavía no se usa
+            // en este script puntual).
+            const validation = this.simulator.validationEngine.validateCircuit();
+            if (validation.errors.length > 0) {
+
+                this.simulator.validationPanel.show();
+
+                const status = document.getElementById("statusText");
+                if (status) {
+
+                    const previousText  = status.textContent;
+                    const previousColor = status.style.color;
+
+                    status.textContent = "⚠ El circuito tiene errores -- revisá \"✓ Validar circuito\" antes de simular.";
+                    status.style.color = "#ff5252";
+
+                    clearTimeout(this._validationErrorTimeout);
+                    this._validationErrorTimeout = setTimeout(() => {
+                        status.textContent = previousText;
+                        status.style.color = previousColor;
+                    }, 6000);
+
+                }
+
+                return;
+
+            }
+
             // 2+ ESP32 no bloquea. En modo QEMU (#modo=qemu) sigue
             // siendo cierto que solo se usa la primera (QemuBridge.
             // getEsp32() -- multi-instancia de QEMU queda fuera de
