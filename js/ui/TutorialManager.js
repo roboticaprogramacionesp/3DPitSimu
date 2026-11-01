@@ -4869,19 +4869,37 @@ class TutorialManager {
                     ),
                 },
                 {
-                    title: "Paso 5 — Conecta el ánodo del LED",
-                    text: "Elige un pin GPIO libre de la ESP32 y conéctalo al ánodo (+, la pata larga) del LED.",
+                    title: "Paso 5 — Toma una resistencia",
+                    text: "Arrastra la Resistencia (categoría Componentes básicos) hasta el lienzo. Sin ella, un GPIO conectado directo al LED deja pasar más corriente de la que el LED soporta -- en hardware real esto lo daña o lo quema. Déjala en 220 Ω, el valor más común para un LED con un GPIO de 3.3V.",
+                    highlight: (tm) => tm.highlightToolboxAndCanvas("resistencia"),
+                    isDone: (tm) => tm.hasComponent("resistencia"),
+                },
+                {
+                    title: "Paso 6 — Conecta un GPIO a la resistencia",
+                    text: "Elige cualquier pin GPIO libre de la ESP32 y conéctalo a cualquiera de los dos terminales de la resistencia -- no importa cuál, no tiene polaridad.",
                     highlight: (tm) => tm.highlightPins([
                         { type: "esp32_wroom", match: (p) => p.type === "gpio" && !p.inputOnly && p.signal !== "uart" },
+                        { type: "resistencia", match: () => true },
+                    ]),
+                    isDone: (tm) => tm.hasWireBetweenComponents(
+                        (comp, pin) => comp.type === "esp32_wroom" && pin.type === "gpio" && !pin.inputOnly && pin.signal !== "uart",
+                        (comp) => comp.type === "resistencia",
+                    ),
+                },
+                {
+                    title: "Paso 7 — Conecta la resistencia al ánodo",
+                    text: "Ahora conecta el otro terminal de la resistencia (el que quedó libre) al ánodo (+) del LED, la pata más larga.",
+                    highlight: (tm) => tm.highlightPins([
+                        { type: "resistencia", match: () => true },
                         { type: "led", match: (p) => p.id === "anodo" },
                     ]),
-                    isDone: (tm) => tm.hasWireBetween(
-                        (pin) => pin.type === "gpio" && !pin.inputOnly && pin.signal !== "uart",
+                    isDone: (tm) => tm.hasWireBetweenComponents(
+                        (comp) => comp.type === "resistencia",
                         (comp, pin) => comp.type === "led" && pin.id === "anodo",
                     ),
                 },
                 {
-                    title: "Paso 6 — Guarda tu proyecto",
+                    title: "Paso 8 — Guarda tu proyecto",
                     text: "Antes de simular, guarda tu proyecto (💾 Guardar, en el menú 📁 Archivo) -- así no perdés el circuito que armaste si la página se recarga o algo falla a mitad de la simulación.",
                     highlight: (tm) => tm.highlightElements(["#pdSaveProject"]),
                     onEnter: () => {
@@ -4891,13 +4909,13 @@ class TutorialManager {
                     isDone: (tm) => !tm.simulator.projectManager.dirty,
                 },
                 {
-                    title: "Paso 7 — Simula el circuito",
+                    title: "Paso 9 — Simula el circuito",
                     text: "Presiona ▶ Simular, arriba a la derecha, para iniciar la simulación.",
                     highlight: (tm) => tm.highlightElements(["#btnSimToggle"]),
                     isDone: (tm) => !!tm.simulator.isRunning,
                 },
                 {
-                    title: "Paso 8 — Escribe tu código",
+                    title: "Paso 10 — Escribe tu código",
                     text: "Elegí un nombre de canal único (ej. tuNombre-123) y pegá este código, cambiando CANAL por el tuyo:\n\nimport network, time, requests, json\nfrom machine import Pin\n\nled = Pin(2, Pin.OUT)  # cambia el 2 por tu GPIO\n\nwlan = network.WLAN(network.WLAN.IF_STA)\nwlan.active(True)\nwlan.connect('CualquierNombre', 'CualquierClave')\nwhile not wlan.isconnected():\n    time.sleep(0.1)\nprint('Conectado!')\n\nCANAL = 'tuNombre-123'\nvisto = set()\n\nwhile True:\n    r = requests.get('https://ntfy.sh/' + CANAL + '/json?poll=1')\n    for linea in r.text.strip().split('\\n'):\n        if not linea:\n            continue\n        msg = json.loads(linea)\n        if msg['id'] not in visto:\n            visto.add(msg['id'])\n            if msg['message'] == 'on':\n                led.value(1)\n            elif msg['message'] == 'off':\n                led.value(0)\n            print('Recibido:', msg['message'])\n    time.sleep(2)\n\n¿Prefieres bloques? Con el botón de abajo se abre este mismo programa armado en el editor de bloques; cambia el canal en el bloque \"CANAL\" y dale \"⬇ Insertar en el editor\".",
                     highlight: (tm) => tm.highlightElements(["#replPanel .repl-header", "#replBtnRun"]),
                     actions: [TutorialManager.blocksAction("examples/wifi/wifi_ntfy.xml")],
@@ -4908,7 +4926,7 @@ class TutorialManager {
                     isDone: (tm) => !!tm.replPanel?.editor?.value?.trim(),
                 },
                 {
-                    title: "Paso 9 — Probalo mandando un mensaje real",
+                    title: "Paso 11 — Probalo mandando un mensaje real",
                     text: "Con tu código corriendo (▶ Ejecutar), abrí https://ntfy.sh/tuNombre-123 (tu mismo canal) en OTRA pestaña del navegador -- o desde tu celular, abriendo telefono_virtual.html (está en la carpeta del proyecto). Mandá el texto \"on\" o \"off\" y mirá la terminal: el LED del lienzo tiene que prender o apagar en un par de segundos.",
                     highlight: (tm) => tm.highlightElements(["#workspace"]),
                     isDone: () => true,
