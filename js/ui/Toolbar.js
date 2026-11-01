@@ -606,21 +606,19 @@ class Toolbar {
 
             }
 
-            // Candado: errores de ValidationEngine (GND atado a
-            // alimentación, cable a un pin inexistente, etc.) -- a
-            // pedido explícito del usuario: no tiene sentido dejar que
-            // arranque la simulación de un circuito que ya sabemos que
-            // está mal armado, mejor cortarlo acá y mostrar bien claro
-            // qué hay que arreglar (mismo panel de "✓ Validar
-            // circuito", ver ValidationPanel.js) que dejar que el
-            // alumno/docente se pregunte por qué no anda nada.
-            // Las ADVERTENCIAS (componente sin conectar, voltaje
-            // distinto al esperado, etc.) NO bloquean a propósito --
-            // son sospechas, no certezas de que algo está mal (ej. un
-            // componente de sobra en el lienzo que todavía no se usa
-            // en este script puntual).
+            // Candado: CUALQUIER hallazgo de ValidationEngine --
+            // errores (GND atado a alimentación, cable a un pin
+            // inexistente) Y advertencias (componente sin conectar, un
+            // motor con un solo terminal, voltaje distinto al
+            // esperado, etc.) -- bloquea por igual, a pedido explícito
+            // del usuario. No tiene sentido dejar que arranque la
+            // simulación de un circuito que ya sabemos que está mal/
+            // incompleto, mejor cortarlo acá y mostrar bien claro qué
+            // hay que arreglar (mismo panel de "✓ Validar circuito",
+            // ver ValidationPanel.js) que dejar que el alumno/docente
+            // se pregunte por qué no anda nada.
             const validation = this.simulator.validationEngine.validateCircuit();
-            if (validation.errors.length > 0) {
+            if (validation.errors.length > 0 || validation.warnings.length > 0) {
 
                 this.simulator.validationPanel.show();
 
@@ -630,7 +628,9 @@ class Toolbar {
                     const previousText  = status.textContent;
                     const previousColor = status.style.color;
 
-                    status.textContent = "⚠ El circuito tiene errores -- revisá \"✓ Validar circuito\" antes de simular.";
+                    status.textContent = validation.errors.length > 0
+                        ? "⚠ El circuito tiene errores -- revisá \"✓ Validar circuito\" antes de simular."
+                        : "⚠ El circuito tiene advertencias -- revisá \"✓ Validar circuito\" antes de simular.";
                     status.style.color = "#ff5252";
 
                     clearTimeout(this._validationErrorTimeout);
@@ -643,18 +643,6 @@ class Toolbar {
 
                 return;
 
-            }
-
-            // Advertencias (sin error): NO bloquean -- la simulación
-            // arranca igual, más abajo -- pero a pedido explícito del
-            // usuario SÍ se muestran solas, para no depender de que se
-            // acuerde de abrir "✓ Validar circuito" a mano (reportado
-            // en vivo con un motor con un solo terminal cableado: la
-            // simulación arrancaba sin avisar nada). Se abre el panel
-            // y se sigue de largo -- el alumno puede cerrarlo y seguir,
-            // la simulación ya está en marcha atrás.
-            if (validation.warnings.length > 0) {
-                this.simulator.validationPanel.show();
             }
 
             // 2+ ESP32 no bloquea. En modo QEMU (#modo=qemu) sigue
