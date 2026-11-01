@@ -101,6 +101,38 @@ class ValidationEngine {
             }
         }
 
+        // 4b. Componente de 2 terminales con SOLO UNO cableado --
+        // reportado en vivo: un motor con un solo terminal conectado
+        // al L298N pasaba el chequeo 4 de arriba (que solo pregunta
+        // "¿tiene ALGÚN cable?", no "¿tiene TODOS los que necesita?")
+        // sin ningún aviso, aunque el circuito esté abierto y el motor
+        // nunca vaya a girar. Acotado a propósito a componentes de
+        // EXACTAMENTE 2 pines (motor, resistencia, switch, LED,
+        // batería, bombillo, clavija_127v, confirmado barriendo todo
+        // components/*/*.json) -- con 2 pines nada más, SIEMPRE hacen
+        // falta los dos para que el componente haga algo; no se
+        // generaliza a 3+ pines porque ahí sí hay casos legítimos de
+        // pines opcionales (ej. LCD en modo 4 bits deja D0-D3 sin
+        // conectar, MPU6050 no necesita XDA/XCL/AD0/INT) que esto
+        // generaría como falsos positivos.
+        const pinWired = new Set();
+        for (const wire of this.simulator.wireManager.wires) {
+            pinWired.add(`${wire.from.componentId}:${wire.from.pinId}`);
+            pinWired.add(`${wire.to.componentId}:${wire.to.pinId}`);
+        }
+        for (const comp of this.simulator.componentManager.getAll()) {
+            const pins = comp.pins || [];
+            if (pins.length !== 2) continue;
+            const wiredCount = pins.filter((p) => pinWired.has(`${comp.id}:${p.id}`)).length;
+            if (wiredCount === 1) {
+                const loosePin = pins.find((p) => !pinWired.has(`${comp.id}:${p.id}`));
+                warnings.push({
+                    message: `${comp.name || comp.type} tiene un solo terminal conectado -- falta cablear "${loosePin.name || loosePin.id}" para que el circuito cierre`,
+                    componentIds: [comp.id],
+                });
+            }
+        }
+
         // 5. Advertencias de VOLTAJE (NO bloqueantes): un componente
         // puede estar cableado a un pin de alimentación real, pero
         // a un voltaje distinto del que declara necesitar (ej. un
