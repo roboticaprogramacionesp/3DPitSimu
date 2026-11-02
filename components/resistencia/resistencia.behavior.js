@@ -17,6 +17,44 @@
 ==========================================================
 */
 
+// Compartido con led.behavior.js -- ver el comentario grande ahí
+// sobre por qué está duplicado (cada .behavior.js carga como un
+// <script> independiente) y qué pinta SignalEngine.computeLedCurrent().
+function _renderLedCurrentInfo(result, panel) {
+
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "margin: 4px 0 14px; padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.5;";
+
+    if (!result) {
+        wrap.style.cssText += "background:#242424; color:#888; border:1px solid #333;";
+        wrap.textContent = "⚡ Sin fuente de voltaje reconocida -- cableá el ánodo del LED (del otro lado de esta resistencia) a un GPIO o a un pin de alimentación para calcular la corriente.";
+        panel.content.appendChild(wrap);
+        return;
+    }
+
+    wrap.style.cssText += result.safe
+        ? "background:#1a3a1a; border:1px solid #2d5a2d; color:#8fd98f;"
+        : "background:#3a1a1a; border:1px solid #5a2d2d; color:#ff8a80;";
+
+    const title = document.createElement("div");
+    title.style.cssText = "font-weight:700; margin-bottom:4px;";
+    title.textContent = result.safe ? "✅ Corriente estimada: segura" : "⚠️ Corriente estimada: PELIGROSA";
+    wrap.appendChild(title);
+
+    const detail = document.createElement("div");
+    if (result.currentMa === Infinity) {
+        detail.textContent = `Fuente: ${result.sourceDescription}. ${result.note}`;
+    } else {
+        detail.textContent = `${result.currentMa.toFixed(1)} mA (máx. recomendado: ${result.ratedMa} mA) -- Fuente: ${result.sourceDescription}` +
+            (result.resistorOhms ? `, resistencia ${result.resistorOhms} Ω` : ", SIN resistencia") +
+            (result.note ? `. ${result.note}` : ".");
+    }
+    wrap.appendChild(detail);
+
+    panel.content.appendChild(wrap);
+
+}
+
 ComponentBehaviorRegistry.register("resistencia", {
 
     // Serie E12 abreviada -- los valores más comunes para limitar
@@ -204,6 +242,23 @@ ComponentBehaviorRegistry.register("resistencia", {
                     applyValue(parseFloat(select.value));
                     draw();
                 });
+
+                // Si hay un LED del otro lado (mismo criterio que
+                // led.behavior.js: alwaysBridgePins hace que
+                // getNet(anodo) ya incluya toda la red, LED incluido),
+                // mostrar la misma calculadora de corriente que ve el
+                // LED -- así da igual desde cuál de los dos
+                // componentes se mire el circuito.
+                const net = panel.simulator.signalEngine.getNet(`${component.id}:term1`);
+                const ledId = [...net].map((k) => k.split(":")[0]).find((cId) => {
+                    const c = panel.simulator.componentManager.get(cId);
+                    return c?.type === "led";
+                });
+                if (ledId) {
+                    const ledComponent = panel.simulator.componentManager.get(ledId);
+                    const result = panel.simulator.signalEngine.computeLedCurrent(ledComponent);
+                    _renderLedCurrentInfo(result, panel);
+                }
 
                 const sep = document.createElement("div");
                 sep.style.cssText = "border-top:1px solid #333; margin: 12px 0;";

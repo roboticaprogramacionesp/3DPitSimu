@@ -2730,6 +2730,118 @@ class SignalEngine {
   }
 
   // ====================================================
+  // Calculadora de corriente LED+resistencia EN VIVO -- a diferencia
+  // de una calculadora genérica (tipeás los valores a mano), esto lee
+  // el voltaje y la resistencia REALES de TU circuito ya armado.
+  // Justificación del porqué hacía falta: resistencia.behavior.js
+  // documenta que esta app NUNCA simuló la caída de tensión/límite de
+  // corriente real -- sus 2 terminales quedan siempre puenteados
+  // (alwaysBridgePins), así que un LED "a través" de una resistencia
+  // prende igual sin importar el valor -- la resistencia hasta hoy
+  // era puramente decorativa eléctricamente. Esto no cambia ESO (la
+  // simulación del LED sigue sin depender de la corriente), es una
+  // herramienta de DIAGNÓSTICO aparte, para que el alumno vea si el
+  // valor que eligió sería seguro en hardware real.
+  //
+  // Devuelve null si no hay ninguna fuente de voltaje reconocible
+  // conectada al ánodo (nada que calcular todavía), o:
+  //   { sourceVoltage, sourceDescription, resistorOhms (0 = sin
+  //     resistencia), vf, ratedMa, currentMa, safe }
+  computeLedCurrent(ledComponent) {
+
+    const net = this.getNet(`${ledComponent.id}:anodo`);
+
+    let resistor = null;
+    let sourceVoltage = null;
+    let sourceDescription = null;
+
+    for (const key of net) {
+
+      const [cId, pId] = key.split(":");
+      if (cId === ledComponent.id) continue;
+
+      const comp = this.simulator.componentManager.get(cId);
+      if (!comp) continue;
+
+      if (comp.type === "resistencia") {
+        resistor = comp;
+        continue;
+      }
+
+      // alwaysBridgePins de la resistencia (ver resistencia.behavior.js)
+      // hace que getNet() de ánodo YA incluya todo lo que esté del
+      // OTRO lado de la resistencia -- no hace falta "cruzarla" a
+      // mano, el net entero ya es una sola red eléctrica.
+      const pin = comp.pins?.find((p) => p.id === pId);
+      if (!pin) continue;
+
+      if (pin.type === "power") {
+        const v = this._inferPinVoltage(pin);
+        if (v != null) {
+          sourceVoltage = v;
+          sourceDescription = `${comp.name || comp.type} (${pin.name || pId}, ${v}V fijo)`;
+        }
+        continue;
+      }
+
+      if (pin.type === "gpio" && comp.type.startsWith("esp32")) {
+        const pwm = this.getPwmDutyForKey(key);
+        if (pwm) {
+          const duty01 = Math.max(0, Math.min(1, pwm.duty / 1023));
+          sourceVoltage = 3.3 * duty01;
+          sourceDescription = `${pin.name || pId} en PWM (duty ${(duty01 * 100).toFixed(0)}%) ≈ ${sourceVoltage.toFixed(2)}V promedio`;
+        } else if (this.isKeyConnectedToHighDriver(key)) {
+          sourceVoltage = 3.3;
+          sourceDescription = `${pin.name || pId} en HIGH (3.3V)`;
+        } else {
+          sourceVoltage = 0;
+          sourceDescription = `${pin.name || pId} en LOW (0V) -- o todavía no corriste nada que lo ponga en HIGH`;
+        }
+        continue;
+      }
+
+      // Cualquier otra fuente declarada (batería, etc.) -- mismo
+      // criterio que isComponentPowered()/isPowerSource.
+      if (comp.properties?.isPowerSource && typeof comp.properties?.voltaje === "number") {
+        sourceVoltage = comp.properties.voltaje;
+        sourceDescription = `${comp.name || comp.type} (~${sourceVoltage}V)`;
+      }
+
+    }
+
+    if (sourceVoltage === null) return null;
+
+    const vf = ledComponent.properties?.voltaje_directo ?? 2.0;
+    const ratedMa = ledComponent.properties?.corriente_ma ?? 20;
+    const ohms = resistor ? (resistor.properties?.ohms ?? 220) : 0;
+
+    if (sourceVoltage <= vf) {
+      return {
+        sourceVoltage, sourceDescription, resistorOhms: ohms, vf, ratedMa,
+        currentMa: 0, safe: true,
+        note: "El voltaje disponible no alcanza para encender este LED (o todavía está en LOW).",
+      };
+    }
+
+    if (ohms === 0) {
+      return {
+        sourceVoltage, sourceDescription, resistorOhms: 0, vf, ratedMa,
+        currentMa: Infinity, safe: false,
+        note: "SIN resistencia en serie -- nada limita la corriente. En hardware real esto quema el LED (o el pin del ESP32) casi al instante.",
+      };
+    }
+
+    const currentMa = ((sourceVoltage - vf) / ohms) * 1000;
+    // 10% de margen -- el valor "rated" de un LED real ya es, de por
+    // sí, un límite con algo de colchón, no hace falta ser tan
+    // estricto como para marcar en rojo algo que está 1mA arriba.
+    const safe = currentMa <= ratedMa * 1.1;
+
+    return { sourceVoltage, sourceDescription, resistorOhms: ohms, vf, ratedMa, currentMa, safe };
+
+  }
+
+  // ====================================================
   // BFS — obtener todas las claves conectadas via cables
   // ====================================================
 
