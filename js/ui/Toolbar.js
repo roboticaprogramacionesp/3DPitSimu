@@ -13,6 +13,7 @@ class Toolbar {
 
         this.bindEvents();
         this.bindSimToggle();
+        this.bindSimToolsMenu();
         this.bindWasmModeToggle();
         this.bindSimulationEvents();
         this.bindWireWarnings();
@@ -1072,6 +1073,83 @@ class Toolbar {
         // Cursor del canvas: mostrar "no-drop" sobre pines cuando está bloqueado
         const canvas = document.getElementById("simulatorCanvas");
         if (canvas) canvas.classList.toggle("sim-locked", isRunning);
+
+        this._updateSimToolsAvailability(isRunning);
+
+    }
+
+    //------------------------------------------------------
+    // Menú 🧰 "Herramientas de simulación" (BLE/IR/Osciloscopio) --
+    // juntados en un solo botón a pedido explícito (antes eran 3
+    // botones sueltos en la barra, ocupando espacio de sobra). Las
+    // 3 herramientas solo tienen sentido con la simulación CORRIENDO
+    // (BLE necesita un bridge activo del otro lado, IR le manda
+    // códigos a un firmware que tiene que estar escuchando,
+    // Osciloscopio grafica un estado que sin simulación ni existe)
+    // -- se deshabilitan solas mientras no está corriendo, en vez de
+    // dejar que el alumno abra un panel que no va a hacer nada y se
+    // confunda pensando que algo está roto.
+    //------------------------------------------------------
+
+    bindSimToolsMenu() {
+
+        const toggleBtn = document.getElementById("btnSimToolsMenu");
+        const drawer     = document.getElementById("simToolsDrawer");
+
+        if (!toggleBtn || !drawer) return;
+
+        const open = () => {
+            drawer.classList.remove("hidden");
+            toggleBtn.classList.add("active");
+        };
+
+        const close = () => {
+            drawer.classList.add("hidden");
+            toggleBtn.classList.remove("active");
+        };
+
+        toggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (drawer.classList.contains("hidden")) open();
+            else close();
+        });
+
+        // Mismo criterio que bindProjectDrawer() -- cerrar al clickear
+        // afuera o con Escape.
+        document.addEventListener("pointerdown", (e) => {
+            if (drawer.classList.contains("hidden")) return;
+            if (drawer.contains(e.target) || toggleBtn.contains(e.target)) return;
+            close();
+        });
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") close();
+        });
+
+        // {id del <button>, panel global que togglea} -- window.blePanel/
+        // irRemotePanel/oscilloscopePanel ya los crea app.js.
+        [
+            ["stBle", () => window.blePanel],
+            ["stIr",  () => window.irRemotePanel],
+            ["stOsc", () => window.oscilloscopePanel],
+        ].forEach(([id, getPanel]) => {
+            document.getElementById(id)?.addEventListener("click", () => {
+                close();
+                getPanel()?.toggle();
+            });
+        });
+
+        this._updateSimToolsAvailability(!!this.simulator.isRunning);
+
+    }
+
+    _updateSimToolsAvailability(isRunning) {
+
+        ["stBle", "stIr", "stOsc"].forEach((id) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.disabled = !isRunning;
+        });
 
     }
 

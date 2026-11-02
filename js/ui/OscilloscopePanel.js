@@ -129,7 +129,10 @@ class OscilloscopePanel {
 
     bindEvents() {
 
-        document.getElementById("btnOscilloscopePanelToggle")?.addEventListener("click", () => this.toggle());
+        // El botón que abre/cierra este panel vive en el menú 🧰
+        // "Herramientas de simulación" (ver Toolbar.bindSimToolsMenu()),
+        // no acá -- ese botón llama a toggle() directo sobre
+        // window.oscilloscopePanel.
 
         this.closeBtn = this.header.querySelector(".osc-btn-close");
         this.closeBtn.addEventListener("click", () => this.toggle());

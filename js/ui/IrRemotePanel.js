@@ -115,7 +115,10 @@ class IrRemotePanel {
 
     bindEvents() {
 
-        document.getElementById("btnIrRemotePanelToggle")?.addEventListener("click", () => this.toggle());
+        // El botón que abre/cierra este panel vive en el menú 🧰
+        // "Herramientas de simulación" (ver Toolbar.bindSimToolsMenu()),
+        // no acá -- ese botón llama a toggle() directo sobre
+        // window.irRemotePanel.
 
         this.closeBtn = this.header.querySelector(".ir-btn-close");
         this.closeBtn.addEventListener("click", () => this.toggle());

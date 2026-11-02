@@ -190,3 +190,32 @@
 .project-drawer-item:hover {
     background: #3a3c42;
 }
+
+.project-drawer-item:disabled {
+    color: #666;
+    cursor: default;
+}
+
+.project-drawer-item:disabled:hover {
+    background: none;
+}
+
+/* --------------------------------------------------------
+   Menú 🧰 "Herramientas de simulación" (BLE/IR/Osciloscopio) --
+   mismo .project-drawer de arriba, pero anclado a la DERECHA del
+   botón (vive del lado derecho de la barra, no bajo el logo como
+   el de Proyecto) y necesita .sim-tools-menu con position:relative
+   para anclar el drawer debajo, igual que .logo lo hace para el
+   suyo.
+   -------------------------------------------------------- */
+
+.sim-tools-menu {
+    position: relative;
+}
+
+.sim-tools-drawer {
+    left: auto;
+    right: 0;
+    min-width: 230px;
+    transform-origin: top right;
+}

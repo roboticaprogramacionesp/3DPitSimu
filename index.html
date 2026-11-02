@@ -96,9 +96,19 @@
             -->
 
             <button id="btnSimToggle" class="btn-sim-toggle">▶ Simular</button>
-            <button id="btnBlePanelToggle" class="btn-project-toggle" title="Teléfono virtual BLE (simula Serial Bluetooth Terminal)">📱</button>
-            <button id="btnIrRemotePanelToggle" class="btn-project-toggle" title="Control remoto virtual (manda códigos IR al KY-022)">📡</button>
-            <button id="btnOscilloscopePanelToggle" class="btn-project-toggle" title="Osciloscopio -- grafica en vivo un GPIO o PWM mientras simulás">📈</button>
+
+            <div class="sim-tools-menu">
+
+                <button id="btnSimToolsMenu" class="btn-project-toggle" title="Herramientas de simulación: BLE, control IR, osciloscopio">🧰</button>
+
+                <div id="simToolsDrawer" class="project-drawer sim-tools-drawer hidden">
+                    <div class="project-drawer-label">Herramientas (necesitan ▶ Simular)</div>
+                    <button class="project-drawer-item" id="stBle" title="Teléfono virtual BLE (simula Serial Bluetooth Terminal)">📱 Teléfono virtual BLE</button>
+                    <button class="project-drawer-item" id="stIr" title="Control remoto virtual (manda códigos IR al KY-022)">📡 Control remoto IR</button>
+                    <button class="project-drawer-item" id="stOsc" title="Osciloscopio -- grafica en vivo un GPIO o PWM">📈 Osciloscopio</button>
+                </div>
+
+            </div>
         </div>
 
     </header>

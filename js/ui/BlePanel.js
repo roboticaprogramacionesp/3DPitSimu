@@ -132,7 +132,10 @@ class BlePanel {
 
     bindEvents() {
 
-        document.getElementById("btnBlePanelToggle")?.addEventListener("click", () => this.toggle());
+        // El botón que abre/cierra este panel vive en el menú 🧰
+        // "Herramientas de simulación" (ver Toolbar.bindSimToolsMenu()),
+        // no acá -- ese botón llama a toggle() directo sobre
+        // window.blePanel.
 
         // Botón ✕ explícito a pedido -- el header entero ya cerraba al
         // tocarlo (sigue así, no se le cambió nada), pero sin una X
