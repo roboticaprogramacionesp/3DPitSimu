@@ -2,10 +2,13 @@
 ==========================================================
  PitSimulator — OscilloscopePanel.js
 
- Osciloscopio simple: grafica en vivo, mientras corre la simulación,
- el estado de UN pin GPIO del primer ESP32 del lienzo -- digital
- (HIGH/LOW) o PWM (duty %), detectado automáticamente según qué haya
- en SignalEngine.pwmStates/driverStates para ese pin en cada muestra.
+ Osciloscopio: grafica en vivo, mientras corre la simulación, hasta 4
+ canales a la vez -- cada uno, el estado de un GPIO del primer ESP32
+ del lienzo. Detecta solo el tipo de señal de cada canal según qué
+ haya para ese pin en SignalEngine (en ese orden): ADC (sensor
+ analógico -- potenciómetro/joystick/LDR/etc., vía
+ SignalEngine.adcStates), PWM (duty %, vía pwmStates), o digital
+ (HIGH/LOW, vía driverStates).
 
  Por qué esta herramienta y no otra: 3DPitBlockly (la app hermana,
  para programar una placa REAL) tiene su propio panel de
@@ -15,22 +18,20 @@
  vivo es puro aprovechamiento de que esto YA es una simulación
  completa -- algo que la app hermana no puede ofrecer sin una placa.
 
- Alcance de esta primera versión -- a propósito NO incluye ADC
- (potenciómetro/joystick/LDR/etc.): esos valores no viven en un dict
- centralizado tipo driverStates/pwmStates, cada componente analógico
- guarda el suyo por separado (joystickState, potRotaryState, etc. en
- SignalEngine.js) y solo se empuja al firmware bajo pedido -- sumarlo
- bien (sin leer directo propiedades internas de cada tipo de
- componente a mano) es un trabajo aparte, no la primera versión de
- esta herramienta.
-
- Muestreo por POLLING (no eventos) a propósito: "gpio:changed" sí
- existe (ver WasmBridge._applyGpioChange()) pero no hay ningún evento
- equivalente para PWM -- mezclar un camino por evento (GPIO) con uno
- por polling (PWM) en el mismo buffer de muestras complica el dibujo
- sin necesidad real (esto es una herramienta de aprendizaje, no un
- osciloscopio de laboratorio -- no hace falta capturar flancos a
- microsegundos).
+ Alcance, a propósito:
+ - Un solo ESP32 (el primero del lienzo) -- sin selector de placa
+   para proyectos multi-ESP32.
+ - Muestreo por POLLING (no eventos) -- "gpio:changed" sí existe pero
+   no hay evento equivalente para PWM/ADC, y mezclar evento+polling
+   en el mismo buffer complica el dibujo sin necesidad real para una
+   herramienta de aprendizaje (no un osciloscopio de laboratorio --
+   no hace falta capturar flancos a microsegundos).
+ - adcStates (ver SignalEngine.js) es el ÚLTIMO valor que algún
+   sensor analógico empujó al firmware -- si nadie todavía corrió
+   código que lo lea, puede no existir ninguna entrada ahí todavía
+   aunque el sensor esté bien cableado (recién se llena la primera
+   vez que el usuario mueve el control del sensor en el panel de
+   propiedades).
 ==========================================================
 */
 
@@ -41,6 +42,9 @@ class OscilloscopePanel {
         21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36, 39,
     ];
 
+    static COLORS = ["#4da3ff", "#ffaa00", "#00ff88", "#ff5fa2"];
+    static MAX_CHANNELS = OscilloscopePanel.COLORS.length;
+
     static POLL_MS = 80;
     static MAX_SAMPLES = 150; // ~12s de historia a 80ms por muestra
 
@@ -50,12 +54,20 @@ class OscilloscopePanel {
         this.open = false;
         this.running = false;
         this._pollTimer = null;
-        this._samples = []; // [{ mode: "digital"|"pwm"|"none", value01 }]
+        this._nextChannelId = 1;
+        this.channels = [this._makeChannel()]; // arranca con 1 canal
+        this._samples = []; // [{ [channelId]: { mode, value01, raw?, freq? } }]
 
         this.buildDOM();
         this.bindEvents();
         this._bindDrag();
 
+    }
+
+    _makeChannel() {
+        const id = this._nextChannelId++;
+        const color = OscilloscopePanel.COLORS[(id - 1) % OscilloscopePanel.COLORS.length];
+        return { id, gpio: null, color };
     }
 
     // ====================================================
@@ -81,13 +93,18 @@ class OscilloscopePanel {
         this.body = document.createElement("div");
         this.body.className = "osc-body";
 
+        this.channelsList = document.createElement("div");
+        this.channelsList.className = "osc-channels";
+        this.body.appendChild(this.channelsList);
+
+        this.addChannelBtn = document.createElement("button");
+        this.addChannelBtn.className = "osc-add-channel";
+        this.addChannelBtn.textContent = "+ Canal";
+        this.addChannelBtn.title = "Agregar otro canal para comparar señales";
+        this.body.appendChild(this.addChannelBtn);
+
         const controls = document.createElement("div");
         controls.className = "osc-controls";
-
-        this.pinSelect = document.createElement("select");
-        this.pinSelect.className = "osc-pin-select";
-        this.pinSelect.innerHTML = `<option value="">-- elegí un GPIO --</option>` +
-            OscilloscopePanel.GPIO_OPTIONS.map((n) => `<option value="${n}">GPIO ${n}</option>`).join("");
 
         this.toggleBtn = document.createElement("button");
         this.toggleBtn.className = "osc-btn osc-btn-toggle";
@@ -100,9 +117,14 @@ class OscilloscopePanel {
         this.clearBtn.textContent = "🗑";
         this.clearBtn.title = "Limpiar el gráfico";
 
-        controls.appendChild(this.pinSelect);
+        this.exportBtn = document.createElement("button");
+        this.exportBtn.className = "osc-btn osc-btn-export";
+        this.exportBtn.textContent = "💾";
+        this.exportBtn.title = "Guardar el gráfico como imagen PNG";
+
         controls.appendChild(this.toggleBtn);
         controls.appendChild(this.clearBtn);
+        controls.appendChild(this.exportBtn);
         this.body.appendChild(controls);
 
         this.canvas = document.createElement("canvas");
@@ -112,10 +134,9 @@ class OscilloscopePanel {
         this.body.appendChild(this.canvas);
         this._ctx = this.canvas.getContext("2d");
 
-        this.readout = document.createElement("div");
-        this.readout.className = "osc-readout";
-        this.readout.textContent = "Elegí un GPIO para empezar.";
-        this.body.appendChild(this.readout);
+        this.statsBox = document.createElement("div");
+        this.statsBox.className = "osc-stats";
+        this.body.appendChild(this.statsBox);
 
         this.panel.appendChild(this.header);
         this.panel.appendChild(this.body);
@@ -123,7 +144,64 @@ class OscilloscopePanel {
         const workspace = document.getElementById("workspace") || document.body;
         workspace.appendChild(this.panel);
 
+        this._renderChannelRows();
         this._drawEmpty();
+
+    }
+
+    // Un <select> de GPIO + swatch de color + ✕ por canal -- se
+    // vuelve a armar entero cada vez que se agrega/saca un canal (la
+    // lista nunca es tan larga, MAX_CHANNELS=4, no vale la pena un
+    // diff más fino acá).
+    _renderChannelRows() {
+
+        this.channelsList.innerHTML = "";
+
+        this.channels.forEach((ch) => {
+
+            const row = document.createElement("div");
+            row.className = "osc-channel-row";
+
+            const swatch = document.createElement("span");
+            swatch.className = "osc-channel-color";
+            swatch.style.background = ch.color;
+            row.appendChild(swatch);
+
+            const select = document.createElement("select");
+            select.className = "osc-pin-select";
+            select.innerHTML = `<option value="">-- GPIO --</option>` +
+                OscilloscopePanel.GPIO_OPTIONS.map((n) => `<option value="${n}">GPIO ${n}</option>`).join("");
+            select.value = ch.gpio ?? "";
+            select.addEventListener("change", () => {
+                ch.gpio = select.value ? parseInt(select.value, 10) : null;
+                this._samples = [];
+                this._updateToggleAvailability();
+                this._draw();
+            });
+            row.appendChild(select);
+
+            // Sacar el PRIMER canal no tiene sentido si es el único --
+            // siempre queda al menos uno.
+            if (this.channels.length > 1) {
+                const removeBtn = document.createElement("button");
+                removeBtn.className = "osc-channel-remove";
+                removeBtn.textContent = "✕";
+                removeBtn.title = "Sacar este canal";
+                removeBtn.addEventListener("click", () => {
+                    this.channels = this.channels.filter((c) => c.id !== ch.id);
+                    this._samples = [];
+                    this._renderChannelRows();
+                    this._updateToggleAvailability();
+                    this._draw();
+                });
+                row.appendChild(removeBtn);
+            }
+
+            this.channelsList.appendChild(row);
+
+        });
+
+        this.addChannelBtn.disabled = this.channels.length >= OscilloscopePanel.MAX_CHANNELS;
 
     }
 
@@ -143,11 +221,10 @@ class OscilloscopePanel {
             this.toggle();
         });
 
-        this.pinSelect.addEventListener("change", () => {
-            this._samples = [];
-            this.toggleBtn.disabled = !this.pinSelect.value;
-            if (this.pinSelect.value && !this.running) this._setRunning(true);
-            this._draw();
+        this.addChannelBtn.addEventListener("click", () => {
+            if (this.channels.length >= OscilloscopePanel.MAX_CHANNELS) return;
+            this.channels.push(this._makeChannel());
+            this._renderChannelRows();
         });
 
         this.toggleBtn.addEventListener("click", () => this._setRunning(!this.running));
@@ -157,6 +234,8 @@ class OscilloscopePanel {
             this._draw();
         });
 
+        this.exportBtn.addEventListener("click", () => this._exportPng());
+
         // Mismo criterio que BlePanel/IrRemotePanel -- al detener la
         // simulación no tiene sentido seguir "graficando" un circuito
         // que ya no está corriendo (todo quedaría congelado en el
@@ -165,13 +244,20 @@ class OscilloscopePanel {
 
     }
 
+    _updateToggleAvailability() {
+        const anyPin = this.channels.some((c) => c.gpio !== null);
+        this.toggleBtn.disabled = !anyPin;
+        if (!anyPin) this._setRunning(false);
+        else if (!this.running) this._setRunning(true);
+    }
+
     // ====================================================
     // Arranque/parada del polling
     // ====================================================
 
     _setRunning(running) {
 
-        this.running = running && !!this.pinSelect.value;
+        this.running = running && this.channels.some((c) => c.gpio !== null);
 
         this.toggleBtn.textContent = this.running ? "⏸" : "▶";
         this.toggleBtn.title = this.running ? "Pausar" : "Empezar a graficar";
@@ -193,39 +279,124 @@ class OscilloscopePanel {
         return this.simulator.componentManager.getAll().find((c) => c.type.startsWith("esp32")) || null;
     }
 
-    _sample() {
+    // Orden de detección -- ADC primero: un sensor analógico empuja
+    // su valor por "ADC:" sin tocar driverStates/pwmStates para nada,
+    // así que si hay una entrada reciente ahí, es casi seguro la señal
+    // real de ese pin (en la práctica un mismo GPIO se usa para una
+    // sola cosa por vez, pero por las dudas se prueba ADC -> PWM ->
+    // digital en ese orden).
+    _sampleChannel(channel, esp32) {
 
-        const gpio = parseInt(this.pinSelect.value, 10);
-        if (Number.isNaN(gpio)) return;
+        if (channel.gpio === null || !esp32) return { mode: "none", value01: 0 };
 
-        const esp32 = this._resolveEsp32();
-        if (!esp32) {
-            this._pushSample({ mode: "none", value01: 0 });
-            this.readout.textContent = "No hay ningún ESP32 en el lienzo.";
-            return;
-        }
-
-        const key = `${esp32.id}:io${gpio}`;
+        const key = `${esp32.id}:io${channel.gpio}`;
         const engine = this.simulator.signalEngine;
+
+        if (key in engine.adcStates) {
+            const raw = engine.adcStates[key]; // u16, 0-65535
+            const value01 = Math.max(0, Math.min(1, raw / 65535));
+            return { mode: "adc", value01, raw, volts: value01 * 3.3 };
+        }
 
         const pwm = engine.pwmStates[key];
         if (pwm) {
-            const pct = Math.max(0, Math.min(1, pwm.duty / 1023));
-            this._pushSample({ mode: "pwm", value01: pct });
-            this.readout.textContent = `GPIO ${gpio}: PWM ${(pct * 100).toFixed(0)}% @ ${pwm.freq} Hz`;
-            return;
+            const value01 = Math.max(0, Math.min(1, pwm.duty / 1023));
+            return { mode: "pwm", value01, freq: pwm.freq };
         }
 
         const digital = engine.driverStates[key];
-        this._pushSample({ mode: "digital", value01: digital ? 1 : 0 });
-        this.readout.textContent = `GPIO ${gpio}: ${digital ? "HIGH" : "LOW"}`;
+        return { mode: "digital", value01: digital ? 1 : 0 };
 
     }
 
-    _pushSample(sample) {
+    _sample() {
+
+        const esp32 = this._resolveEsp32();
+        const sample = {};
+
+        this.channels.forEach((ch) => {
+            sample[ch.id] = this._sampleChannel(ch, esp32);
+        });
+
         this._samples.push(sample);
         if (this._samples.length > OscilloscopePanel.MAX_SAMPLES) this._samples.shift();
+
         this._draw();
+        this._updateStats(!esp32);
+
+    }
+
+    // ====================================================
+    // Estadísticas por canal (mín/máx + frecuencia para digital/PWM) --
+    // sobre la ventana de muestras que hay ahora mismo en el buffer,
+    // no un tiempo fijo (el buffer puede no estar lleno todavía).
+    // ====================================================
+
+    _updateStats(noEsp32) {
+
+        this.statsBox.innerHTML = "";
+
+        if (noEsp32) {
+            const row = document.createElement("div");
+            row.className = "osc-stat-row";
+            row.textContent = "No hay ningún ESP32 en el lienzo.";
+            this.statsBox.appendChild(row);
+            return;
+        }
+
+        const windowSeconds = (this._samples.length * OscilloscopePanel.POLL_MS) / 1000;
+
+        this.channels.forEach((ch) => {
+
+            if (ch.gpio === null) return;
+
+            const series = this._samples.map((s) => s[ch.id]).filter(Boolean);
+            if (series.length === 0) return;
+
+            const last = series[series.length - 1];
+            const row = document.createElement("div");
+            row.className = "osc-stat-row";
+
+            const dot = document.createElement("span");
+            dot.className = "osc-stat-dot";
+            dot.style.background = ch.color;
+            row.appendChild(dot);
+
+            const text = document.createElement("span");
+
+            if (last.mode === "adc") {
+                const volts = series.map((s) => s.volts);
+                const min = Math.min(...volts).toFixed(2);
+                const max = Math.max(...volts).toFixed(2);
+                text.textContent = `GPIO ${ch.gpio} (ADC): ${last.volts.toFixed(2)}V -- rango ${min}V a ${max}V`;
+            } else if (last.mode === "pwm") {
+                const freqHz = this._countTransitions(series) / Math.max(0.001, windowSeconds);
+                text.textContent = `GPIO ${ch.gpio} (PWM): ${(last.value01 * 100).toFixed(0)}% @ ${last.freq} Hz` +
+                    (series.length > 3 ? ` -- duty cambia ≈${freqHz.toFixed(1)} veces/s` : "");
+            } else if (last.mode === "digital") {
+                const freqHz = this._countTransitions(series) / Math.max(0.001, windowSeconds) / 2;
+                text.textContent = `GPIO ${ch.gpio}: ${last.value01 ? "HIGH" : "LOW"}` +
+                    (series.length > 3 && freqHz > 0.05 ? ` -- parpadea ≈${freqHz.toFixed(2)} Hz` : "");
+            } else {
+                text.textContent = `GPIO ${ch.gpio}: sin señal (LOW, o todavía sin usar)`;
+            }
+
+            row.appendChild(text);
+            this.statsBox.appendChild(row);
+
+        });
+
+    }
+
+    // Cantidad de cambios de valor01 dentro de la serie -- un ciclo
+    // completo HIGH->LOW->HIGH son 2 transiciones, por eso digital
+    // divide /2 arriba para pasar de "transiciones" a "ciclos" (Hz).
+    _countTransitions(series) {
+        let count = 0;
+        for (let i = 1; i < series.length; i++) {
+            if (series[i].value01 !== series[i - 1].value01) count++;
+        }
+        return count;
     }
 
     // ====================================================
@@ -249,7 +420,9 @@ class OscilloscopePanel {
 
         this._drawEmpty();
 
-        // Grilla HIGH/LOW de referencia
+        // Grilla de referencia (0% / 50% / 100% de la escala de cada
+        // canal -- no un voltaje fijo, cada canal puede estar en una
+        // escala distinta: HIGH/LOW, % de duty, o volts de ADC).
         ctx.strokeStyle = "#2d2d4e";
         ctx.lineWidth = 1;
         [0, 0.5, 1].forEach((frac) => {
@@ -265,26 +438,55 @@ class OscilloscopePanel {
         const stepX = (w - pad * 2) / (OscilloscopePanel.MAX_SAMPLES - 1);
         const startIdx = OscilloscopePanel.MAX_SAMPLES - this._samples.length;
 
-        ctx.beginPath();
-        ctx.strokeStyle = "#4da3ff";
-        ctx.lineWidth = 2;
-        ctx.lineJoin = "round";
+        this.channels.forEach((ch) => {
 
-        this._samples.forEach((s, i) => {
-            const x = pad + (startIdx + i) * stepX;
-            const y = pad + (1 - s.value01) * (h - pad * 2);
-            if (i === 0) ctx.moveTo(x, y);
-            else {
-                // Escalón (no una rampa suave) -- un cambio de GPIO es
-                // instantáneo de verdad, no gradual.
-                const prevY = pad + (1 - this._samples[i - 1].value01) * (h - pad * 2);
-                ctx.lineTo(x, prevY);
-                ctx.lineTo(x, y);
-            }
+            if (ch.gpio === null) return;
+
+            ctx.beginPath();
+            ctx.strokeStyle = ch.color;
+            ctx.lineWidth = 2;
+            ctx.lineJoin = "round";
+
+            let started = false;
+            let prevValue01 = null;
+
+            this._samples.forEach((sample, i) => {
+
+                const point = sample[ch.id];
+                if (!point) { started = false; return; } // hueco (canal agregado a mitad de camino)
+
+                const x = pad + (startIdx + i) * stepX;
+                const y = pad + (1 - point.value01) * (h - pad * 2);
+
+                if (!started) {
+                    ctx.moveTo(x, y);
+                    started = true;
+                } else {
+                    // Escalón (no una rampa suave) -- fiel para
+                    // digital/PWM (un cambio real es instantáneo); para
+                    // ADC es una aproximación razonable dado el muestreo
+                    // cada 80ms, no hace falta una curva suavizada.
+                    const prevY = pad + (1 - prevValue01) * (h - pad * 2);
+                    ctx.lineTo(x, prevY);
+                    ctx.lineTo(x, y);
+                }
+
+                prevValue01 = point.value01;
+
+            });
+
+            ctx.stroke();
+
         });
 
-        ctx.stroke();
+    }
 
+    _exportPng() {
+        const url = this.canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `osciloscopio_${Date.now()}.png`;
+        a.click();
     }
 
     // ====================================================

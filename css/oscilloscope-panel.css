@@ -90,6 +90,53 @@
     padding: 5px 6px;
 }
 
+/* ---- Canales (uno por fila: swatch de color + GPIO + sacar) ---- */
+
+.osc-channels {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.osc-channel-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.osc-channel-color {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.osc-channel-remove {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    background: #242442;
+    border: 1px solid #4a2d2d;
+    border-radius: 6px;
+    color: #ff8a80;
+    font-size: 11px;
+    cursor: pointer;
+}
+.osc-channel-remove:hover { background: #4a1f1f; color: #ff5252; }
+
+.osc-add-channel {
+    align-self: flex-start;
+    background: none;
+    border: 1px dashed #3d3d5e;
+    border-radius: 6px;
+    color: #a9b1d6;
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+.osc-add-channel:hover { background: #242442; }
+.osc-add-channel:disabled { opacity: .4; cursor: default; }
+
 .osc-btn {
     flex: 0 0 auto;
     width: 30px;
@@ -110,9 +157,24 @@
     display: block;
 }
 
-.osc-readout {
+.osc-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.osc-stat-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 11px;
     color: #a9b1d6;
-    text-align: center;
     font-variant-numeric: tabular-nums;
+}
+
+.osc-stat-dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
 }

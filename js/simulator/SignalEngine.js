@@ -42,6 +42,18 @@ class SignalEngine {
     // distinguir "no hay entrada" de "hay una entrada apagada".
     this.pwmStates = {};
 
+    // Último valor ADC (u16, 0-65535) mandado al firmware por
+    // _notifyAdcToFirmware(): "espId:io<N>" → valor -- mismo esquema
+    // de clave que driverStates/pwmStates. Se agrega para
+    // OscilloscopePanel.js (graficar un sensor analógico en vivo):
+    // antes no había NINGÚN dict centralizado con "el último valor
+    // analógico de este pin", cada sensor (joystick/potenciómetro/
+    // LDR/adkey) guardaba el suyo por separado en su propio
+    // component.xxxState -- esto lo junta en un solo lugar, en el
+    // mismo momento (y con el mismo valor) que ya se le manda al
+    // firmware, sin agregar ningún cálculo nuevo.
+    this.adcStates = {};
+
     // Temperatura simulada: "componentId" → celsius
     this.tempStates = {};
 
@@ -432,6 +444,7 @@ class SignalEngine {
       const match = pId.match(/^io(\d+)$/);
       if (!match) continue;
       const gpioNumber = parseInt(match[1], 10);
+      this.adcStates[`${esp32.id}:io${gpioNumber}`] = value;
       const bridge = this._bridgeFor(esp32);
       if (bridge?.connected) {
         bridge.sendData(`ADC:${gpioNumber}:${value}`);
@@ -2952,6 +2965,7 @@ class SignalEngine {
     this.driverStates = {};
     this.i2cOutputBytes = {};
     this.pwmStates = {};
+    this.adcStates = {};
     this.simulator.renderer.stopAllBuzzers?.();
     this.evaluateAll();
     const esp32 = this.simulator.componentManager
