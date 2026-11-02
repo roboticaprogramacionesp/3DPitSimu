@@ -1,0 +1,118 @@
+/* ==========================================================
+   PitSimulator — oscilloscope-panel.css
+   Osciloscopio -- panel flotante, mismo criterio general que
+   ir-remote-panel.css/ble-panel.css (posición inicial fija,
+   arrastrable agarrando la cabecera). Arranca debajo del control
+   remoto IR para que no se solapen si se abren los dos juntos. */
+#oscilloscopePanel {
+    position: absolute;
+    top: 260px;
+    right: 330px;
+    width: 320px;
+    z-index: 220;
+    display: flex;
+    flex-direction: column;
+    background: #1a1a2e;
+    border: 1px solid #2d2d4e;
+    border-radius: 10px;
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+}
+
+#oscilloscopePanel.dragging { user-select: none; }
+
+#oscilloscopePanel.osc-closed { display: none; }
+
+/* ---- Cabecera (mismo look que .ir-header) ---- */
+
+.osc-header {
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    height: 32px;
+    min-height: 32px;
+    background: #16213e;
+    border-bottom: 1px solid #2d2d4e;
+    cursor: grab;
+    user-select: none;
+}
+
+#oscilloscopePanel.dragging .osc-header { cursor: grabbing; }
+
+.osc-header-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
+
+.osc-icon  { font-size: 14px; }
+.osc-title {
+    color: #a9b1d6;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.osc-btn-close {
+    margin-left: auto;
+    padding: 2px 8px;
+    background: #242442;
+    border: 1px solid #4a2d2d;
+    border-radius: 6px;
+    color: #ff8a80;
+    font-size: 12px;
+    cursor: pointer;
+}
+.osc-btn-close:hover { background: #4a1f1f; color: #ff5252; }
+
+/* ---- Cuerpo ---- */
+
+.osc-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.osc-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.osc-pin-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: #242442;
+    border: 1px solid #2d2d4e;
+    border-radius: 6px;
+    color: #e8ecff;
+    font-size: 12px;
+    padding: 5px 6px;
+}
+
+.osc-btn {
+    flex: 0 0 auto;
+    width: 30px;
+    background: #242442;
+    border: 1px solid #2d2d4e;
+    border-radius: 6px;
+    color: #e8ecff;
+    font-size: 13px;
+    cursor: pointer;
+}
+.osc-btn:hover { background: #2e2e52; }
+.osc-btn:disabled { opacity: .4; cursor: default; }
+
+.osc-canvas {
+    width: 100%;
+    height: 120px;
+    border-radius: 6px;
+    display: block;
+}
+
+.osc-readout {
+    font-size: 11px;
+    color: #a9b1d6;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}

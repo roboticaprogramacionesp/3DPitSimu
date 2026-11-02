@@ -92,6 +92,10 @@
     //     blePanel, panel aparte, no depende de ReplPanel.
     const irRemotePanel = new IrRemotePanel(sim);
 
+    // 2d. Osciloscopio -- grafica en vivo un GPIO/PWM del primer ESP32
+    //     mientras corre la simulación (ver OscilloscopePanel.js).
+    const oscilloscopePanel = new OscilloscopePanel(sim);
+
     // 3. WasmBridge (modo 100% navegador, sin QEMU/servidor -- ver plan
     //    "PitSimulator en GitHub Pages") -- AHORA EL DEFAULT. Desde que
     //    el modo navegador llegó a cubrir prácticamente todo el
@@ -178,6 +182,7 @@
     window.replWindowManager = replWindowManager;
     window.blePanel        = blePanel;
     window.irRemotePanel   = irRemotePanel;
+    window.oscilloscopePanel = oscilloscopePanel;
     window.tutorialManager = tutorialManager;
     window.tutorialImport  = tutorialImport;
     window.tutorialCreator = tutorialCreator;
