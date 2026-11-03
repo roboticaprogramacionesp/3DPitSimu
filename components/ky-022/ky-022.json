@@ -3,8 +3,8 @@
     "name": "KY-022 Receptor Infrarrojo",
     "category": "Sensores",
 
-    "width": 32,
-    "height": 70,
+    "width": 53.15039,
+    "height": 84.127092,
 
     "svg": "components/ky-022/ky-022.svg",
 
@@ -12,9 +12,9 @@
     "pinSize": 4,
 
     "pins": [
-        { "id": "s",   "name": "S",   "x": 8,  "y": 68, "type": "signal" },
-        { "id": "vcc", "name": "VCC", "x": 16, "y": 68, "type": "power",  "signal": "power", "voltage": 5 },
-        { "id": "gnd", "name": "GND", "x": 24, "y": 68, "type": "ground", "signal": "ground" }
+        { "id": "s",   "name": "S",   "x": 18.82, "y": 89.73, "type": "signal" },
+        { "id": "vcc", "name": "VCC", "x": 28.46, "y": 89.73, "type": "power",  "signal": "power", "voltage": 5 },
+        { "id": "gnd", "name": "GND", "x": 38.06, "y": 89.73, "type": "ground", "signal": "ground" }
     ],
 
     "properties": {
