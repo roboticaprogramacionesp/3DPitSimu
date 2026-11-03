@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Dibujado a mano para PitSimulator: el sdcard.svg suelto que se habia
+     agregado resulto ser una imagen de un PROTOBOARD completo (ids
+     "pin1A".."pin63J", la grilla de huecos tipica de Fritzing para el
+     breadboard de fondo), no un modulo lector de microSD -- no era
+     usable. Pinout tipico de un modulo lector microSD SPI (orden
+     "Catalex"/HW-125, de izquierda a derecha): GND, VCC, MISO, MOSI,
+     SCK, CS. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 48" width="60" height="48">
+  <rect x="1" y="1" width="58" height="46" rx="2" fill="#0b2f52" stroke="#071f38" stroke-width="1"/>
+
+  <!-- Ranura microSD -->
+  <rect x="14" y="4" width="32" height="22" rx="1" fill="#c9a227" stroke="#8a6d10" stroke-width="0.6"/>
+  <path d="M16 6 h24 v18 h-24 z M38 6 l4 4 v14 h-4 z" fill="#d9b94a" stroke="#8a6d10" stroke-width="0.3"/>
+  <text x="30" y="17" font-size="3.4" font-family="Droid Sans, sans-serif" fill="#1e1e1e" text-anchor="middle">microSD</text>
+
+  <!-- Chip regulador -->
+  <rect x="4" y="5" width="7" height="12" rx="0.6" fill="#141414" stroke="#000000" stroke-width="0.4"/>
+
+  <text x="30" y="32" font-size="3.4" font-family="Droid Sans, sans-serif" fill="#8fc6ff" text-anchor="middle">SD Card Module</text>
+
+  <!-- Fila de pines (borde inferior) -->
+  <g font-family="Droid Sans, sans-serif" font-size="3" fill="#e8e8e8" text-anchor="middle">
+    <rect id="connector0pin" x="5"  y="40" width="4" height="4" fill="#c9a227"/>
+    <text x="7" y="37.5">GND</text>
+
+    <rect id="connector1pin" x="14.6" y="40" width="4" height="4" fill="#c9a227"/>
+    <text x="16.6" y="37.5">VCC</text>
+
+    <rect id="connector2pin" x="24.2" y="40" width="4" height="4" fill="#c9a227"/>
+    <text x="26.2" y="37.5">MISO</text>
+
+    <rect id="connector3pin" x="33.8" y="40" width="4" height="4" fill="#c9a227"/>
+    <text x="35.8" y="37.5">MOSI</text>
+
+    <rect id="connector4pin" x="43.4" y="40" width="4" height="4" fill="#c9a227"/>
+    <text x="45.4" y="37.5">SCK</text>
+
+    <rect id="connector5pin" x="53" y="40" width="4" height="4" fill="#c9a227"/>
+    <text x="55" y="37.5">CS</text>
+  </g>
+</svg>

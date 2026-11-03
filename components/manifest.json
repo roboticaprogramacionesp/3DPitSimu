@@ -378,6 +378,11 @@
             "type": "dfplayer",
             "name": "DFPlayer Mini (reproductor MP3)",
             "category": "Actuadores"
+        },
+        {
+            "type": "sdcard",
+            "name": "Módulo Lector microSD (SPI)",
+            "category": "Comunicación"
         }
     ]
 }
