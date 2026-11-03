@@ -12,9 +12,9 @@
     "pinSize": 4,
 
     "pins": [
-        { "id": "s",   "name": "S",   "x": 18.82, "y": 89.73, "type": "signal" },
-        { "id": "vcc", "name": "VCC", "x": 28.46, "y": 89.73, "type": "power",  "signal": "power", "voltage": 5 },
-        { "id": "gnd", "name": "GND", "x": 38.06, "y": 89.73, "type": "ground", "signal": "ground" }
+        { "id": "s",   "name": "S",   "x": 17.64, "y": 83.53, "type": "signal" },
+        { "id": "vcc", "name": "VCC", "x": 26.68, "y": 83.53, "type": "power",  "signal": "power", "voltage": 5 },
+        { "id": "gnd", "name": "GND", "x": 35.68, "y": 83.53, "type": "ground", "signal": "ground" }
     ],
 
     "properties": {

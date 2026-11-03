@@ -290,7 +290,7 @@
         {
             "type": "ky-005",
             "name": "KY-005 Transmisor Infrarrojo",
-            "category": "Sensores"
+            "category": "Actuadores"
         },
         {
             "type": "tcs34725",

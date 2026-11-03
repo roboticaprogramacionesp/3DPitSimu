@@ -1,7 +1,7 @@
 {
     "type": "ky-005",
     "name": "KY-005 Transmisor Infrarrojo",
-    "category": "Sensores",
+    "category": "Actuadores",
 
     "width": 53.150391,
     "height": 118.4822,
@@ -12,9 +12,9 @@
     "pinSize": 4,
 
     "pins": [
-        { "id": "s",   "name": "S",   "x": 18.96, "y": 125.91, "type": "output", "signal": "digital" },
-        { "id": "vcc", "name": "VCC", "x": 28.61, "y": 125.91, "type": "power",  "signal": "power", "voltage": 5 },
-        { "id": "gnd", "name": "GND", "x": 38.21, "y": 125.91, "type": "ground", "signal": "ground" }
+        { "id": "s",   "name": "S",   "x": 17.79, "y": 117.89, "type": "output", "signal": "digital" },
+        { "id": "vcc", "name": "VCC", "x": 26.83, "y": 117.89, "type": "power",  "signal": "power", "voltage": 5 },
+        { "id": "gnd", "name": "GND", "x": 35.83, "y": 117.89, "type": "ground", "signal": "ground" }
     ],
 
     "properties": {
