@@ -1,0 +1,26 @@
+{
+    "type": "fingerprint",
+    "name": "Sensor de Huella FPM383C (SFM-V1.7)",
+    "category": "Sensores",
+
+    "width": 866.14163,
+    "height": 866.14162,
+
+    "svg": "components/fingerprint/fingerprint.svg",
+
+    "pinShape": "square",
+    "pinSize": 32,
+
+    "pins": [
+        { "id": "vcc",    "name": "VCC",    "x": 232.44, "y": 358.47, "type": "power",  "signal": "power", "voltage": 3.3 },
+        { "id": "gnd",    "name": "GND",    "x": 311.2,  "y": 358.47, "type": "ground", "signal": "ground" },
+        { "id": "tx",     "name": "TXD",    "x": 389.94, "y": 358.15, "type": "gpio",   "signal": "uart" },
+        { "id": "rx",     "name": "RXD",    "x": 468.68, "y": 358.15, "type": "gpio",   "signal": "uart" },
+        { "id": "touch",  "name": "TOUCH",  "x": 547.41, "y": 358.49, "type": "gpio",   "signal": "digital", "optional": true },
+        { "id": "wakeup", "name": "WAKEUP", "x": 626.15, "y": 358.17, "type": "gpio",   "signal": "digital", "optional": true }
+    ],
+
+    "properties": {
+        "info": "Sensor óptico de huella (protocolo AS608 por UART, 57600 baudios). Solo VCC/GND/TXD/RXD participan de la simulación -- TOUCH/WAKEUP existen en el módulo real pero no se simulan. Usá el botón \"Poner el dedo\" del panel para simular una huella apoyada (hace falta mientras corre el programa, para que gen_img()/wait_finger()/search() detecten algo)."
+    }
+}

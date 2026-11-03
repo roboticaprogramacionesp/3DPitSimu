@@ -54,6 +54,11 @@ class SignalEngine {
     // firmware, sin agregar ningún cálculo nuevo.
     this.adcStates = {};
 
+    // Estado del sensor de huella FPM383C: "componentId" ->
+    // {enrolled, fingerPresent, lastImageOk} -- ver _fpmState()/
+    // _handleFpmCommand() más abajo.
+    this.fpmStates = {};
+
     // Temperatura simulada: "componentId" → celsius
     this.tempStates = {};
 
@@ -1970,12 +1975,22 @@ class SignalEngine {
   }
 
   // Llamado desde WasmBridge al recibir "UARTTX:<id>:<hex>" (ver
-  // comentario ahí) -- resuelve a qué componente HC-06 le llegó y
-  // avisa al teléfono virtual.
-  handleUartTx(esp32Id, uartId, text) {
-    const component = this._findHc06ByUartTx(esp32Id, uartId);
-    if (!component) return;
-    this.simulator.eventBus.emit("hc06:data", { componentId: component.id, esp32Id, data: text });
+  // comentario ahí) -- resuelve a qué componente le llegó. "hex" es
+  // el string de bytes crudo (necesario para el sensor de huella,
+  // protocolo binario -- "text" ya viene decodificado como UTF-8,
+  // válido solo para el HC-06). Un mismo uart id resuelve a UN SOLO
+  // tipo de componente (según a qué esté cableado el TX del ESP32),
+  // así que no hay ambigüedad en cuál de los dos usar.
+  handleUartTx(esp32Id, uartId, text, hex) {
+    const hc06 = this._findHc06ByUartTx(esp32Id, uartId);
+    if (hc06) {
+      this.simulator.eventBus.emit("hc06:data", { componentId: hc06.id, esp32Id, data: text });
+      return;
+    }
+    const fpm = this._findFpmByUartTx(esp32Id, uartId);
+    if (fpm) {
+      this._handleFpmCommand(fpm, esp32Id, uartId, hex || "");
+    }
   }
 
   // Dirección navegador -> firmware (el alumno escribió algo en el
@@ -2012,6 +2027,176 @@ class SignalEngine {
       result.push({ componentId: comp.id, esp32Id: resolved.esp32Id, name: comp.name || "HC-06" });
     }
     return result;
+  }
+
+  // ====================================================
+  // Sensor de huella FPM383C (SFM-V1.7, protocolo AS608 por UART,
+  // ver components_wasm/libs/fpm383c.py) -- igual que el HC-06, hace
+  // falta resolver ESP32+uart id a partir del cableado real (no "el
+  // primer ESP32"), PERO acá el protocolo es BINARIO (header 0xEF01,
+  // instrucción de 1 byte, checksum de 2 bytes) y unidireccional
+  // desde el punto de vista del "actor humano": el ESP32 manda un
+  // comando y espera una respuesta -- no hay "teléfono virtual" que
+  // escriba mensajes libres, el único control manual que le damos al
+  // alumno es un botón "poner el dedo" en el panel de propiedades
+  // (fingerprint.behavior.js) que fija fpmStates[id].fingerPresent
+  // por unos segundos, imitando apoyar el dedo de verdad.
+  //
+  // _findFpmByUartTx() resuelve en la MISMA llamada a handleUartTx()
+  // (no hace falta un paso previo como con HC-06, que resuelve al
+  // conectar el teléfono virtual) -- cada "UARTTX:" que llega se
+  // intenta primero contra HC-06 y, si no matchea ningún componente,
+  // se prueba acá.
+  // ====================================================
+
+  _resolveFpmUart(component) {
+    const net = this.getNet(`${component.id}:tx`);
+    let esp32Id = null;
+    let gpioNum = null;
+    for (const key of net) {
+      const [cId, pId] = key.split(":");
+      const comp = this.simulator.componentManager.get(cId);
+      if (!comp || !comp.type.startsWith("esp32")) continue;
+      const match = pId.match(/^io(\d+)$/);
+      if (match) {
+        esp32Id = cId;
+        gpioNum = parseInt(match[1], 10);
+        break;
+      }
+    }
+    if (gpioNum === null) return null;
+
+    for (const key of Object.keys(this.declaredPins)) {
+      if (!key.startsWith("uart:")) continue;
+      const declared = this.declaredPins[key];
+      if (declared.rx === gpioNum) {
+        return { esp32Id, uartId: parseInt(key.slice("uart:".length), 10) };
+      }
+    }
+    return null;
+  }
+
+  _findFpmByUartTx(esp32Id, uartId) {
+    const declared = this.declaredPins[`uart:${uartId}`];
+    if (!declared || declared.tx === undefined) return null;
+
+    const net = this.getNet(`${esp32Id}:io${declared.tx}`);
+    for (const key of net) {
+      const [cId, pId] = key.split(":");
+      if (pId !== "rx") continue;
+      const comp = this.simulator.componentManager.get(cId);
+      if (comp && comp.type === "fingerprint") return comp;
+    }
+    return null;
+  }
+
+  _fpmState(componentId) {
+    if (!this.fpmStates) this.fpmStates = {};
+    if (!this.fpmStates[componentId]) {
+      this.fpmStates[componentId] = { enrolled: [], fingerPresent: false, lastImageOk: false };
+    }
+    return this.fpmStates[componentId];
+  }
+
+  // Llamado por el botón "👆 Poner el dedo" del panel de propiedades
+  // (fingerprint.behavior.js) -- imita apoyar el dedo real unos
+  // segundos y después sacarlo solo (igual que soltar un botón físico).
+  setFpmFingerPresent(componentId, present, holdMs = 2500) {
+    const state = this._fpmState(componentId);
+    state.fingerPresent = present;
+    if (state._timeout) clearTimeout(state._timeout);
+    if (present) {
+      state._timeout = setTimeout(() => {
+        state.fingerPresent = false;
+        this.simulator.eventBus.emit("fpm:changed", { componentId });
+      }, holdMs);
+    }
+    this.simulator.eventBus.emit("fpm:changed", { componentId });
+  }
+
+  // checksum = suma de (PID + LEN de 2 bytes + payload) mod 65536 --
+  // misma fórmula que build_cmd() de fpm383c.py del lado del ESP32.
+  _fpmBuildResponse(payloadBytes) {
+    const pid = 0x07; // packet de "ack" (respuesta) del protocolo AS608
+    const len = payloadBytes.length + 2; // payload + 2 bytes de checksum
+    const body = [pid, (len >> 8) & 0xff, len & 0xff, ...payloadBytes];
+    let checksum = 0;
+    for (const b of body) checksum = (checksum + b) & 0xffff;
+    const frame = [0xef, 0x01, 0xff, 0xff, 0xff, 0xff, ...body, (checksum >> 8) & 0xff, checksum & 0xff];
+    return frame.map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // Decodifica el comando AS608 que mandó el ESP32 (ver build_cmd()
+  // de fpm383c.py: header 0xEF01 + addr 0xFFFFFFFF + packet_type 0x01
+  // + length (2 bytes) + instrucción (1 byte) + parámetros), simula
+  // el sensor y le contesta por el mismo canal ("UARTRX:<id>:<hex>",
+  // ver _on_uartrx_line() de _uart_bus_wasm.py) -- igual que un
+  // sensor real respondiendo por UART.
+  _handleFpmCommand(component, esp32Id, uartId, hex) {
+    if (hex.length < 18) return; // header+addr+pid+len+instr, mínimo
+    const bytes = [];
+    for (let i = 0; i < hex.length; i += 2) bytes.push(parseInt(hex.slice(i, i + 2), 16));
+    if (bytes[0] !== 0xef || bytes[1] !== 0x01) return; // no es un header AS608 válido
+
+    const instruction = bytes[9];
+    const params = bytes.slice(10, bytes.length - 2); // sin el checksum final
+    const state = this._fpmState(component.id);
+
+    let confirm = 0x00;
+    let extra = [];
+
+    if (instruction === 0x01) {
+      // gen_img -- "¿hay un dedo apoyado ahora mismo?"
+      confirm = state.fingerPresent ? 0x00 : 0x02;
+      state.lastImageOk = confirm === 0x00;
+    } else if (instruction === 0x02) {
+      // img2tz -- convertir la última imagen leída
+      confirm = state.lastImageOk ? 0x00 : 0x06;
+    } else if (instruction === 0x05) {
+      // reg_model -- combinar buffers (se simplifica: siempre OK)
+      confirm = 0x00;
+    } else if (instruction === 0x06) {
+      // store -- params = buf_id(1) + fid(2, big-endian)
+      const fid = params.length >= 3 ? (params[1] << 8) | params[2] : null;
+      if (fid !== null && !state.enrolled.includes(fid)) state.enrolled.push(fid);
+      confirm = 0x00;
+    } else if (instruction === 0x0c) {
+      // delete_model -- params = fid(2, big-endian) + count(2)
+      const fid = params.length >= 2 ? (params[0] << 8) | params[1] : null;
+      state.enrolled = state.enrolled.filter((f) => f !== fid);
+      confirm = 0x00;
+    } else if (instruction === 0x0d) {
+      // empty_database
+      state.enrolled = [];
+      confirm = 0x00;
+    } else if (instruction === 0x04) {
+      // search -- hace falta un dedo apoyado Y al menos una huella
+      // guardada (se simula: siempre "encuentra" la última guardada)
+      if (state.fingerPresent && state.enrolled.length > 0) {
+        const fid = state.enrolled[state.enrolled.length - 1];
+        const score = 150;
+        confirm = 0x00;
+        extra = [(fid >> 8) & 0xff, fid & 0xff, (score >> 8) & 0xff, score & 0xff];
+      } else {
+        confirm = 0x09; // "no se encontró ninguna coincidencia"
+      }
+    } else if (instruction === 0x1d) {
+      // get_template_count (comando crudo de fpm383c.py, sin pasar
+      // por build_cmd -- mismo formato de respuesta igual)
+      const count = state.enrolled.length;
+      confirm = 0x00;
+      extra = [(count >> 8) & 0xff, count & 0xff];
+    } else if (instruction === 0x3c) {
+      // led -- no se simula un LED real, solo confirma
+      confirm = 0x00;
+    } else {
+      return; // instrucción no soportada -- no contesta nada (igual que un timeout real)
+    }
+
+    const bridge = this.simulator.bridges.get(esp32Id);
+    if (!bridge?.connected) return;
+    const hexResponse = this._fpmBuildResponse([confirm, ...extra]);
+    bridge.sendData(`UARTRX:${uartId}:${hexResponse}`);
   }
 
   // ====================================================
@@ -3085,6 +3270,7 @@ class SignalEngine {
     this.i2cOutputBytes = {};
     this.pwmStates = {};
     this.adcStates = {};
+    this.fpmStates = {};
     this.simulator.renderer.stopAllBuzzers?.();
     this.evaluateAll();
     const esp32 = this.simulator.componentManager

@@ -752,9 +752,21 @@ class WasmBridge {
             const sepIdx = rest.indexOf(":");
             if (sepIdx > 0 && this.esp32) {
                 const uartId = parseInt(rest.slice(0, sepIdx), 10);
-                const data = WasmBridge._hexToUtf8(rest.slice(sepIdx + 1));
+                const hex = rest.slice(sepIdx + 1);
                 if (!Number.isNaN(uartId)) {
-                    this.simulator.signalEngine.handleUartTx(this.esp32.id, uartId, data);
+                    // El sensor de huella (fingerprint.hal.py) habla un
+                    // protocolo BINARIO (AS608/FPM383C) -- _hexToUtf8()
+                    // usa TextDecoder(), que reemplaza cualquier byte
+                    // que no sea UTF-8 válido (0xEF, 0xFF, etc., muy
+                    // comunes en ese protocolo) por el carácter de
+                    // reemplazo U+FFFD, perdiendo el byte original para
+                    // siempre. Se manda el hex CRUDO además del texto
+                    // decodificado -- SignalEngine.handleUartTx()
+                    // decide cuál de los dos usar según a qué tipo de
+                    // componente resuelva este uart id (ver el
+                    // comentario grande ahí).
+                    const data = WasmBridge._hexToUtf8(hex);
+                    this.simulator.signalEngine.handleUartTx(this.esp32.id, uartId, data, hex);
                 }
             }
             return true;

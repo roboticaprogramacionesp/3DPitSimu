@@ -383,6 +383,12 @@
             "type": "sdcard",
             "name": "Módulo Lector microSD (SPI)",
             "category": "Comunicación"
+        },
+        {
+            "type": "fingerprint",
+            "name": "Sensor de Huella FPM383C (SFM-V1.7)",
+            "category": "Sensores",
+            "hasBehavior": true
         }
     ]
 }

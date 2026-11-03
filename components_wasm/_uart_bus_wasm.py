@@ -62,6 +62,30 @@ def _on_uart_line(parts):
 register_line_handler("UART:", _on_uart_line)
 
 
+def _on_uartrx_line(parts):
+    # Igual que "UART:" pero para protocolos BINARIOS (ej. el sensor
+    # de huella FPM383C/AS608, ver fingerprint.hal.py) -- "UART:"
+    # codifica el texto como UTF-8 y le agrega "\r\n", lo que corrompe
+    # cualquier protocolo con bytes no-UTF8 (0xEF, 0xFF, etc.) y además
+    # nunca debería llevar un terminador agregado. "UARTRX:<id>:<hex>"
+    # inyecta los bytes CRUDOS, tal cual, sin tocarlos.
+    if len(parts) < 3:
+        return
+    try:
+        uart_id = int(parts[1])
+    except ValueError:
+        return
+    hex_text = ":".join(parts[2:])
+    try:
+        data = bytes(int(hex_text[i : i + 2], 16) for i in range(0, len(hex_text), 2))
+    except ValueError:
+        return
+    _uart_buf(uart_id).extend(data)
+
+
+register_line_handler("UARTRX:", _on_uartrx_line)
+
+
 def _declare_uart_pins(uart_id, tx_num, rx_num):
     if uart_id in _uart_pininfo_declared:
         return
