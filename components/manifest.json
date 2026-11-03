@@ -368,6 +368,11 @@
             "name": "YF-S201 Sensor de Flujo",
             "category": "Sensores",
             "hasBehavior": true
+        },
+        {
+            "type": "bocina",
+            "name": "Bocina (altavoz)",
+            "category": "Actuadores"
         }
     ]
 }
