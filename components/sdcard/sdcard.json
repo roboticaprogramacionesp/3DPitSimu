@@ -3,8 +3,8 @@
     "name": "Módulo Lector microSD (SPI)",
     "category": "Comunicación",
 
-    "width": 60,
-    "height": 48,
+    "width": 68.03,
+    "height": 119.06,
 
     "svg": "components/sdcard/sdcard.svg",
 
@@ -12,12 +12,12 @@
     "pinSize": 4,
 
     "pins": [
-        { "id": "gnd",  "name": "GND",  "x": 7,    "y": 42, "type": "ground", "signal": "ground" },
-        { "id": "vcc",  "name": "VCC",  "x": 16.6, "y": 42, "type": "power",  "signal": "power", "voltage": 3.3 },
-        { "id": "miso", "name": "MISO", "x": 26.2, "y": 42, "type": "gpio",   "signal": "spi" },
-        { "id": "mosi", "name": "MOSI", "x": 35.8, "y": 42, "type": "gpio",   "signal": "spi" },
-        { "id": "sck",  "name": "SCK",  "x": 45.4, "y": 42, "type": "gpio",   "signal": "spi" },
-        { "id": "cs",   "name": "CS",   "x": 55,   "y": 42, "type": "gpio",   "signal": "spi" }
+        { "id": "gnd",  "name": "GND",  "x": 15.5, "y": 11.28, "type": "ground", "signal": "ground" },
+        { "id": "vcc",  "name": "VCC",  "x": 22.7, "y": 11.28, "type": "power",  "signal": "power", "voltage": 3.3 },
+        { "id": "miso", "name": "MISO", "x": 29.9, "y": 11.28, "type": "gpio",   "signal": "spi" },
+        { "id": "mosi", "name": "MOSI", "x": 37.1, "y": 11.28, "type": "gpio",   "signal": "spi" },
+        { "id": "sck",  "name": "SCK",  "x": 44.3, "y": 11.28, "type": "gpio",   "signal": "spi" },
+        { "id": "cs",   "name": "CS",   "x": 51.5, "y": 11.28, "type": "gpio",   "signal": "spi" }
     ],
 
     "properties": {
