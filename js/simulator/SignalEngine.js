@@ -2664,6 +2664,24 @@ class SignalEngine {
     return false;
   }
 
+  // Distingue "el firmware todavía no escribió nada acá" de "lo puso
+  // en LOW" -- isKeyConnectedToHighDriver() no puede, devuelve false
+  // para los dos casos por igual (this.driverStates[key] === 1 falla
+  // en ambos). Hace falta para componentes activos en BAJO (ej.
+  // ky-019.behavior.js): sin esto, antes de correr cualquier código
+  // (o antes de que el código toque ese pin puntual), "nunca tocado"
+  // se interpreta igual que "LOW" -> el relevador queda ENERGIZADO
+  // de arranque, sin que el alumno haya hecho nada -- BUG REAL
+  // reportado en vivo ("pongo una clavija al COM y al NO y se
+  // prende" sin haber corrido ningún programa).
+  isKeyDriven(startKey) {
+    const net = this.getNet(startKey);
+    for (const key of net) {
+      if (key in this.driverStates) return true;
+    }
+    return false;
+  }
+
   // Mismo criterio que isKeyConnectedToHighDriver, pero para PWM: un
   // pin manejado con machine.PWM (ver setPwmState/_base.hal.py) nunca
   // pasa por driverStates (no es un 0/1 digital), así que un LED

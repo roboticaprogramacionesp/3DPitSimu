@@ -36,9 +36,21 @@ ComponentBehaviorRegistry.register("ky-019", {
             }
 
             const powered = engine.isComponentPowered(component);
+            // BUG REAL reportado en vivo ("pongo una clavija al COM y
+            // al NO y se prende" sin correr ningún programa): con
+            // activeLow (el default real del KY-019), "S" en LOW
+            // energiza el relevador -- pero isKeyConnectedToHighDriver()
+            // no distingue "todavía nadie escribió nada acá" de
+            // "LOW explícito", los dos dan signalHigh=false. Sin
+            // isKeyDriven(), eso energizaba el relevador de arranque,
+            // antes de que el alumno corriera una sola línea. Ahora, si
+            // "S" nunca fue tocado por el firmware, el relevador queda
+            // en reposo (COM-NC) sin importar activeLow -- recién se
+            // energiza cuando el código realmente escribe algo ahí.
+            const signalDriven = engine.isKeyDriven(`${component.id}:s`);
             const signalHigh = engine.isKeyConnectedToHighDriver(`${component.id}:s`);
             const activeLow = component.properties?.activeLow !== false;
-            const energized = powered && (activeLow ? !signalHigh : signalHigh);
+            const energized = powered && signalDriven && (activeLow ? !signalHigh : signalHigh);
 
             const changed = (component.spdtPosition === "no") !== energized;
             component.spdtPosition = energized ? "no" : "nc";
