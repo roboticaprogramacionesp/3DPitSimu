@@ -373,6 +373,11 @@
             "type": "bocina",
             "name": "Bocina (altavoz)",
             "category": "Actuadores"
+        },
+        {
+            "type": "dfplayer",
+            "name": "DFPlayer Mini (reproductor MP3)",
+            "category": "Actuadores"
         }
     ]
 }

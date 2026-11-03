@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Dibujado a mano para PitSimulator: el dfplayer.svg suelto que se agregó
+     es un diagrama infografico (1200x800, sin pines reales), no una pieza de
+     protoboard -- mismo caso que KY-022 en esta sesion. Pinout real tomado de
+     js/blockly/img/dfplayer.svg (pieza Fritzing original, capa "copper"):
+     VCC/RX/TX/DAC_R/DAC_L/SPK1/GND/SPK2 de un lado, BUSY/USB-/USB+/ADKEY2/
+     ADKEY1/IO2/GND/IO3 del otro. Solo se exponen los pines que el firmware
+     simulado realmente usa (igual criterio que hc-06.json/gps.json). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 56" width="70" height="56">
+  <rect x="1" y="1" width="68" height="54" rx="2" fill="#0e3a1f" stroke="#082a16" stroke-width="1"/>
+  <rect x="4" y="4" width="62" height="30" rx="1.5" fill="#123f23" stroke="#082a16" stroke-width="0.6"/>
+
+  <!-- Chip DFPlayer (IC negro central) -->
+  <rect x="24" y="9" width="22" height="16" rx="1" fill="#141414" stroke="#000000" stroke-width="0.6"/>
+  <text x="35" y="15.5" font-size="3.1" font-family="Droid Sans, sans-serif" fill="#cfcfcf" text-anchor="middle">DFPlayer</text>
+  <text x="35" y="19.5" font-size="3.1" font-family="Droid Sans, sans-serif" fill="#cfcfcf" text-anchor="middle">Mini</text>
+
+  <!-- Ranura microSD -->
+  <rect x="6" y="9" width="14" height="16" rx="1" fill="#c9a227" stroke="#8a6d10" stroke-width="0.6"/>
+  <path d="M8 10 h10 v14 h-10 z M16.5 10 l2 2 v12 h-2 z" fill="#d9b94a" stroke="#8a6d10" stroke-width="0.3"/>
+  <text x="13" y="27.5" font-size="2.6" font-family="Droid Sans, sans-serif" fill="#1e1e1e" text-anchor="middle">microSD</text>
+
+  <!-- Boton reset -->
+  <circle cx="60" cy="12" r="2.6" fill="#777777" stroke="#333333" stroke-width="0.4"/>
+
+  <text x="35" y="31.5" font-size="3" font-family="Droid Sans, sans-serif" fill="#8fd49a" text-anchor="middle">MP3 Player</text>
+
+  <!-- Fila de pines (borde inferior) -->
+  <g font-family="Droid Sans, sans-serif" font-size="2.6" fill="#e8e8e8" text-anchor="middle">
+    <rect id="connector0pin" x="6" y="47" width="4" height="4" fill="#c9a227"/>
+    <text x="8" y="44.5">VCC</text>
+
+    <rect id="connector1pin" x="17.2" y="47" width="4" height="4" fill="#c9a227"/>
+    <text x="19.2" y="44.5">GND</text>
+
+    <rect id="connector2pin" x="28.4" y="47" width="4" height="4" fill="#c9a227"/>
+    <text x="30.4" y="44.5">RX</text>
+
+    <rect id="connector3pin" x="39.6" y="47" width="4" height="4" fill="#c9a227"/>
+    <text x="41.6" y="44.5">TX</text>
+
+    <rect id="connector4pin" x="50.8" y="47" width="4" height="4" fill="#c9a227"/>
+    <text x="52.8" y="44.5">SPK1</text>
+
+    <rect id="connector5pin" x="62" y="47" width="4" height="4" fill="#c9a227"/>
+    <text x="64" y="44.5">SPK2</text>
+  </g>
+</svg>

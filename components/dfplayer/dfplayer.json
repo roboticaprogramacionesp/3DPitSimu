@@ -1,0 +1,26 @@
+{
+    "type": "dfplayer",
+    "name": "DFPlayer Mini (reproductor MP3)",
+    "category": "Actuadores",
+
+    "width": 70,
+    "height": 56,
+
+    "svg": "components/dfplayer/dfplayer.svg",
+
+    "pinShape": "square",
+    "pinSize": 4,
+
+    "pins": [
+        { "id": "vcc",  "name": "VCC",  "x": 8,    "y": 49, "type": "power",  "signal": "power", "voltage": 5 },
+        { "id": "gnd",  "name": "GND",  "x": 19.2, "y": 49, "type": "ground", "signal": "ground" },
+        { "id": "rx",   "name": "RX",   "x": 30.4, "y": 49, "type": "gpio",   "signal": "uart" },
+        { "id": "tx",   "name": "TX",   "x": 41.6, "y": 49, "type": "gpio",   "signal": "uart", "optional": true },
+        { "id": "spk1", "name": "SPK1", "x": 52.8, "y": 49, "type": "signal" },
+        { "id": "spk2", "name": "SPK2", "x": 64,   "y": 49, "type": "signal" }
+    ],
+
+    "properties": {
+        "info": "Reproductor de MP3 (lee una microSD). Se controla por UART: RX recibe lo que manda machine.UART desde el ESP32 (MP3PLAYER de mp3_player.py, siempre bus 2). SPK1/SPK2 van a una bocina."
+    }
+}

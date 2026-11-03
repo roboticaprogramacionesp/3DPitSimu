@@ -4645,18 +4645,26 @@ Blockly.Python["tcs34725_gain"] = function (block) {
 
 Blockly.Python["dfplayer_init"] = function (block) {
   const name = block.getFieldValue("NAME");
-  const id = block.getFieldValue("UART");
   const tx = block.getFieldValue("TX");
   const rx = block.getFieldValue("RX");
   const baud = block.getFieldValue("BAUD");
 
+  // BUG REAL: esto armaba un UART propio aparte y se lo pasaba a
+  // MP3PLAYER(uart_id) -- pero la librería real (ver
+  // components_wasm/libs/bundle.json, clave "mp3_player") NO acepta
+  // ningún objeto UART como argumento, es
+  // MP3PLAYER(baudrate=, tx=, rx=) y arma SU PROPIO UART(2, ...)
+  // adentro. El código generado tiraba NameError (nunca se importaba
+  // "UART" con "from machine import UART") y, aunque se arreglara
+  // eso, MP3PLAYER(uart_id) le pasaría un objeto UART donde la
+  // librería espera enteros -- TypeError de ahí en más. El dropdown
+  // "UART" del bloque queda sin usar a propósito: la librería real
+  // siempre usa el bus 2, cualquier otro valor elegido ahí nunca
+  // tuvo efecto ni en la librería real ni en ninguna otra parte.
   Blockly.Python.definitions_["import_mp3_player"] =
     "from mp3_player import MP3PLAYER";
 
-  const code = `uart_${id} = UART(${id}, baudrate=${baud}, tx=${tx}, rx=${rx})
-${name} = MP3PLAYER(uart_${id})\n`;
-
-  return code;
+  return `${name} = MP3PLAYER(baudrate=${baud}, tx=${tx}, rx=${rx})\n`;
 };
 
 Blockly.Python["dfplayer_play"] = function (block) {
