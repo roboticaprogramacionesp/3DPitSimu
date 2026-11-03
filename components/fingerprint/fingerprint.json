@@ -3,21 +3,21 @@
     "name": "Sensor de Huella FPM383C (SFM-V1.7)",
     "category": "Sensores",
 
-    "width": 866.14163,
-    "height": 866.14162,
+    "width": 72,
+    "height": 72,
 
     "svg": "components/fingerprint/fingerprint.svg",
 
     "pinShape": "square",
-    "pinSize": 32,
+    "pinSize": 4,
 
     "pins": [
-        { "id": "vcc",    "name": "VCC",    "x": 232.44, "y": 358.47, "type": "power",  "signal": "power", "voltage": 3.3 },
-        { "id": "gnd",    "name": "GND",    "x": 311.2,  "y": 358.47, "type": "ground", "signal": "ground" },
-        { "id": "tx",     "name": "TXD",    "x": 389.94, "y": 358.15, "type": "gpio",   "signal": "uart" },
-        { "id": "rx",     "name": "RXD",    "x": 468.68, "y": 358.15, "type": "gpio",   "signal": "uart" },
-        { "id": "touch",  "name": "TOUCH",  "x": 547.41, "y": 358.49, "type": "gpio",   "signal": "digital", "optional": true },
-        { "id": "wakeup", "name": "WAKEUP", "x": 626.15, "y": 358.17, "type": "gpio",   "signal": "digital", "optional": true }
+        { "id": "vcc",    "name": "VCC",    "x": 19.32, "y": 29.8, "type": "power",  "signal": "power", "voltage": 3.3 },
+        { "id": "gnd",    "name": "GND",    "x": 25.87, "y": 29.8, "type": "ground", "signal": "ground" },
+        { "id": "tx",     "name": "TXD",    "x": 32.41, "y": 29.77, "type": "gpio",   "signal": "uart" },
+        { "id": "rx",     "name": "RXD",    "x": 38.95, "y": 29.77, "type": "gpio",   "signal": "uart" },
+        { "id": "touch",  "name": "TOUCH",  "x": 45.5,  "y": 29.8, "type": "gpio",   "signal": "digital", "optional": true },
+        { "id": "wakeup", "name": "WAKEUP", "x": 52.04, "y": 29.77, "type": "gpio",   "signal": "digital", "optional": true }
     ],
 
     "properties": {
