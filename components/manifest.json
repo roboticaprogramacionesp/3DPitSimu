@@ -288,6 +288,11 @@
             "category": "Sensores"
         },
         {
+            "type": "ky-005",
+            "name": "KY-005 Transmisor Infrarrojo",
+            "category": "Sensores"
+        },
+        {
             "type": "tcs34725",
             "name": "TCS34725 Sensor de Color (I2C)",
             "category": "Sensores",

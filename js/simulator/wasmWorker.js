@@ -81,6 +81,7 @@ const KEYPAD_I2C_WASM_URL = new URL("../../components_wasm/_keypad_i2c_wasm.py",
 const ADC_BUS_WASM_URL   = new URL("../../components_wasm/_adc_bus_wasm.py", import.meta.url);
 const UART_BUS_WASM_URL  = new URL("../../components_wasm/_uart_bus_wasm.py", import.meta.url);
 const IR_RX_WASM_URL     = new URL("../../components_wasm/_ir_rx_wasm.py", import.meta.url);
+const IR_TX_WASM_URL     = new URL("../../components_wasm/_ir_tx_wasm.py", import.meta.url);
 const NEOPIXEL_WASM_URL  = new URL("../../components_wasm/_neopixel_wasm.py", import.meta.url);
 const DHT_WASM_URL       = new URL("../../components_wasm/_dht_wasm.py", import.meta.url);
 const ESPNOW_WASM_URL    = new URL("../../components_wasm/_espnow_wasm.py", import.meta.url);
@@ -310,6 +311,7 @@ self.onmessage = async (e) => {
             const adcP        = fetch(ADC_BUS_WASM_URL, NO_CACHE).then((r) => r.text());
             const uartP       = fetch(UART_BUS_WASM_URL, NO_CACHE).then((r) => r.text());
             const irRxP       = fetch(IR_RX_WASM_URL, NO_CACHE).then((r) => r.text());
+            const irTxP       = fetch(IR_TX_WASM_URL, NO_CACHE).then((r) => r.text());
             const neopixelP   = fetch(NEOPIXEL_WASM_URL, NO_CACHE).then((r) => r.text());
             const dhtP        = fetch(DHT_WASM_URL, NO_CACHE).then((r) => r.text());
             const espnowP     = fetch(ESPNOW_WASM_URL, NO_CACHE).then((r) => r.text());
@@ -349,6 +351,16 @@ self.onmessage = async (e) => {
             // primer "▶ Ejecutar", no hay orden real respecto a los
             // otros bloques de acá.
             await mp.runPython(await irRxP);
+
+            // KY-005 (transmisor IR) -- mismo criterio que ir_rx justo
+            // arriba, pero en la otra dirección: reemplaza "ir_tx"
+            // ENTERO (la librería real necesita esp32.RMT, que este
+            // build no tiene -- "from ir_tx import NEC" tiraba
+            // ImportError apenas se importaba). NEC.transmit() avisa
+            // por protocolo "IRTX:<addr>:<data>", que WasmBridge.js
+            // reenvía a SignalEngine.broadcastIrCode() -- el mismo
+            // camino que ya usa el control remoto virtual.
+            await mp.runPython(await irTxP);
 
             await mp.runPython(await neopixelP);
             await mp.runPython(await dhtP);

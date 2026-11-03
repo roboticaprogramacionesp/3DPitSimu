@@ -717,6 +717,24 @@ class WasmBridge {
             return true;
         }
 
+        if (line.startsWith("IRTX:")) {
+            // Formato: IRTX:<addr>:<cmd> -- ver _ir_tx_wasm.py (KY-005,
+            // NEC.transmit()). Un control remoto real es broadcast (sin
+            // "emparejar" con nada), mismo criterio que
+            // SignalEngine.broadcastIrCode() ya usa para el control
+            // remoto virtual (IrRemotePanel.js) -- cualquier KY-022 bien
+            // cableado y alimentado en el lienzo lo recibe.
+            const parts = line.slice("IRTX:".length).split(":");
+            if (parts.length >= 2) {
+                const addr = parseInt(parts[0], 10);
+                const cmd = parseInt(parts[1], 10);
+                if (!Number.isNaN(addr) && !Number.isNaN(cmd)) {
+                    this.simulator.signalEngine.broadcastIrCode(addr, cmd);
+                }
+            }
+            return true;
+        }
+
         if (line.startsWith("BLE_ADV:")) {
             // Formato: BLE_ADV:<nombre hex> -- ver _bluetooth_wasm.py
             // (BLE.gap_advertise(), solo cuando reconoce el Nordic
