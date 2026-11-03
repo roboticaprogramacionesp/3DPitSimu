@@ -362,6 +362,12 @@
             "name": "INMP441 Micrófono I2S",
             "category": "Sensores",
             "hasBehavior": true
+        },
+        {
+            "type": "yf201",
+            "name": "YF-S201 Sensor de Flujo",
+            "category": "Sensores",
+            "hasBehavior": true
         }
     ]
 }

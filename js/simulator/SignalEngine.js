@@ -68,6 +68,17 @@ class SignalEngine {
 
     this.simulator.eventBus.on("wire:added", () => this.evaluateAll());
     this.simulator.eventBus.on("wire:removed", () => this.evaluateAll());
+
+    // Cortar TODOS los pulsos simulados de YF-S201 al detener la
+    // simulación -- ver _restartYf201Pulse() más abajo. Sin esto, el
+    // setInterval de un sensor con caudal>0 seguiría mandando "IN:"
+    // al Worker ya terminado para siempre (y arrancaría de nuevo mal
+    // sincronizado si se vuelve a simular sin pasar por acá).
+    this.simulator.eventBus.on("simulation:stopped", () => {
+      this.simulator.componentManager.getAll()
+        .filter((c) => c.type === "yf201")
+        .forEach((c) => this._stopYf201Pulse(c));
+    });
   }
 
   // ====================================================
@@ -2049,6 +2060,114 @@ class SignalEngine {
   broadcastIrCode(addr, cmd) {
     const receivers = this.simulator.componentManager.getAll().filter((c) => c.type === "ky-022");
     receivers.forEach((comp) => this.sendIrCode(comp.id, addr, cmd));
+  }
+
+  // ====================================================
+  // YF-S201 (sensor de flujo de agua) -- a diferencia de un sensor
+  // analógico (joystick/potenciómetro/LDR, un solo valor por "ADC:"),
+  // este es un sensor de PULSOS digitales: la frecuencia de los
+  // pulsos ES la medición (más caudal, pulsos más seguidos), el
+  // código real del alumno los cuenta con Pin.irq() -- no hay ningún
+  // "valor" único que mandar, hay que generar el tren de pulsos de
+  // verdad, con el timing real del datasheet (F(Hz) = 7.5 × caudal
+  // en L/min), mientras dura la simulación.
+  // ====================================================
+
+  // Mismo criterio que _resolveKy022Gpio -- a qué GPIO del ESP32 está
+  // cableado el pin de señal de este componente.
+  _resolveYf201Gpio(component) {
+    const net = this.getNet(`${component.id}:signal`);
+    for (const key of net) {
+      const [cId, pId] = key.split(":");
+      const comp = this.simulator.componentManager.get(cId);
+      if (!comp || !comp.type.startsWith("esp32")) continue;
+      const match = pId.match(/^io(\d+)$/);
+      if (match) return { esp32Id: cId, gpio: parseInt(match[1], 10) };
+    }
+    return null;
+  }
+
+  // Llamado por yf201.behavior.js al mover el slider "Caudal
+  // simulado" del panel de propiedades -- guarda el valor Y
+  // arranca/para el tren de pulsos acorde.
+  setYf201FlowRate(component, lMin) {
+    component.properties = component.properties || {};
+    component.properties.flujo_lmin = Math.max(0, lMin);
+    this._restartYf201Pulse(component);
+  }
+
+  // Se llama también al arrancar la simulación (ver "resync" en
+  // yf201.behavior.js, mismo criterio que ky_001/ky_040/etc.) --
+  // así un caudal ya seteado antes de apretar ▶ Simular arranca sus
+  // pulsos de una, sin que el alumno tenga que tocar el slider de
+  // nuevo.
+  //
+  // BUG REAL encontrado probando esto en vivo: con setInterval()
+  // simple (un pulso por tick, delay fijo) a frecuencias de caudal
+  // altas (ej. 10 L/min = 75Hz = 6.7ms de medio período) el navegador
+  // NO logra despertar el timer con esa precisión -- confirmado
+  // contando pulsos reales recibidos del lado Python: ~29% menos de
+  // los que deberían haber llegado en el mismo tiempo. En vez de eso,
+  // se agenda contra un reloj absoluto (performance.now()) y en cada
+  // tick se mandan TANTOS pulsos como hagan falta para ponerse al día
+  // -- el PROMEDIO de frecuencia a lo largo del tiempo queda bien
+  // aunque el navegador despierte el timer tarde o de forma
+  // irregular (a Pin.irq() del lado del alumno no le importa si los
+  // pulsos llegan perfectamente espaciados o en una rafaguita corta,
+  // solo que lleguen y se cuenten).
+  _restartYf201Pulse(component) {
+
+    this._stopYf201Pulse(component);
+
+    const lMin = component.properties?.flujo_lmin || 0;
+    if (lMin <= 0 || !this.simulator.isRunning) return;
+    if (!this.isComponentPowered(component)) return;
+
+    // F(Hz) = 7.5 × Q(L/min) -- fórmula real del datasheet YF-S201.
+    // Medio período HIGH, medio período LOW -- onda cuadrada simple,
+    // no hace falta imitar ninguna forma de pulso más realista para
+    // que Pin.irq() cuente flancos bien.
+    const hz = lMin * 7.5;
+    const halfPeriodMs = 500 / hz;
+
+    const state = { value: 0, nextTime: performance.now() + halfPeriodMs, timeoutId: null, cancelled: false };
+    component._yf201State = state;
+
+    const tick = () => {
+
+      if (state.cancelled) return;
+
+      const now = performance.now();
+      // Tope de seguridad (50) -- si por lo que sea el tab estuvo
+      // minimizado/congelado un buen rato, no hay que mandar miles de
+      // pulsos atrasados de una sola vez al volver.
+      for (let sent = 0; state.nextTime <= now && sent < 50; sent++) {
+        state.value = state.value ? 0 : 1;
+        this._sendYf201Pulse(component, state.value);
+        state.nextTime += halfPeriodMs;
+      }
+
+      state.timeoutId = setTimeout(tick, Math.max(0, state.nextTime - performance.now()));
+
+    };
+
+    tick();
+
+  }
+
+  _stopYf201Pulse(component) {
+    if (!component._yf201State) return;
+    component._yf201State.cancelled = true;
+    clearTimeout(component._yf201State.timeoutId);
+    component._yf201State = null;
+  }
+
+  _sendYf201Pulse(component, value) {
+    const resolved = this._resolveYf201Gpio(component);
+    if (!resolved) return;
+    const bridge = this.simulator.bridges.get(resolved.esp32Id);
+    if (!bridge?.connected) return;
+    bridge.sendData(`IN:${resolved.gpio}:${value}`);
   }
 
   // ====================================================
