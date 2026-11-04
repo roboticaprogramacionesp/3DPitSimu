@@ -409,7 +409,8 @@ body{
 }
 
 /* Pestaña para reabrir el panel colapsado */
-#propsReopenTab{
+/* Contenedor: candado + pestaña, pegados al borde derecho */
+#propsSideTabs{
 
     position:absolute;
 
@@ -420,6 +421,66 @@ body{
     transform:translateY(-50%);
 
     display:none;
+
+    flex-direction:column;
+
+    align-items:flex-end;
+
+    gap:6px;
+
+    z-index:5;
+
+}
+
+#mainLayout.props-collapsed #propsSideTabs{
+
+    display:flex;
+
+}
+
+#propsLockTab{
+
+    background:#2b2d31;
+
+    border:1px solid #444;
+
+    border-right:none;
+
+    border-radius:6px 0 0 6px;
+
+    color:#ccc;
+
+    cursor:pointer;
+
+    padding:6px 8px;
+
+    font-size:13px;
+
+    line-height:1;
+
+}
+
+#propsLockTab:hover{
+
+    border-color:#4da3ff;
+
+}
+
+/* Candado puesto: resaltado para que se note que el panel no se abre solo */
+#propsLockTab.active,
+#btnLockPanel.active{
+
+    background:#e0a030;
+
+    border-color:#e0a030;
+
+    color:#1e1f22;
+
+}
+
+#propsReopenTab{
+
+    display:block;
 
     background:#2b2d31;
 
@@ -448,12 +509,6 @@ body{
     color:#fff;
 
     border-color:#4da3ff;
-
-}
-
-#mainLayout.props-collapsed #propsReopenTab{
-
-    display:block;
 
 }
 

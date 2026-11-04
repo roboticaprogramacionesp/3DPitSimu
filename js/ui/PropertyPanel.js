@@ -35,6 +35,18 @@ class PropertyPanel {
 
         this.reopenTab = document.getElementById("propsReopenTab");
 
+        // 🔒 "No abrir solo": mientras está puesto, seleccionar un
+        // componente/cable NO despliega el panel (útil al cablear, para
+        // que no tape el lienzo). Hay dos botones (encabezado del panel
+        // y junto a la pestaña "◀ Propiedades", visible con el panel
+        // cerrado) que controlan el mismo estado.
+        this.lockBtns  = ["btnLockPanel", "propsLockTab"]
+            .map((id) => document.getElementById(id))
+            .filter(Boolean);
+
+        this.autoOpenBlocked = false;
+        try { this.autoOpenBlocked = localStorage.getItem("pit_props_lock") === "1"; } catch (e) { /* sin storage */ }
+
         this.layout    = document.getElementById("mainLayout");
 
 
@@ -50,6 +62,8 @@ class PropertyPanel {
         this.bindBusEvents();
 
         this.clear();
+
+        this._refreshLockButtons();
 
 
     }
@@ -73,7 +87,14 @@ class PropertyPanel {
 
             this.pinBtn.classList.toggle("active", this.pinned);
 
+            // Fijar abierto y "no abrir solo" se contradicen: fijar gana.
+            if (this.pinned && this.autoOpenBlocked) this.setAutoOpenBlocked(false);
+
         });
+
+        this.lockBtns.forEach((btn) => btn.addEventListener("click", () => {
+            this.setAutoOpenBlocked(!this.autoOpenBlocked);
+        }));
 
 
         // Reabrir panel colapsado
@@ -196,13 +217,53 @@ class PropertyPanel {
     // ====================================================
 
 
+    // ====================================================
+    // 🔒 No abrir solo al seleccionar
+    // ====================================================
+
+    setAutoOpenBlocked(blocked) {
+
+        this.autoOpenBlocked = blocked;
+        try { localStorage.setItem("pit_props_lock", blocked ? "1" : "0"); } catch (e) { /* sin storage */ }
+
+        if (blocked) {
+            // Se cierra ya (el contenido queda armado: la pestaña lo reabre).
+            this.pinned = false;
+            this.pinBtn?.classList.remove("active");
+            this.layout?.classList.add("props-collapsed");
+        } else if (this.current || this.currentWireId) {
+            // Al quitar el candado se ve lo que esté seleccionado.
+            this.layout?.classList.remove("props-collapsed");
+        }
+
+        this._refreshLockButtons();
+
+    }
+
+    _refreshLockButtons() {
+
+        for (const btn of this.lockBtns) {
+            btn.classList.toggle("active", this.autoOpenBlocked);
+            btn.textContent = this.autoOpenBlocked ? "🔒" : "🔓";
+            btn.title = this.autoOpenBlocked
+                ? "El panel NO se abre solo al seleccionar. Clic para que vuelva a abrirse solo."
+                : "Clic para que el panel NO se abra solo al seleccionar (útil mientras conectas cables).";
+        }
+
+    }
+
+    // Abre el panel al seleccionar algo, salvo que esté puesto el 🔒.
+    _autoOpen() {
+        if (!this.autoOpenBlocked) this.layout?.classList.remove("props-collapsed");
+    }
+
     show(component) {
 
         this.current = component;
         this.currentWireId = null;
 
-        // Abrir el panel si estaba colapsado
-        this.layout?.classList.remove("props-collapsed");
+        // Abrir el panel si estaba colapsado (salvo con el 🔒 puesto)
+        this._autoOpen();
 
         // Todos los tipos con panel especial ya migraron a
         // ComponentBehaviorRegistry (ver ese archivo) -- un tipo nuevo
@@ -256,7 +317,7 @@ class PropertyPanel {
 
     showPreview(definition, type) {
 
-        this.layout?.classList.remove("props-collapsed");
+        this._autoOpen();
 
         this.content.innerHTML = "";
 
@@ -991,7 +1052,7 @@ class PropertyPanel {
         this.current       = null;
         this.currentWireId = wire.id;
 
-        this.layout?.classList.remove("props-collapsed");
+        this._autoOpen();
 
         this.content.innerHTML = "";
 

@@ -199,6 +199,7 @@
             <h3>
                 Propiedades
                 <button id="btnPinPanel" class="panel-pin-btn" title="Fijar panel">📌</button>
+                <button id="btnLockPanel" class="panel-pin-btn" title="No abrir solo al seleccionar (útil mientras conectas cables)">🔒</button>
             </h3>
 
             <div id="propertyContent">
@@ -208,7 +209,10 @@
         </aside>
 
         <!-- Pestaña para reabrir el panel cuando está colapsado -->
-        <button id="propsReopenTab" title="Mostrar propiedades">◀ Propiedades</button>
+        <div id="propsSideTabs">
+            <button id="propsLockTab" title="">🔓</button>
+            <button id="propsReopenTab" title="Mostrar propiedades">◀ Propiedades</button>
+        </div>
 
     </main>
 
