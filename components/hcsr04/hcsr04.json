@@ -12,7 +12,6 @@
       "id": "vcc",
       "name": "VCC (+)",
       "type": "power",
-      "voltage": 5,
       "x": 52.087,
       "y": 52.875
     },
