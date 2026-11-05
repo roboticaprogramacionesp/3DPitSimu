@@ -439,13 +439,12 @@ class ContextMenu {
             items.push({
                 label: "Borrar este codo",
                 action: () => {
-                    const removedPoint = wire.points[elbowIndex];
+                    if (!wire.points[elbowIndex]) return;
+                    const before = WireManager.clonePoints(wire.points);
                     wire.points.splice(elbowIndex, 1);
+                    wireManager.sanitizeSelection();
                     wireManager.renderAll();
-                    this.simulator.history.push({
-                        undo: () => { wire.points.splice(elbowIndex, 0, removedPoint); wireManager.renderAll(); },
-                        redo: () => { wire.points.splice(elbowIndex, 1); wireManager.renderAll(); }
-                    });
+                    wireManager.pushPointsChange(wire, before, wire.points);
                 }
             });
             items.push("separator");
@@ -459,12 +458,8 @@ class ContextMenu {
                 wireManager.selectedWire = null;
                 this.simulator.eventBus.emit("wire:selected", null);
                 this.simulator.history.push({
-                    undo: () => {
-                        wireManager.wires.push(wire);
-                        wireManager.renderAll();
-                        this.simulator.eventBus.emit("wire:added", wire);
-                    },
-                    redo: () => { wireManager.removeWire(wire.id); }
+                    undo: () => wireManager.restoreWire(wire),
+                    redo: () => wireManager.removeWire(wire.id),
                 });
             }
         });

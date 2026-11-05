@@ -52,13 +52,50 @@ class HistoryManager {
     // Deshacer / rehacer
     //------------------------------------------------------
 
+    // Mientras la simulación corre el circuito está bloqueado (no se
+    // pueden mover ni borrar cables/componentes): deshacer tampoco debe
+    // poder cambiarlo por detrás, o la simulación queda con cables que
+    // ya no existen.
+    _blocked() {
+        return !!this.simulator.isRunning;
+    }
+
+    // Ejecutar un paso sin que un error deje el historial a medias:
+    // antes, si un undo() fallaba, el paso ya se había sacado de la
+    // pila y no volvía a ninguna -- desde ahí Ctrl+Z/Ctrl+Y quedaban
+    // desfasados del dibujo.
+    _run(fn) {
+        try {
+            const r = fn();
+            if (r && typeof r.then === "function") {
+                r.catch(err => console.error("[Historial]", err))
+                 .finally(() => this._afterStep());
+            }
+            return true;
+        } catch (err) {
+            console.error("[Historial]", err);
+            return false;
+        } finally {
+            this._afterStep();
+        }
+    }
+
+    _afterStep() {
+        const wm = this.simulator.wireManager;
+        if (!wm) return;
+        wm.sanitizeSelection?.();
+        wm.renderAll?.();
+    }
+
     undo() {
+
+        if (this._blocked()) return;
 
         const command = this.undoStack.pop();
         if (!command) return;
 
-        command.undo();
-        this.redoStack.push(command);
+        if (this._run(() => command.undo())) this.redoStack.push(command);
+        else this.undoStack.push(command);
 
         // Antes esto NO emitía nada, y ProjectManager solo escuchaba el
         // "push()" de arriba (vía un parche sobre este mismo método) --
@@ -73,11 +110,13 @@ class HistoryManager {
 
     redo() {
 
+        if (this._blocked()) return;
+
         const command = this.redoStack.pop();
         if (!command) return;
 
-        command.redo();
-        this.undoStack.push(command);
+        if (this._run(() => command.redo())) this.undoStack.push(command);
+        else this.redoStack.push(command);
 
         // Mismo motivo que en undo() de arriba.
         this.simulator.eventBus.emit("history:changed", { action: "redo" });

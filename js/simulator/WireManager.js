@@ -372,8 +372,19 @@ class WireManager {
             return;
         }
 
-        this.addWire(this.pendingFrom, { componentId, pinId });
+        const wire = this.addWire(this.pendingFrom, { componentId, pinId });
         this.cancelWire();
+
+        // Antes trazar un cable NO entraba al historial: Ctrl+Z
+        // deshacía lo anterior (ej. quitaba el componente recién puesto
+        // y con él se perdían en silencio los cables, sin poder
+        // rehacerlos).
+        if (wire) {
+            this.simulator.history.push({
+                undo: () => this.removeWire(wire.id),
+                redo: () => this.restoreWire(wire),
+            });
+        }
 
     }
 
@@ -464,6 +475,10 @@ class WireManager {
                 const b = allPoints[segmentIndex + 1];
                 if (!a || !b) return;
 
+                // Foto de los codos ANTES de tocar nada (incluido el
+                // "bakeado" de abajo), para que deshacer vuelva justo acá.
+                const beforePoints = WireManager.clonePoints(wire.points);
+
                 // ── "Bakear" los codos automáticos ──────────────────────
                 // buildOrthogonalPoints() puede insertar codos "virtuales"
                 // (que no existen en wire.points) para cualquier tramo entre
@@ -535,7 +550,8 @@ class WireManager {
                     leftWasNew,
                     rightWasNew,
                     startLeft,
-                    startRight
+                    startRight,
+                    beforePoints
                 };
                 this.dragStartPos = { x: e.clientX, y: e.clientY };
                 this.capturePointer(e.pointerId);
@@ -571,15 +587,11 @@ class WireManager {
             const wireId     = handle.getAttribute("data-wire-id");
             const pointIndex = parseInt(handle.getAttribute("data-point-index"), 10);
             const wire = this.wires.find(w => w.id === wireId);
-            if (wire) {
-                const removedPoint = wire.points[pointIndex];
+            if (wire && wire.points[pointIndex]) {
+                const before = WireManager.clonePoints(wire.points);
                 wire.points.splice(pointIndex, 1);
-                this.renderAll();
-
-                this.simulator.history.push({
-                    undo: () => { wire.points.splice(pointIndex, 0, removedPoint); this.renderAll(); },
-                    redo: () => { wire.points.splice(pointIndex, 1); this.renderAll(); }
-                });
+                this.setSelectedPoint(null);
+                this.pushPointsChange(wire, before, wire.points);
             }
             return;
         }
@@ -695,46 +707,16 @@ class WireManager {
 
                     if (moved < 4) {
 
-                        // No hubo arrastre real: se descartan los puntos que
-                        // se hayan insertado (si el ancla era un pin) para no
-                        // dejar un nodo fantasma, y se restauran los puntos
-                        // existentes a su valor original. Se elimina primero
-                        // el índice mayor para no desfasar el menor.
-                        if (drag.rightWasNew) wire.points.splice(drag.rightIndex, 1);
-                        else wire.points[drag.rightIndex] = { ...drag.startRight };
-
-                        if (drag.leftWasNew) wire.points.splice(drag.leftIndex, 1);
-                        else wire.points[drag.leftIndex] = { ...drag.startLeft };
+                        // No hubo arrastre real: el cable vuelve exactamente
+                        // a como estaba (sin nodos fantasma ni codos bakeados).
+                        wire.points = WireManager.clonePoints(drag.beforePoints);
 
                         this.setSelectedWire(wire.id);
                         this.setSelectedPoint(null);
 
                     } else {
 
-                        const finalLeft  = { ...wire.points[drag.leftIndex] };
-                        const finalRight = { ...wire.points[drag.rightIndex] };
-                        const { leftIndex, rightIndex, leftWasNew, rightWasNew, startLeft, startRight } = drag;
-
-                        this.simulator.history.push({
-                            undo: () => {
-                                if (rightWasNew) wire.points.splice(rightIndex, 1);
-                                else wire.points[rightIndex] = { ...startRight };
-
-                                if (leftWasNew) wire.points.splice(leftIndex, 1);
-                                else wire.points[leftIndex] = { ...startLeft };
-
-                                this.renderAll();
-                            },
-                            redo: () => {
-                                if (leftWasNew) wire.points.splice(leftIndex, 0, { ...finalLeft });
-                                else wire.points[leftIndex] = { ...finalLeft };
-
-                                if (rightWasNew) wire.points.splice(rightIndex, 0, { ...finalRight });
-                                else wire.points[rightIndex] = { ...finalRight };
-
-                                this.renderAll();
-                            }
-                        });
+                        this.pushPointsChange(wire, drag.beforePoints, wire.points);
 
                     }
 
@@ -895,18 +877,15 @@ class WireManager {
             const wire = this.wires.find(w => w.id === selectedPoint.wireId);
             if (!wire || !wire.points[selectedPoint.pointIndex]) return;
 
+            const beforePoints = WireManager.clonePoints(wire.points);
             const before = wire.points[selectedPoint.pointIndex];
-            const after = {
+            wire.points[selectedPoint.pointIndex] = {
                 ...before,
                 x: Utils.snapToGrid(before.x + dx, this.simulator.gridSize, this.snapEnabled),
                 y: Utils.snapToGrid(before.y + dy, this.simulator.gridSize, this.snapEnabled)
             };
-            wire.points[selectedPoint.pointIndex] = after;
             this.renderAll();
-            this.simulator.history.push({
-                undo: () => { wire.points[selectedPoint.pointIndex] = before; this.renderAll(); },
-                redo: () => { wire.points[selectedPoint.pointIndex] = after; this.renderAll(); }
-            });
+            this.pushPointsChange(wire, beforePoints, wire.points);
             return;
         }
 
@@ -916,19 +895,17 @@ class WireManager {
             const wire = this.wires.find(w => w.id === selectedWireId);
             if (!wire) return;
 
-            const beforePoints = wire.points.map(p => ({ ...p }));
-            const afterPoints = wire.points.map(p => ({
+            const beforePoints = WireManager.clonePoints(wire.points);
+            wire.points = wire.points.map(p => ({
                 ...p,
                 x: Utils.snapToGrid(p.x + dx, this.simulator.gridSize, this.snapEnabled),
                 y: Utils.snapToGrid(p.y + dy, this.simulator.gridSize, this.snapEnabled)
             }));
-
-            wire.points = afterPoints;
             this.renderAll();
-            this.simulator.history.push({
-                undo: () => { wire.points = beforePoints; this.renderAll(); },
-                redo: () => { wire.points = afterPoints; this.renderAll(); }
-            });
+            // Copias (no los mismos arrays): antes deshacer dejaba en el
+            // cable el MISMO array guardado en el historial, y el
+            // siguiente arrastre lo modificaba "por dentro".
+            this.pushPointsChange(wire, beforePoints, wire.points);
             return;
         }
 
@@ -1104,19 +1081,82 @@ class WireManager {
 
     removeWire(id) {
         this.wires = this.wires.filter(w => w.id !== id);
+        this.sanitizeSelection();
         this.renderAll();
         this.simulator.eventBus.emit("wire:removed", id);
     }
 
     removeWiresForComponent(componentId) {
-        this.wires = this.wires.filter(w =>
-            w.from.componentId !== componentId && w.to.componentId !== componentId
+        const removed = this.wires.filter(w =>
+            w.from.componentId === componentId || w.to.componentId === componentId
         );
-        if (this.selectedPoint && !this.wires.find(w => w.id === this.selectedPoint.wireId))
-            this.selectedPoint = null;
-        if (this.selectedWire && !this.wires.find(w => w.id === this.selectedWire))
-            this.selectedWire = null;
+        this.wires = this.wires.filter(w => !removed.includes(w));
+        this.sanitizeSelection();
         this.renderAll();
+        // Antes no avisaba: el motor de señales seguía viendo los cables
+        // de un componente ya borrado hasta el próximo cambio.
+        removed.forEach(w => this.simulator.eventBus.emit("wire:removed", w.id));
+    }
+
+    // Volver a poner un cable borrado (deshacer un borrado / rehacer una
+    // creación). Es el MISMO objeto, así los demás pasos del historial
+    // que lo referencian siguen apuntando a él. Si ya está, no se
+    // duplica (antes un deshacer repetido podía dejar dos copias del
+    // mismo cable, que se seleccionaban y borraban juntas).
+    restoreWire(wire) {
+        if (!wire || this.wires.includes(wire)) return;
+        if (!Array.isArray(wire.points)) wire.points = [];
+        this.wires.push(wire);
+        this.ensureUniqueWireIds();
+        this.renderAll();
+        this.simulator.eventBus.emit("wire:added", wire);
+    }
+
+    // Copia profunda de los codos de un cable.
+    static clonePoints(points) {
+        return (points || [])
+            .filter(p => p && Number.isFinite(p.x) && Number.isFinite(p.y))
+            .map(p => ({ ...p }));
+    }
+
+    // Registrar en el historial un cambio en la forma de un cable
+    // guardando la lista COMPLETA de codos antes y después.
+    //
+    // Antes cada acción guardaba solo "el punto número N": si después el
+    // cable se reacomodaba (al arrastrar un tramo se materializan los
+    // codos automáticos y cambia la cantidad de puntos), deshacer
+    // escribía en el índice equivocado -> zigzags, o directamente un
+    // error que dejaba el historial a medias. Con la lista completa,
+    // deshacer siempre deja el cable exactamente como estaba.
+    pushPointsChange(wire, before, after) {
+        const b = WireManager.clonePoints(before);
+        const a = WireManager.clonePoints(after);
+        if (JSON.stringify(a) === JSON.stringify(b)) return;
+        const apply = (pts) => {
+            wire.points = WireManager.clonePoints(pts);
+            this.sanitizeSelection();
+            this.renderAll();
+        };
+        this.simulator.history.push({
+            undo: () => apply(b),
+            redo: () => apply(a),
+        });
+    }
+
+    // Quitar de la selección cables/codos que ya no existen (por ej.
+    // después de deshacer). Sin esto, apretar Supr con un codo
+    // "fantasma" seleccionado metía un punto vacío en el cable y el
+    // dibujo de todos los cables fallaba.
+    sanitizeSelection() {
+        const sp = this.selectedPoint;
+        if (sp) {
+            const w = this.wires.find(x => x.id === sp.wireId);
+            if (!w || !w.points[sp.pointIndex]) this.selectedPoint = null;
+        }
+        if (this.selectedWire && !this.wires.find(w => w.id === this.selectedWire)) {
+            this.selectedWire = null;
+            this.simulator.eventBus.emit("wire:selected", null);
+        }
     }
 
     //------------------------------------------------------

@@ -255,12 +255,11 @@ class DragManager {
                         m.component.setPosition(m.startX, m.startY);
                         this.simulator.eventBus.emit("component:moved", m.component);
                     });
-                    wireMoves.forEach(wm => {
-                        wm.wire.points.forEach((p, i) => {
-                            p.x = wm.startPoints[i].x;
-                            p.y = wm.startPoints[i].y;
-                        });
-                    });
+                    // Lista completa, no punto por punto: si mientras tanto
+                    // el cable cambió de cantidad de codos, el recorrido
+                    // por índice fallaba (startPoints[i] undefined) y
+                    // el deshacer se cortaba a medias.
+                    wireMoves.forEach(wm => { wm.wire.points = WireManager.clonePoints(wm.startPoints); });
                     if (wireManager && wireMoves.length > 0) wireManager.renderAll();
                     this.simulator.selectionManager.renderHighlight();
                 },
@@ -269,12 +268,7 @@ class DragManager {
                         m.component.setPosition(m.endX, m.endY);
                         this.simulator.eventBus.emit("component:moved", m.component);
                     });
-                    wireMoves.forEach(wm => {
-                        wm.wire.points.forEach((p, i) => {
-                            p.x = wm.endPoints[i].x;
-                            p.y = wm.endPoints[i].y;
-                        });
-                    });
+                    wireMoves.forEach(wm => { wm.wire.points = WireManager.clonePoints(wm.endPoints); });
                     if (wireManager && wireMoves.length > 0) wireManager.renderAll();
                     this.simulator.selectionManager.renderHighlight();
                 }

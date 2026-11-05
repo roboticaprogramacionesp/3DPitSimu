@@ -70,11 +70,14 @@ class Toolbar {
         btnRedo?.addEventListener("click", () => this.simulator.history.redo());
 
         const updateUndoRedoState = () => {
-            if (btnUndo) btnUndo.disabled = this.simulator.history.undoStack.length === 0;
-            if (btnRedo) btnRedo.disabled = this.simulator.history.redoStack.length === 0;
+            const running = !!this.simulator.isRunning;
+            if (btnUndo) btnUndo.disabled = running || this.simulator.history.undoStack.length === 0;
+            if (btnRedo) btnRedo.disabled = running || this.simulator.history.redoStack.length === 0;
         };
 
         this.simulator.eventBus.on("history:changed", updateUndoRedoState);
+        this.simulator.eventBus.on("simulation:started", updateUndoRedoState);
+        this.simulator.eventBus.on("simulation:stopped", updateUndoRedoState);
         this.simulator.eventBus.on("project:new", updateUndoRedoState);
         updateUndoRedoState();
 

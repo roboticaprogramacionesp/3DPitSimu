@@ -660,17 +660,14 @@ class Simulator {
 
             const wire = this.wireManager.wires.find(w => w.id === selectedPoint.wireId);
 
-            if (wire) {
+            // Solo si el codo todavía existe (después de un deshacer el
+            // índice guardado puede quedar fuera de rango: antes eso metía
+            // un punto vacío en el cable y rompía el dibujo).
+            if (wire && wire.points[selectedPoint.pointIndex]) {
 
-                const pointIndex = selectedPoint.pointIndex;
-                const removedPoint = wire.points[pointIndex];
-
-                wire.points.splice(pointIndex, 1);
-
-                this.history.push({
-                    undo: () => { wire.points.splice(pointIndex, 0, removedPoint); this.wireManager.renderAll(); },
-                    redo: () => { wire.points.splice(pointIndex, 1); this.wireManager.renderAll(); }
-                });
+                const before = WireManager.clonePoints(wire.points);
+                wire.points.splice(selectedPoint.pointIndex, 1);
+                this.wireManager.pushPointsChange(wire, before, wire.points);
 
             }
 
@@ -694,14 +691,8 @@ class Simulator {
             if (wire) {
 
                 this.history.push({
-                    undo: () => {
-                        this.wireManager.wires.push(wire);
-                        this.wireManager.renderAll();
-                        this.eventBus.emit("wire:added", wire);
-                    },
-                    redo: () => {
-                        this.wireManager.removeWire(wire.id);
-                    }
+                    undo: () => this.wireManager.restoreWire(wire),
+                    redo: () => this.wireManager.removeWire(wire.id),
                 });
 
             }
@@ -732,13 +723,11 @@ class Simulator {
         this.selectionManager.clear();
 
         this.history.push({
-            undo: () => {
-                removed.forEach(component => this.addComponent(component));
-                removedWires.forEach(wire => this.wireManager.wires.push(wire));
-                this.wireManager.ensureUniqueWireIds();
-                this.wireManager.renderAll();
-            },
-            redo: () => { removed.forEach(component => this.removeComponent(component.id)); }
+            undo: () => this.restoreComponents(removed, removedWires),
+            redo: () => {
+                this.selectionManager.clear();
+                removed.forEach(component => this.removeComponent(component.id));
+            }
         });
 
     }
@@ -748,6 +737,18 @@ class Simulator {
     Agregar componente (ya construido) y dibujarlo
     ======================================================
     */
+
+    // Deshacer el borrado de componentes: primero esperar a que cada
+    // componente esté dibujado y LUEGO reconectar sus cables (antes los
+    // cables se ponían antes de que el componente existiera en pantalla
+    // y el motor de señales no se enteraba de que habían vuelto).
+    async restoreComponents(components, wires) {
+        await Promise.all(components
+            .filter(c => !this.componentManager.get(c.id))
+            .map(c => this.addComponent(c)));
+        wires.forEach(w => this.wireManager.restoreWire(w));
+        this.wireManager.renderAll();
+    }
 
     async addComponent(component) {
 

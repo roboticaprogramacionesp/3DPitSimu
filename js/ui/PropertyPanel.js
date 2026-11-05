@@ -916,13 +916,11 @@ class PropertyPanel {
             this.simulator.removeComponent(component.id);
 
             this.simulator.history.push({
-                undo: () => {
-                    this.simulator.addComponent(component);
-                    removedWires.forEach(wire => this.simulator.wireManager.wires.push(wire));
-                    this.simulator.wireManager.ensureUniqueWireIds();
-                    this.simulator.wireManager.renderAll();
-                },
-                redo: () => this.simulator.removeComponent(component.id)
+                undo: () => this.simulator.restoreComponents([component], removedWires),
+                redo: () => {
+                    this.simulator.selectionManager.clear();
+                    this.simulator.removeComponent(component.id);
+                }
             });
 
             this.clear();
