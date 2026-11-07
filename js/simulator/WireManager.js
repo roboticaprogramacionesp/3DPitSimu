@@ -482,6 +482,17 @@ class WireManager {
                 // "bakeado" de abajo), para que deshacer vuelva justo acá.
                 const beforePoints = WireManager.clonePoints(wire.points);
 
+                // A partir de ACÁ, este cable queda "ruteado a mano" --
+                // ver el comentario grande en DragManager.startDrag()
+                // sobre por qué esto importa: mientras no se toque este
+                // tirador, mover cualquiera de los dos componentes
+                // puede resetear los codos a un trazado limpio de
+                // vuelta; en cuanto el usuario arregla el tramo A MANO
+                // acá, esa reconstrucción automática se apaga para
+                // SIEMPRE en este cable (su forma ya es intención
+                // explícita, no un resto de un trazado viejo).
+                wire.autoRouted = false;
+
                 // ── "Bakear" los codos automáticos ──────────────────────
                 // buildOrthogonalPoints() puede insertar codos "virtuales"
                 // (que no existen en wire.points) para cualquier tramo entre
@@ -1145,6 +1156,14 @@ class WireManager {
             id: Utils.generateId("wire"),
             from, to,
             points,
+            // Ver DragManager.startDrag() -- mientras el usuario no
+            // haya clickeado codos a mano dibujando este cable
+            // (pendingPoints vacío, el caso más común: un cable
+            // derecho de pin a pin), queda "auto-ruteado": mover
+            // cualquiera de los dos componentes lo puede reconstruir
+            // limpio de vuelta en vez de arrastrar codos viejos que ya
+            // no tienen sentido con la nueva posición.
+            autoRouted: manualPoints.length === 0,
             color: WireManager.colorForPins(pinFrom, pinTo),
             // Tipo de conector real para armar el circuito FÍSICO (ver
             // PropertyPanel._renderWire() -- el usuario lo puede

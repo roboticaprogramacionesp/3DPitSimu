@@ -177,7 +177,15 @@ class ProjectManager {
             to: { ...wire.to },
             points: wire.points.map(p => ({ ...p })),
             color: wire.color,
-            connectorType: wire.connectorType
+            connectorType: wire.connectorType,
+            // Sin esto, guardar y volver a abrir el proyecto perdía la
+            // marca de "este cable lo acomodé a mano" (ver
+            // WireManager.onWireLayerDown()/DragManager.startDrag()) --
+            // al reabrir, cualquier cable con una forma elegida a
+            // propósito volvía a quedar "auto-ruteado" por default, y
+            // el próximo arrastre de un componente se la tiraba sin
+            // avisar.
+            autoRouted: wire.autoRouted !== false,
         }));
 
         const annotations = this.simulator.annotationManager?.serialize() || [];
@@ -289,6 +297,13 @@ class ProjectManager {
                     // recién dibujado usaría.
                     connectorType: wireData.connectorType
                         || WireManager.defaultConnectorType(this.simulator, wireData.from, wireData.to),
+                    // Campo nuevo también -- un proyecto de ANTES de
+                    // este fix no lo trae (undefined), y como la mejora
+                    // es justo "los cables viejos con codos raros se
+                    // acomodan solos la próxima vez que se mueva algo",
+                    // el default para esos tiene que ser auto-ruteado
+                    // (true), no al revés.
+                    autoRouted: wireData.autoRouted !== false,
                 };
                 this.simulator.wireManager.wires.push(wire);
             }

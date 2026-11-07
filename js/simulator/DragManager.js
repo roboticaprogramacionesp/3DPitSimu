@@ -125,20 +125,37 @@ class DragManager {
         // quiebre feo ("como si se empujara el cable") en vez de seguir
         // limpio hasta el pin fijo.
         //
-        // Arreglado con un peso por codo: el codo más cercano al
-        // extremo que SÍ se mueve recibe casi todo el delta, el más
-        // cercano al extremo FIJO recibe casi nada, interpolando lineal
-        // entre los dos -- el cable se "estira" suave en vez de
-        // trasladarse en bloque. Con los dos extremos en el grupo (o
-        // ninguno, caso que ni debería llegar acá por el filtro de
-        // "wires" de arriba) el peso es 1 en todos los codos, igual que
-        // antes.
+        // Investigado en vivo (agente aparte) cómo lo resuelven Wokwi/
+        // Tinkercad/Fritzing -- ninguno hace ruteo automático "de
+        // verdad" (pathfinding/esquivar otros componentes): Fritzing
+        // directamente deja los bendpoints clavados donde estaban, el
+        // usuario los re-arregla a mano. La diferencia real está en
+        // CUÁNDO tirar esos codos viejos: un cable que el usuario nunca
+        // tocó a mano (ver wire.autoRouted, WireManager.addWire()) no
+        // tiene ninguna razón para conservar una forma vieja que ya no
+        // tiene sentido con la posición nueva -- en vez de trasladar
+        // esos codos (aunque sea con peso), se tiran del todo acá y
+        // Utils.buildOrthogonalPoints() arma un trazado limpio de pin a
+        // pin de vuelta en el próximo renderAll() (el mismo camino que
+        // ya usa cualquier cable recién dibujado sin codos). Un cable
+        // que el usuario SÍ reacomodó a mano (ver WireManager.
+        // onWireLayerDown(), el tirador del tramo pone
+        // autoRouted=false) nunca se toca así -- sigue con el peso por
+        // codo de siempre, para no pisar una forma elegida a propósito.
+        //
+        // Con los DOS extremos en el grupo, la geometría relativa entre
+        // los dos pines NO cambia (se mueven juntos) -- ahí da igual si
+        // es auto-ruteado o no, el peso sigue siendo 1 en todos los
+        // codos como siempre: tirar la forma en ESE caso sería peor
+        // (no hace falta, nada "dejó de tener sentido").
         const wireSnapshots = wires.map(w => {
             const fromMoved = memberIds.has(w.from.componentId);
             const toMoved   = memberIds.has(w.to.componentId);
+            const bothMoved = fromMoved && toMoved;
+            const resetToClean = !bothMoved && w.autoRouted !== false;
             const n = w.points.length;
-            const weights = w.points.map((_, i) => {
-                if (fromMoved && toMoved) return 1;
+            const weights = resetToClean ? null : w.points.map((_, i) => {
+                if (bothMoved) return 1;
                 if (fromMoved) return 1 - (i + 1) / (n + 1);   // codo[0] (cerca de "from", que se mueve) -> casi 1
                 if (toMoved)   return (i + 1) / (n + 1);       // codo[n-1] (cerca de "to", que se mueve) -> casi 1
                 return 1; // no debería pasar (wires ya exige que alguno esté en el grupo), red de seguridad
@@ -146,6 +163,7 @@ class DragManager {
             return {
                 wire: w,
                 startPoints: w.points.map(p => ({ x: p.x, y: p.y })),
+                resetToClean,
                 weights,
             };
         });
@@ -212,8 +230,16 @@ class DragManager {
         // Codos de los cables internos al grupo: mismo delta que el
         // grupo, partiendo siempre del snapshot tomado en startDrag
         // (no acumular sobre el valor ya movido, para no arrastrar
-        // error de redondeo del snap en cada pointermove).
+        // error de redondeo del snap en cada pointermove). Los
+        // "resetToClean" (ver el comentario grande en startDrag) ni
+        // siquiera entran acá con codos -- quedan en [] y
+        // Utils.buildOrthogonalPoints() arma la forma limpia sola en
+        // el renderAll() de abajo, como un cable recién dibujado.
         this.dragging.wireSnapshots.forEach(ws => {
+            if (ws.resetToClean) {
+                if (ws.wire.points.length > 0) ws.wire.points = [];
+                return;
+            }
             ws.wire.points.forEach((p, i) => {
                 const w = ws.weights[i];
                 p.x = ws.startPoints[i].x + dx * w;
@@ -268,8 +294,17 @@ class DragManager {
         // Mismo criterio que "moves": solo entra al historial si el
         // cable realmente se movió (el grupo pudo haberse soltado sin
         // arrastre real, o el cable pudo no tener codos que mover).
+        // OJO -- el chequeo de longitud es a propósito: un cable
+        // "resetToClean" (ver startDrag/updateDrag) puede pasar de N
+        // codos a 0, y ".some()" sobre un array VACÍO siempre da falso
+        // sin importar qué compare, así que sin esto ese caso nunca
+        // entraba al historial -- deshacer el movimiento del
+        // componente dejaba el cable con los codos tirados en vez de
+        // devolverle también su forma vieja.
         const wireMoves = wireSnapshots
-            .filter(ws => ws.wire.points.some((p, i) => p.x !== ws.startPoints[i].x || p.y !== ws.startPoints[i].y))
+            .filter(ws =>
+                ws.wire.points.length !== ws.startPoints.length ||
+                ws.wire.points.some((p, i) => p.x !== ws.startPoints[i].x || p.y !== ws.startPoints[i].y))
             .map(ws => ({
                 wire: ws.wire,
                 startPoints: ws.startPoints,
