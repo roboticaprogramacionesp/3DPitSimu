@@ -135,6 +135,9 @@ class WireManager {
         this.snapEnabled = true;
         this.shiftKeyPressed = false;
 
+        // Ciclado de cables superpuestos -- ver _pickOverlappingWireSegment().
+        this._overlapCycle = null;
+
         this.bindEvents();
 
     }
@@ -559,7 +562,7 @@ class WireManager {
             return;
         }
 
-        const segment = e.target.closest(".wire-segment");
+        const segment = this._pickOverlappingWireSegment(e);
 
         if (segment) {
             const wireId = segment.getAttribute("data-wire-id");
@@ -570,6 +573,87 @@ class WireManager {
 
         this.setSelectedPoint(null);
         this.setSelectedWire(null);
+
+    }
+
+    //------------------------------------------------------
+    // Desempate cuando 2+ cables se superponen en el mismo punto de
+    // pantalla -- SIN esto, el click SIEMPRE selecciona el cable
+    // dibujado más arriba (el último del array this.wires que pasa
+    // por ese punto), y no hay forma de agarrar el que queda "tapado"
+    // para moverlo (reportado en vivo: "cuando 2 cables se empalman
+    // y quiero mover el que está detrás es imposible").
+    //
+    // document.elementsFromPoint() devuelve la pila COMPLETA de
+    // elementos en ese punto de arriba hacia abajo -- no solo el de
+    // más arriba, que es lo único que e.target ya daba. Si el click
+    // cae sobre más de un cable distinto Y el click anterior fue casi
+    // en el mismo punto (mismos cables en juego, <1.5s), se avanza al
+    // siguiente de la pila en vez de quedarse siempre con el primero
+    // -- mismo gesto que "click de nuevo para seleccionar lo de
+    // abajo" de Figma/Illustrator. Un click en cualquier otro punto
+    // (o con otro conjunto de cables debajo) reinicia el ciclo solo,
+    // sin hacer falta ningún reset explícito en otro lado.
+    //
+    // Les demás zonas de click de un cable (manejadores de arrastre
+    // de tramo/borrado de esquina) NO necesitan esto: esas solo
+    // existen para el cable YA seleccionado (ver renderAll() más
+    // abajo, "Mostrar manejadores solo cuando el cable está
+    // seleccionado"), así que nunca hay ambigüedad entre dos cables
+    // distintos ahí -- esta es la ÚNICA zona de click que coexiste
+    // para TODOS los cables del lienzo a la vez.
+    //------------------------------------------------------
+
+    _pickOverlappingWireSegment(e) {
+
+        const fallback = e.target.closest(".wire-segment");
+
+        let stack;
+        try {
+            stack = document.elementsFromPoint(e.clientX, e.clientY);
+        } catch (err) {
+            this._overlapCycle = null;
+            return fallback;
+        }
+
+        const matches = [];
+        const seenIds = new Set();
+        for (const el of stack) {
+            const hit = el.closest?.(".wire-segment");
+            if (!hit) continue;
+            const id = hit.getAttribute("data-wire-id");
+            if (!id || seenIds.has(id)) continue;
+            seenIds.add(id);
+            matches.push(hit);
+        }
+
+        // Cualquier click que NO sea sobre 2+ cables superpuestos
+        // reinicia el ciclo -- sin esto, un click afuera (que no toca
+        // ningún "wire-segment", matches.length===0) no borraba el
+        // estado viejo, y volver a clickear el mismo punto ambiguo de
+        // antes seguía el ciclo donde había quedado en vez de arrancar
+        // de nuevo por el de más arriba (resultado raro: dos clicks
+        // bien separados en el tiempo "recordaban" uno al otro).
+        if (matches.length <= 1) {
+            this._overlapCycle = null;
+            return matches[0] || fallback;
+        }
+
+        const now = Date.now();
+        const ids = matches.map((el) => el.getAttribute("data-wire-id"));
+        const prev = this._overlapCycle;
+        const samePoint = !!prev &&
+            Math.abs(prev.x - e.clientX) <= 3 &&
+            Math.abs(prev.y - e.clientY) <= 3 &&
+            (now - prev.time) < 1500 &&
+            prev.ids.length === ids.length &&
+            prev.ids.every((id, i) => id === ids[i]);
+
+        const index = samePoint ? (prev.index + 1) % matches.length : 0;
+
+        this._overlapCycle = { x: e.clientX, y: e.clientY, time: now, ids, index };
+
+        return matches[index];
 
     }
 
