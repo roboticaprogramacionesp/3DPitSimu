@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": 1792338617906,
+  "timestamp": 1792976420792,
   "components": [
     {
       "id": "esp32_wroom_unqp78z",
@@ -18,7 +18,8 @@
         "voltaje_operacion": 3.3,
         "flash_mb": 4,
         "isPowerSource": true,
-        "macAddress": "DF:C3:2D:E6:99:35"
+        "macAddress": "DF:C3:2D:E6:99:35",
+        "espnowCode": "from machine import Pin, PWM\nfrom time import sleep\n\ndef map(x, in_min=0, in_max=100, out_min=0, out_max=1023):\n    return int((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min)\n\nl298n_pwmA = PWM(Pin(25),freq=5000)\nl298n_pwmB = PWM(Pin(26),freq=5000)\nl298n_pwmC = PWM(Pin(16),freq=5000)\nl298n_pwmD = PWM(Pin(17),freq=5000)\n\nl298n_pwmA.duty(map(50))\nl298n_pwmB.duty(map(0))\nl298n_pwmC.duty(map(0))\nl298n_pwmD.duty(map(0))\nsleep(5)\n\nl298n_pwmA.duty(map(0))\nl298n_pwmB.duty(map(50))\nl298n_pwmC.duty(map(0))\nl298n_pwmD.duty(map(0))\nsleep(5)\n\nl298n_pwmA.duty(map(0))\nl298n_pwmB.duty(map(0))\nl298n_pwmC.duty(map(0))\nl298n_pwmD.duty(map(0))\n"
       },
       "locked": false
     },
@@ -207,7 +208,7 @@
       "connectorType": "hembra-hembra"
     },
     {
-      "id": "wire_rpdatj1",
+      "id": "wire_s64pydw",
       "from": {
         "componentId": "motor_zqlp03i",
         "pinId": "pin1"
@@ -221,25 +222,16 @@
       "connectorType": "hembra-hembra"
     },
     {
-      "id": "wire_kxbu2bp",
+      "id": "wire_5z78x9l",
       "from": {
-        "componentId": "motor_zqlp03i",
-        "pinId": "pin2"
-      },
-      "to": {
         "componentId": "l298n_cd7fb6h",
         "pinId": "out2"
       },
-      "points": [
-        {
-          "x": 641.5714541261632,
-          "y": 208.92932268336762
-        },
-        {
-          "x": 641.5714541261632,
-          "y": 229.92099342910535
-        }
-      ],
+      "to": {
+        "componentId": "motor_zqlp03i",
+        "pinId": "pin2"
+      },
+      "points": [],
       "color": "#8d6e63",
       "connectorType": "hembra-hembra"
     }

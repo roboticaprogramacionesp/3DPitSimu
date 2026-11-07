@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": 1791135839425,
+  "timestamp": 1793739475758,
   "components": [
     {
       "id": "esp32_wroom_wzuljto",
@@ -17,7 +17,8 @@
         "mcu": "ESP32-WROOM-32",
         "voltaje_operacion": 3.3,
         "flash_mb": 4,
-        "isPowerSource": true
+        "isPowerSource": true,
+        "macAddress": "31:68:14:72:17:99"
       },
       "locked": false
     },
@@ -69,15 +70,23 @@
       "points": [
         {
           "x": 738.9221110944621,
-          "y": 206.11307758178356
+          "y": 204.70445665799716
+        },
+        {
+          "x": 679.3571982912991,
+          "y": 204.70445665799716
+        },
+        {
+          "x": 679.3571982912991,
+          "y": 363.1586624031529
         },
         {
           "x": 576.28,
-          "y": 206.11307758178356
+          "y": 363.1586624031529
         }
       ],
       "color": "#1a1a1a",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_x9erylq",
@@ -92,15 +101,23 @@
       "points": [
         {
           "x": 746.1211110944622,
-          "y": 197.8486145882976
+          "y": 196.302297306144
+        },
+        {
+          "x": 714.6433451129503,
+          "y": 196.302297306144
+        },
+        {
+          "x": 714.6433451129503,
+          "y": 401.03097028317586
         },
         {
           "x": 546.28,
-          "y": 197.8486145882976
+          "y": 401.03097028317586
         }
       ],
       "color": "#ff5252",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_pg72xd9",
@@ -118,12 +135,20 @@
           "y": 173.67348273545002
         },
         {
-          "x": 576.28,
+          "x": 705.2862785918386,
           "y": 173.67348273545002
+        },
+        {
+          "x": 705.2862785918386,
+          "y": 388.96705153221194
+        },
+        {
+          "x": 576.28,
+          "y": 388.96705153221194
         }
       ],
       "color": "#1a1a1a",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_rlgyn0o",
@@ -138,11 +163,19 @@
       "points": [
         {
           "x": 753.3211110944621,
-          "y": 189.19651474344295
+          "y": 204.60616503942606
+        },
+        {
+          "x": 697.2517646108364,
+          "y": 204.60616503942606
+        },
+        {
+          "x": 697.2517646108364,
+          "y": 380.36746872917604
         },
         {
           "x": 576.28,
-          "y": 189.19651474344295
+          "y": 380.36746872917604
         }
       ],
       "color": "#1a1a1a",
@@ -168,8 +201,8 @@
           "y": 138.59848428998447
         }
       ],
-      "color": "#26c6da",
-      "connectorType": "hembra-hembra"
+      "color": "#8d6e63",
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_7hw7h47",
@@ -184,11 +217,19 @@
       "points": [
         {
           "x": 767.7211110944622,
-          "y": 188.98155839492873
+          "y": 204.42272346065647
+        },
+        {
+          "x": 687.7622130648659,
+          "y": 204.42272346065647
+        },
+        {
+          "x": 687.7622130648659,
+          "y": 372.2823072549068
         },
         {
           "x": 576.28,
-          "y": 188.98155839492873
+          "y": 372.2823072549068
         }
       ],
       "color": "#1a1a1a",
@@ -215,7 +256,7 @@
         }
       ],
       "color": "#26c6da",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_9m85azk",
@@ -237,8 +278,8 @@
           "y": 118.25571338299373
         }
       ],
-      "color": "#bb86fc",
-      "connectorType": "hembra-hembra"
+      "color": "#ff66cc",
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_odsnfum",
@@ -260,8 +301,8 @@
           "y": 112.50023224715763
         }
       ],
-      "color": "#bb86fc",
-      "connectorType": "hembra-hembra"
+      "color": "#4da3ff",
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_fr4bt8y",
@@ -284,7 +325,7 @@
         }
       ],
       "color": "#bb86fc",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_fglmq90",
@@ -306,8 +347,8 @@
           "y": 97.39209426558783
         }
       ],
-      "color": "#bb86fc",
-      "connectorType": "hembra-hembra"
+      "color": "#2ecc71",
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_qc9prkk",
@@ -329,8 +370,8 @@
           "y": 227.3289259869719
         }
       ],
-      "color": "#ff5252",
-      "connectorType": "hembra-hembra"
+      "color": "#f2994a",
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_78x88u5",
@@ -361,7 +402,7 @@
         }
       ],
       "color": "#ff5252",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     }
   ],
   "annotations": []

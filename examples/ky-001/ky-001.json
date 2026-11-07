@@ -1,0 +1,123 @@
+{
+  "version": "1.0",
+  "timestamp": 1792960271621,
+  "components": [
+    {
+      "id": "esp32_wroom_b72o5k0",
+      "type": "esp32_wroom",
+      "name": "ESP32 WeMos D1 R32",
+      "x": 280,
+      "y": 160,
+      "width": 276.28,
+      "height": 210,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "mcu": "ESP32-WROOM-32",
+        "voltaje_operacion": 3.3,
+        "flash_mb": 4,
+        "isPowerSource": true,
+        "macAddress": "55:BC:A6:0E:CF:F0"
+      },
+      "locked": false
+    },
+    {
+      "id": "ky_001_6k584kc",
+      "type": "ky_001",
+      "name": "KY-001 Temp Sensor",
+      "x": 620,
+      "y": 220,
+      "width": 56.694,
+      "height": 89.736,
+      "rotation": 0,
+      "scale": 1,
+      "flipX": false,
+      "properties": {
+        "temperature": 25,
+        "address": "28 01 02 03 04 05 06"
+      },
+      "locked": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_qp8lch1",
+      "from": {
+        "componentId": "ky_001_6k584kc",
+        "pinId": "gnd"
+      },
+      "to": {
+        "componentId": "esp32_wroom_b72o5k0",
+        "pinId": "gnd_2"
+      },
+      "points": [
+        {
+          "x": 639,
+          "y": 385.1200245798867
+        },
+        {
+          "x": 456.28,
+          "y": 385.1200245798867
+        }
+      ],
+      "color": "#1a1a1a",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_cecof5s",
+      "from": {
+        "componentId": "ky_001_6k584kc",
+        "pinId": "vcc"
+      },
+      "to": {
+        "componentId": "esp32_wroom_b72o5k0",
+        "pinId": "3v3"
+      },
+      "points": [
+        {
+          "x": 648.5,
+          "y": 395.2805551684481
+        },
+        {
+          "x": 426.28,
+          "y": 395.2805551684481
+        }
+      ],
+      "color": "#ff5252",
+      "connectorType": "hembra-hembra"
+    },
+    {
+      "id": "wire_ywwe23y",
+      "from": {
+        "componentId": "esp32_wroom_b72o5k0",
+        "pinId": "io26"
+      },
+      "to": {
+        "componentId": "ky_001_6k584kc",
+        "pinId": "signal"
+      },
+      "points": [
+        {
+          "x": 516.28,
+          "y": 141.83176437600042
+        },
+        {
+          "x": 699.9851473639169,
+          "y": 141.83176437600042
+        },
+        {
+          "x": 699.9851473639169,
+          "y": 328.10815849962563
+        },
+        {
+          "x": 658,
+          "y": 328.10815849962563
+        }
+      ],
+      "color": "#26c6da",
+      "connectorType": "hembra-hembra"
+    }
+  ],
+  "annotations": []
+}

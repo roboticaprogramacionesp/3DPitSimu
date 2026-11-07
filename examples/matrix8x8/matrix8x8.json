@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": 1792363815558,
+  "timestamp": 1793681829997,
   "components": [
     {
       "id": "esp32_wroom_h3vlkhf",
@@ -68,7 +68,7 @@
         }
       ],
       "color": "#1a1a1a",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_tc9yost",
@@ -95,7 +95,7 @@
         }
       ],
       "color": "#ff5252",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_0j0y4pw",
@@ -122,7 +122,7 @@
         }
       ],
       "color": "#4da3ff",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_o7qj8d5",
@@ -149,7 +149,7 @@
         }
       ],
       "color": "#bb86fc",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     },
     {
       "id": "wire_zehj196",
@@ -176,7 +176,7 @@
         }
       ],
       "color": "#2ecc71",
-      "connectorType": "hembra-hembra"
+      "connectorType": "hembra-macho"
     }
   ],
   "annotations": []
