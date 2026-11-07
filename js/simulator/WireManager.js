@@ -639,21 +639,40 @@ class WireManager {
             return matches[0] || fallback;
         }
 
+        const currentIds = matches.map((el) => el.getAttribute("data-wire-id"));
+        const currentSet = new Set(currentIds);
+
         const now = Date.now();
-        const ids = matches.map((el) => el.getAttribute("data-wire-id"));
         const prev = this._overlapCycle;
+        // Mismo CONJUNTO de cables (sin importar el orden) -- el orden
+        // SÍ puede cambiar entre un click y el siguiente sin que el
+        // usuario haya hecho nada raro: el cable seleccionado se
+        // redibuja último a propósito (ver el comentario grande en
+        // renderAll(), "arriba en el z-order" para que sus manejadores
+        // se vean), así que ciclar a un cable lo manda arriba, y el
+        // PRÓXIMO click en el mismo punto vería ese orden invertido. Si
+        // comparáramos el orden exacto acá, ese cambio de z-order por
+        // sí solo reiniciaba el ciclo en vez de seguir avanzando.
         const samePoint = !!prev &&
             Math.abs(prev.x - e.clientX) <= 3 &&
             Math.abs(prev.y - e.clientY) <= 3 &&
             (now - prev.time) < 1500 &&
-            prev.ids.length === ids.length &&
-            prev.ids.every((id, i) => id === ids[i]);
+            prev.ids.length === currentIds.length &&
+            prev.ids.every((id) => currentSet.has(id));
 
-        const index = samePoint ? (prev.index + 1) % matches.length : 0;
+        // Si es el mismo click ambiguo de antes, seguimos LA MISMA
+        // secuencia ya fijada la primera vez (prev.ids) -- no la
+        // recalculamos del z-order actual, que es justo lo que puede
+        // haber cambiado. Si es un click nuevo, arrancamos de cero con
+        // el de más arriba AHORA MISMO primero (comportamiento de
+        // siempre: el primer click agarra lo que se ve encima).
+        const ids = samePoint ? prev.ids : currentIds;
+        const index = samePoint ? (prev.index + 1) % ids.length : 0;
 
         this._overlapCycle = { x: e.clientX, y: e.clientY, time: now, ids, index };
 
-        return matches[index];
+        const chosenId = ids[index];
+        return matches.find((el) => el.getAttribute("data-wire-id") === chosenId) || fallback;
 
     }
 
@@ -1273,7 +1292,25 @@ class WireManager {
         // o "Expected number, '...NaN...'".
         const validPoint = (p) => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 
-        this.wires.forEach(wire => {
+        // El cable SELECCIONADO se dibuja último a propósito -- en SVG,
+        // "después" en el DOM significa "arriba" en el z-order. Sin
+        // esto, si el cable seleccionado aparece ANTES que otro en
+        // this.wires (ej. es más viejo) y los dos se superponen en
+        // algún tramo, el trazo del otro cable (dibujado encima) tapaba
+        // por completo los manejadores de arrastre/los puntos del
+        // seleccionado -- quedaban ahí, clickeables, pero invisibles,
+        // así que no había forma de agarrarlos a simple vista (reportado
+        // en vivo con captura: "no se muestran los tiradores porque
+        // aparece el otro cable por encima"). El orden entre los DEMÁS
+        // cables (ninguno es el seleccionado) no cambia.
+        const orderedWires = this.selectedWire
+            ? [
+                ...this.wires.filter(w => w.id !== this.selectedWire),
+                ...this.wires.filter(w => w.id === this.selectedWire),
+            ]
+            : this.wires;
+
+        orderedWires.forEach(wire => {
 
             const start = this.getPinAbsolutePosition(wire.from);
             const end   = this.getPinAbsolutePosition(wire.to);
