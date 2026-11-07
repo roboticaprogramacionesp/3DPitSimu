@@ -219,3 +219,23 @@
     min-width: 230px;
     transform-origin: top right;
 }
+
+/* --------------------------------------------------------
+   Menú 🛠️ "Circuitos de ejemplo" (ExamplesCatalog.js) -- mismo
+   .project-drawer de siempre, pero con muchos items agrupados por
+   categoría (ver ExamplesCatalog.js), así que necesita scroll propio
+   en vez de dejar que la lista empuje el resto de la página. El
+   título es más largo que "🆕 Nuevo proyecto" -- normal en vez de
+   nowrap, para que haga 2 líneas en vez de desbordar.
+   -------------------------------------------------------- */
+
+.examples-drawer {
+    max-width: 340px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.examples-drawer .project-drawer-item {
+    white-space: normal;
+    line-height: 1.3;
+}

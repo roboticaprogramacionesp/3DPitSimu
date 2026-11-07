@@ -14,6 +14,7 @@ class Toolbar {
         this.bindEvents();
         this.bindSimToggle();
         this.bindSimToolsMenu();
+        this.bindExamplesMenu();
         this.bindWasmModeToggle();
         this.bindSimulationEvents();
         this.bindWireWarnings();
@@ -1152,6 +1153,84 @@ class Toolbar {
             const btn = document.getElementById(id);
             if (!btn) return;
             btn.disabled = !isRunning;
+        });
+
+    }
+
+    // ====================================================
+    // Menú 🛠️ "Circuitos de ejemplo" (ExamplesCatalog.js) -- a
+    // diferencia de 🎓 Tutoriales (pasos guiados para ARMAR un
+    // circuito), esto carga un proyecto YA armado de una, estilo
+    // "Examples" de Wokwi. No depende de estar simulando (al revés
+    // que 🧰 Herramientas) -- mismo motivo que el menú de Proyecto,
+    // así que reusa ese mismo patrón de abrir/cerrar.
+    // ====================================================
+
+    bindExamplesMenu() {
+
+        const toggleBtn = document.getElementById("btnExamplesMenu");
+        const drawer     = document.getElementById("examplesDrawer");
+
+        if (!toggleBtn || !drawer || typeof EXAMPLES_CATALOG === "undefined") return;
+
+        const open = () => {
+            drawer.classList.remove("hidden");
+            toggleBtn.classList.add("active");
+        };
+
+        const close = () => {
+            drawer.classList.add("hidden");
+            toggleBtn.classList.remove("active");
+        };
+
+        // Armado una sola vez acá (no cambia en tiempo de ejecución) --
+        // agrupado por categoría, mismo lenguaje visual que
+        // projectDrawer/simToolsDrawer (.project-drawer-label +
+        // .project-drawer-item).
+        const categories = [];
+        EXAMPLES_CATALOG.forEach((entry) => {
+            let cat = categories.find((c) => c.name === entry.category);
+            if (!cat) {
+                cat = { name: entry.category, items: [] };
+                categories.push(cat);
+            }
+            cat.items.push(entry);
+        });
+
+        categories.forEach((cat) => {
+            const label = document.createElement("div");
+            label.className = "project-drawer-label";
+            label.textContent = cat.name;
+            drawer.appendChild(label);
+
+            cat.items.forEach((entry) => {
+                const btn = document.createElement("button");
+                btn.className = "project-drawer-item";
+                btn.textContent = `${entry.icon} ${entry.title}`;
+                btn.addEventListener("click", async () => {
+                    close();
+                    await this.simulator.projectManager.loadExample(entry);
+                });
+                drawer.appendChild(btn);
+            });
+        });
+
+        toggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (drawer.classList.contains("hidden")) open();
+            else close();
+        });
+
+        // Mismo criterio que bindProjectDrawer()/bindSimToolsMenu() --
+        // cerrar al clickear afuera o con Escape.
+        document.addEventListener("pointerdown", (e) => {
+            if (drawer.classList.contains("hidden")) return;
+            if (drawer.contains(e.target) || toggleBtn.contains(e.target)) return;
+            close();
+        });
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") close();
         });
 
     }

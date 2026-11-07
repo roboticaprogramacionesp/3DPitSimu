@@ -64,6 +64,11 @@
             <button id="btnGenerateReport" class="btn-project-toggle" title="Generar reporte de la práctica (SVG)">📄</button>
             <button id="btnShareProject" class="btn-project-toggle" title="Compartir proyecto (link + QR)">🔗</button>
 
+            <div id="examplesSelector" class="tutorial-selector">
+                <button id="btnExamplesMenu" class="btn-project-toggle" title="Circuitos de ejemplo ya armados (cargalos de una, como en Wokwi)">🛠️</button>
+                <div id="examplesDrawer" class="project-drawer examples-drawer hidden"></div>
+            </div>
+
             <div id="projectDrawer" class="project-drawer hidden">
 
                 <div class="project-drawer-section">
@@ -275,6 +280,7 @@
     <!-- INTERFAZ                                               -->
     <!-- ====================================================== -->
 
+    <script src="js/ui/ExamplesCatalog.js"></script>
     <script src="js/ui/Toolbar.js"></script>
     <script src="js/ui/Toolbox.js"></script>
     <script src="js/ui/PropertyPanel.js"></script>

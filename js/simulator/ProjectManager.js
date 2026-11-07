@@ -600,6 +600,72 @@ class ProjectManager {
     }
 
     //------------------------------------------------------
+    // Cargar un circuito de ejemplo ya armado (botón 🛠️, ver
+    // Toolbar.bindExamplesMenu()/ExamplesCatalog.js) -- a diferencia
+    // de los Tutoriales (que enseñan a armar el circuito paso a
+    // paso), esto carga un proyecto YA cableado de una, estilo
+    // "Examples" de Wokwi. Mismo post-procesamiento que
+    // loadFromSharedData() (viene de un fetch a examples/<id>/<id>.json,
+    // no de un selector de archivos), más el ejemplo en bloques si la
+    // carpeta tiene uno (examples/<id>/<id>.xml) -- mismo mecanismo
+    // que ya usa TutorialManager.blocksAction() (blocklyPanel.
+    // openXmlFromUrl()). Un 404 del .xml NO es un error: la mayoría
+    // de los ejemplos solo tienen el circuito, sin código de bloques
+    // pre-armado -- el alumno escribe el suyo.
+    //------------------------------------------------------
+
+    async loadExample(entry) {
+
+        if (this.dirty) {
+            const ok = confirm(
+                `¿Cargar "${entry.title}"?\n\nSe perderán los cambios que todavía no guardaste.`
+            );
+            if (!ok) return false;
+        }
+
+        let data;
+        try {
+            const res = await fetch(entry.json);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            data = await res.json();
+        } catch (err) {
+            alert(`❌ No se pudo cargar el ejemplo "${entry.title}": ${err.message}`);
+            return false;
+        }
+
+        if (!(await this.deserialize(data))) {
+            alert(`❌ No se pudo cargar el ejemplo "${entry.title}" (formato inválido).`);
+            return false;
+        }
+
+        if (this.simulator.isRunning) {
+            this.simulator.stopSimulation();
+        }
+
+        this.simulator.history.undoStack = [];
+        this.simulator.history.redoStack = [];
+
+        this.fileHandle = null;
+        this._setCurrentFile(entry.title);
+        this._setDirty(false);
+
+        if (entry.xml) {
+            try {
+                const xmlRes = await fetch(entry.xml, { method: "HEAD" });
+                if (xmlRes.ok) {
+                    await window.blocklyPanel?.openXmlFromUrl(entry.xml);
+                }
+            } catch (err) {
+                // Sin bloques de ejemplo para esta carpeta -- el circuito
+                // ya cargó bien, no hace falta avisar nada por esto.
+            }
+        }
+
+        return true;
+
+    }
+
+    //------------------------------------------------------
     // Guardar (Ctrl+S / botón "Guardar"): siempre actualiza
     // localStorage (red de seguridad silenciosa) y además, si hay un
     // archivo vinculado (por haber abierto o guardado uno antes),
