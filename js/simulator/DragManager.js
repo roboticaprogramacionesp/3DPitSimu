@@ -115,10 +115,40 @@ class DragManager {
                 Array.isArray(w.points) && w.points.length > 0)
             : [];
 
-        const wireSnapshots = wires.map(w => ({
-            wire: w,
-            startPoints: w.points.map(p => ({ x: p.x, y: p.y })),
-        }));
+        // BUG REAL reportado en vivo con captura: con AMBOS extremos
+        // del cable en el grupo (ej. los dos componentes seleccionados
+        // juntos) trasladar TODO por el mismo delta es correcto -- pero
+        // con UN SOLO extremo en el grupo (el caso más común: un
+        // sensor cableado a una ESP32 fija), mover TODOS los codos por
+        // el delta completo empuja incluso los codos que están pegados
+        // al extremo que NO se movió, y el tramo final queda con un
+        // quiebre feo ("como si se empujara el cable") en vez de seguir
+        // limpio hasta el pin fijo.
+        //
+        // Arreglado con un peso por codo: el codo más cercano al
+        // extremo que SÍ se mueve recibe casi todo el delta, el más
+        // cercano al extremo FIJO recibe casi nada, interpolando lineal
+        // entre los dos -- el cable se "estira" suave en vez de
+        // trasladarse en bloque. Con los dos extremos en el grupo (o
+        // ninguno, caso que ni debería llegar acá por el filtro de
+        // "wires" de arriba) el peso es 1 en todos los codos, igual que
+        // antes.
+        const wireSnapshots = wires.map(w => {
+            const fromMoved = memberIds.has(w.from.componentId);
+            const toMoved   = memberIds.has(w.to.componentId);
+            const n = w.points.length;
+            const weights = w.points.map((_, i) => {
+                if (fromMoved && toMoved) return 1;
+                if (fromMoved) return 1 - (i + 1) / (n + 1);   // codo[0] (cerca de "from", que se mueve) -> casi 1
+                if (toMoved)   return (i + 1) / (n + 1);       // codo[n-1] (cerca de "to", que se mueve) -> casi 1
+                return 1; // no debería pasar (wires ya exige que alguno esté en el grupo), red de seguridad
+            });
+            return {
+                wire: w,
+                startPoints: w.points.map(p => ({ x: p.x, y: p.y })),
+                weights,
+            };
+        });
 
         this.dragging = {
             anchor: component,
@@ -185,8 +215,9 @@ class DragManager {
         // error de redondeo del snap en cada pointermove).
         this.dragging.wireSnapshots.forEach(ws => {
             ws.wire.points.forEach((p, i) => {
-                p.x = ws.startPoints[i].x + dx;
-                p.y = ws.startPoints[i].y + dy;
+                const w = ws.weights[i];
+                p.x = ws.startPoints[i].x + dx * w;
+                p.y = ws.startPoints[i].y + dy * w;
             });
         });
 
