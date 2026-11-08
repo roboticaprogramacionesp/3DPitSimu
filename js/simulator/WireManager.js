@@ -473,7 +473,9 @@ class WireManager {
                 // Reconstruir puntos visibles (start, ...wire.points, end)
                 const start = this.getPinAbsolutePosition(wire.from);
                 const end = this.getPinAbsolutePosition(wire.to);
-                const allPoints = Utils.buildOrthogonalPoints([start, ...wire.points, end]);
+                const startDir = this.getPinExitDirectionFor(wire.from);
+                const endDir   = this.getPinExitDirectionFor(wire.to);
+                const allPoints = Utils.buildOrthogonalPoints([start, ...wire.points, end], startDir, endDir);
                 const a = allPoints[segmentIndex];
                 const b = allPoints[segmentIndex + 1];
                 if (!a || !b) return;
@@ -1092,7 +1094,11 @@ class WireManager {
             this.simulator.wireLayer.appendChild(this.tempLine);
         }
 
-        const allPoints = Utils.buildOrthogonalPoints([...fixedPoints, end]);
+        // Dirección del pin de origen (this.pendingFrom sigue activo
+        // mientras se dibuja esta vista previa) -- sin endDir, el cursor
+        // no es un pin real y no tiene una dirección "natural" propia.
+        const startDir = this.pendingFrom ? this.getPinExitDirectionFor(this.pendingFrom) : null;
+        const allPoints = Utils.buildOrthogonalPoints([...fixedPoints, end], startDir, null);
         const d = allPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x},${p.y}`).join(" ");
 
         this.tempLine.setAttribute("d", d);
@@ -1291,6 +1297,16 @@ class WireManager {
         return component.getPinPosition(ref.pinId);
     }
 
+    // Dirección "natural" de salida de un pin (ver
+    // Component.getPinExitDirection) -- usada por buildOrthogonalPoints
+    // para que el primer/último tramo de cada cable salga derecho del
+    // pin en vez de doblar hacia el lado equivocado.
+    getPinExitDirectionFor(ref) {
+        const component = this.simulator.componentManager.get(ref.componentId);
+        if (!component) return null;
+        return component.getPinExitDirection(ref.pinId);
+    }
+
     //------------------------------------------------------
     // Redibujar cables
     //------------------------------------------------------
@@ -1341,8 +1357,10 @@ class WireManager {
             // válidas, pero por si mete NaN en algún caso borde, también
             // filtramos el resultado final antes de dibujar).
             const cleanMidPoints = (wire.points || []).filter(validPoint);
+            const startDir = this.getPinExitDirectionFor(wire.from);
+            const endDir   = this.getPinExitDirectionFor(wire.to);
             const allPoints      = Utils
-                .buildOrthogonalPoints([start, ...cleanMidPoints, end])
+                .buildOrthogonalPoints([start, ...cleanMidPoints, end], startDir, endDir)
                 .filter(validPoint);
 
             const isSelectedWire  = this.selectedWire === wire.id;

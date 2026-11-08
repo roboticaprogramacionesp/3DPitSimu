@@ -273,6 +273,78 @@ class Component {
     }
 
     //--------------------------------------------------
+    // Dirección "natural" por la que un pin sale del componente --
+    // usada SOLO para rutear cables en línea recta (ver
+    // WireManager.renderAll()/Utils.buildOrthogonalPoints()), nunca
+    // para la posición real del pin (eso sigue siendo getPinPosition()
+    // tal cual). Se basa en a qué BORDE del rectángulo del componente
+    // está más cerca el pin en coordenadas LOCALES (antes de
+    // rotar/reflejar) -- un pin de la fila de arriba sale hacia
+    // arriba, uno de la fila de abajo hacia abajo, etc., exactamente
+    // como un pin header real: el cable nunca debería salir "de
+    // costado" atravesando el propio dibujo del componente.
+    //
+    // BUG REAL reportado en vivo con captura: sin esto,
+    // Utils.buildOrthogonalPoints() elegía el primer tramo según cuál
+    // distancia (horizontal o vertical) fuera más grande entre los dos
+    // pines -- sin ninguna relación con el LADO real del componente en
+    // el que vivía cada pin, así que un cable podía terminar saliendo
+    // para arriba desde un pin que está en la fila de ABAJO de la
+    // ESP32, dando toda una vuelta fea para volver a bajar.
+    getPinExitDirection(id) {
+
+        const pin = this.getPin(id);
+        if (!pin) return null;
+
+        const w = this.width || 1;
+        const h = this.height || 1;
+
+        // Distancia a cada borde en coordenadas LOCALES (sin reflejar/
+        // rotar todavía) -- el flip horizontal de abajo ya se encarga
+        // de que "izquierda"/"derecha" terminen del lado correcto.
+        const distTop    = pin.y;
+        const distBottom = h - pin.y;
+        const distLeft   = pin.x;
+        const distRight  = w - pin.x;
+
+        const minDist = Math.min(distTop, distBottom, distLeft, distRight);
+
+        // Vector LOCAL (sin rotar) -- {0,-1}=arriba, {0,1}=abajo,
+        // {-1,0}=izquierda, {1,0}=derecha. En caso de empate exacto
+        // (pin en una esquina) se prioriza arriba/abajo sobre
+        // izquierda/derecha -- más común en este catálogo (filas de
+        // pines arriba/abajo de una placa) que al revés.
+        let dx = 0, dy = 0;
+        if (minDist === distTop) { dx = 0; dy = -1; }
+        else if (minDist === distBottom) { dx = 0; dy = 1; }
+        else if (minDist === distLeft) { dx = -1; dy = 0; }
+        else { dx = 1; dy = 0; }
+
+        // Mismo truco que getPinPosition(): el flip horizontal refleja
+        // X respecto al centro, así que la dirección local también se
+        // refleja en X antes de rotar.
+        if (this.flipX) dx = -dx;
+
+        const rad = (this.rotation * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+
+        let rotatedDx = dx * cos - dy * sin;
+        let rotatedDy = dx * sin + dy * cos;
+
+        // Encajar al cardinal más cercano -- el ruteo solo entiende
+        // arriba/abajo/izquierda/derecha, nunca diagonal (con
+        // rotaciones que no sean múltiplo de 90°, que hoy esta UI no
+        // ofrece, esto igual da un resultado razonable en vez de un
+        // vector raro sin usar).
+        if (Math.abs(rotatedDx) >= Math.abs(rotatedDy)) {
+            return { dx: rotatedDx >= 0 ? 1 : -1, dy: 0 };
+        }
+        return { dx: 0, dy: rotatedDy >= 0 ? 1 : -1 };
+
+    }
+
+    //--------------------------------------------------
     // SVG
     //--------------------------------------------------
 

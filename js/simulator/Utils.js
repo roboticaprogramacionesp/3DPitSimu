@@ -175,14 +175,52 @@ class Utils {
     // recto para que el resultado se vea más limpio y cercano a Wokwi.
     //------------------------------------------------------
 
-    static buildOrthogonalPoints(points) {
+    // startDir/endDir (opcionales): {dx,dy} con la dirección "natural"
+    // de salida del pin inicial/final (ver Component.getPinExitDirection()).
+    // Sin esto, el codo entre dos puntos se elegía SOLO según cuál
+    // distancia (horizontal o vertical) fuera más grande -- sin
+    // ninguna relación con el lado real del componente del que sale
+    // cada pin, lo que podía mandar un cable "de costado" por encima
+    // del propio dibujo del componente (reportado en vivo con
+    // captura). Con la dirección, se inserta un tramo recto corto
+    // ("tiro") que sale derecho del pin en SU dirección antes de
+    // doblar -- mismo truco que usan Wokwi/Fritzing/la mayoría de los
+    // editores de esquemáticos para que un cable nunca "nazca" yendo
+    // para el lado equivocado.
+    static buildOrthogonalPoints(points, startDir = null, endDir = null) {
 
         if (!Array.isArray(points) || points.length < 2) {
             return Array.isArray(points) ? points : [];
         }
 
-        const normalized = points.filter(Boolean);
+        let normalized = points.filter(Boolean).map(p => ({ ...p }));
         if (normalized.length < 2) return normalized;
+
+        const STUB = 14; // unidades del lienzo -- largo del tiro recto que sale del pin
+
+        const needsStub = (dir, from, to) => {
+            if (!dir || (dir.dx === 0 && dir.dy === 0)) return false;
+            // Si el próximo punto YA sigue derecho en la dirección del
+            // tiro (o está más allá), insertar el tiro solo agregaría
+            // un codo inútil pegado al pin.
+            if (dir.dx !== 0) {
+                return Math.abs(to.y - from.y) > 0.5 || Math.sign(to.x - from.x || dir.dx) !== Math.sign(dir.dx);
+            }
+            return Math.abs(to.x - from.x) > 0.5 || Math.sign(to.y - from.y || dir.dy) !== Math.sign(dir.dy);
+        };
+
+        if (startDir && needsStub(startDir, normalized[0], normalized[1])) {
+            const first = normalized[0];
+            normalized.splice(1, 0, { x: first.x + startDir.dx * STUB, y: first.y + startDir.dy * STUB });
+        }
+
+        if (endDir) {
+            const lastIdx = normalized.length - 1;
+            if (needsStub(endDir, normalized[lastIdx], normalized[lastIdx - 1])) {
+                const last = normalized[lastIdx];
+                normalized.splice(lastIdx, 0, { x: last.x + endDir.dx * STUB, y: last.y + endDir.dy * STUB });
+            }
+        }
 
         const result = [{ ...normalized[0] }];
 
