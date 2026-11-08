@@ -198,28 +198,74 @@ class Utils {
 
         const STUB = 14; // unidades del lienzo -- largo del tiro recto que sale del pin
 
-        const needsStub = (dir, from, to) => {
-            if (!dir || (dir.dx === 0 && dir.dy === 0)) return false;
-            // Si el próximo punto YA sigue derecho en la dirección del
-            // tiro (o está más allá), insertar el tiro solo agregaría
-            // un codo inútil pegado al pin.
+        // El resto de esta función (más abajo) ya elige un codo "natural"
+        // comparando qué eje tiene más distancia que recorrer. Si ESE
+        // codo natural YA sale en la misma dirección/sentido que el pin
+        // (ej. el siguiente punto está bastante más abajo que al costado,
+        // y el pin apunta hacia abajo), forzar un tiro extra no corrige
+        // nada -- solo agrega un codo de más pegado al pin que antes no
+        // estaba (reportado en vivo con captura: "ahora crea codos... se
+        // ve peor" en cables que antes salían derechos sin necesitarlo).
+        // Solo insertamos el tiro cuando el codo natural de verdad
+        // saldría para el lado equivocado (eje incorrecto, o eje correcto
+        // pero sentido contrario -- ej. el destino queda "detrás" del
+        // pin respecto a por dónde debe salir).
+        const exitsNaturally = (dir, from, to) => {
+            if (!dir || (dir.dx === 0 && dir.dy === 0)) return true;
+            const ddx = to.x - from.x;
+            const ddy = to.y - from.y;
             if (dir.dx !== 0) {
-                return Math.abs(to.y - from.y) > 0.5 || Math.sign(to.x - from.x || dir.dx) !== Math.sign(dir.dx);
+                return Math.abs(ddx) > Math.abs(ddy) && Math.sign(ddx || dir.dx) === Math.sign(dir.dx);
             }
-            return Math.abs(to.x - from.x) > 0.5 || Math.sign(to.y - from.y || dir.dy) !== Math.sign(dir.dy);
+            return Math.abs(ddy) > Math.abs(ddx) && Math.sign(ddy || dir.dy) === Math.sign(dir.dy);
         };
 
-        if (startDir && needsStub(startDir, normalized[0], normalized[1])) {
-            const first = normalized[0];
-            normalized.splice(1, 0, { x: first.x + startDir.dx * STUB, y: first.y + startDir.dy * STUB });
+        // Ambas decisiones se evalúan contra los puntos ORIGINALES (antes
+        // de insertar nada) -- si se insertara el tiro inicial primero,
+        // la revisión del tiro final terminaría comparando contra ese
+        // punto recién inventado en vez del vecino real.
+        const first  = normalized[0];
+        const second = normalized[1];
+        const needsStartStub = !!startDir && !exitsNaturally(startDir, first, second);
+
+        const lastIdx    = normalized.length - 1;
+        const last       = normalized[lastIdx];
+        const secondLast = normalized[lastIdx - 1];
+        const needsEndStub = !!endDir && !exitsNaturally(endDir, last, secondLast);
+
+        // Si AMBOS extremos necesitan tiro y los dos son sobre el MISMO
+        // eje (ej. un componente pegado justo arriba del ESP32: su pin
+        // sale hacia abajo y el del ESP32 hacia arriba, los dos en Y),
+        // un tiro de 14 fijo de cada lado puede "pasarse" cuando el
+        // hueco real entre los dos pines es más chico que 28 -- los dos
+        // tiros se cruzan y el tramo que los une termina yendo para
+        // atrás antes de volver, el zigzag feo reportado en vivo con
+        // captura ("ahora crea codos... se ve peor"). Acortamos cada
+        // tiro a lo sumo a la mitad del hueco disponible en ese eje para
+        // que, en el peor caso, se toquen justo en el medio y nunca se
+        // crucen.
+        let startStubLen = STUB;
+        let endStubLen = STUB;
+        if (needsStartStub && needsEndStub) {
+            if (startDir.dx === 0 && endDir.dx === 0) {
+                const half = Math.abs(last.y - first.y) / 2;
+                startStubLen = Math.min(STUB, half);
+                endStubLen = Math.min(STUB, half);
+            } else if (startDir.dy === 0 && endDir.dy === 0) {
+                const half = Math.abs(last.x - first.x) / 2;
+                startStubLen = Math.min(STUB, half);
+                endStubLen = Math.min(STUB, half);
+            }
         }
 
-        if (endDir) {
-            const lastIdx = normalized.length - 1;
-            if (needsStub(endDir, normalized[lastIdx], normalized[lastIdx - 1])) {
-                const last = normalized[lastIdx];
-                normalized.splice(lastIdx, 0, { x: last.x + endDir.dx * STUB, y: last.y + endDir.dy * STUB });
-            }
+        // Insertar primero el del final (en lastIdx, no afecta el índice
+        // 1) y recién después el del inicio (en el índice 1) -- así
+        // ninguno de los dos splice corre al otro de lugar.
+        if (needsEndStub) {
+            normalized.splice(lastIdx, 0, { x: last.x + endDir.dx * endStubLen, y: last.y + endDir.dy * endStubLen });
+        }
+        if (needsStartStub) {
+            normalized.splice(1, 0, { x: first.x + startDir.dx * startStubLen, y: first.y + startDir.dy * startStubLen });
         }
 
         const result = [{ ...normalized[0] }];
