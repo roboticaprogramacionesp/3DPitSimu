@@ -291,6 +291,21 @@ class Component {
     // el que vivía cada pin, así que un cable podía terminar saliendo
     // para arriba desde un pin que está en la fila de ABAJO de la
     // ESP32, dando toda una vuelta fea para volver a bajar.
+    // Caja que ocupa el componente en el lienzo (ya rotado/escalado),
+    // {x1,y1,x2,y2} -- la usa el enrutador de cables para rodearlo.
+    getBounds() {
+        const w = (this.width || 0) * (this.scale || 1);
+        const h = (this.height || 0) * (this.scale || 1);
+        const rad = ((this.rotation || 0) * Math.PI) / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        const xs = [], ys = [];
+        for (const [lx, ly] of [[0, 0], [w, 0], [0, h], [w, h]]) {
+            xs.push(this.x + lx * cos - ly * sin);
+            ys.push(this.y + lx * sin + ly * cos);
+        }
+        return { x1: Math.min(...xs), y1: Math.min(...ys), x2: Math.max(...xs), y2: Math.max(...ys) };
+    }
+
     getPinExitDirection(id) {
 
         const pin = this.getPin(id);
@@ -299,26 +314,13 @@ class Component {
         const w = this.width || 1;
         const h = this.height || 1;
 
-        // Distancia a cada borde en coordenadas LOCALES (sin reflejar/
-        // rotar todavía) -- el flip horizontal de abajo ya se encarga
-        // de que "izquierda"/"derecha" terminen del lado correcto.
-        const distTop    = pin.y;
-        const distBottom = h - pin.y;
-        const distLeft   = pin.x;
-        const distRight  = w - pin.x;
-
-        const minDist = Math.min(distTop, distBottom, distLeft, distRight);
-
-        // Vector LOCAL (sin rotar) -- {0,-1}=arriba, {0,1}=abajo,
-        // {-1,0}=izquierda, {1,0}=derecha. En caso de empate exacto
-        // (pin en una esquina) se prioriza arriba/abajo sobre
-        // izquierda/derecha -- más común en este catálogo (filas de
-        // pines arriba/abajo de una placa) que al revés.
-        let dx = 0, dy = 0;
-        if (minDist === distTop) { dx = 0; dy = -1; }
-        else if (minDist === distBottom) { dx = 0; dy = 1; }
-        else if (minDist === distLeft) { dx = -1; dy = 0; }
-        else { dx = 1; dy = 0; }
+        // Vector LOCAL (sin rotar/reflejar) -- ver Utils.pinExitLocal():
+        // "exit" declarado en el .json, pin pegado a un borde, fila o
+        // columna de pines, o el borde más cercano. El flip horizontal
+        // de abajo ya se encarga de que izquierda/derecha queden bien.
+        // (en el navegador Utils es global; en los tests de Node se carga)
+        const U = (typeof Utils !== "undefined") ? Utils : require("./Utils");
+        let { dx, dy } = U.pinExitLocal(pin, this.pins, w, h);
 
         // Mismo truco que getPinPosition(): el flip horizontal refleja
         // X respecto al centro, así que la dirección local también se

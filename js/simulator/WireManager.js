@@ -473,9 +473,10 @@ class WireManager {
                 // Reconstruir puntos visibles (start, ...wire.points, end)
                 const start = this.getPinAbsolutePosition(wire.from);
                 const end = this.getPinAbsolutePosition(wire.to);
-                const startDir = this.getPinExitDirectionFor(wire.from);
-                const endDir   = this.getPinExitDirectionFor(wire.to);
-                const allPoints = Utils.buildOrthogonalPoints([start, ...wire.points, end], startDir, endDir);
+                // Los mismos puntos que se ven en pantalla (incluida la
+                // separación de carriles); si no hay, se enruta de nuevo.
+                const allPoints = this._renderedRoutes?.get(wire.id) || this.routeWire(wire);
+                if (!allPoints) return;
                 const a = allPoints[segmentIndex];
                 const b = allPoints[segmentIndex + 1];
                 if (!a || !b) return;
@@ -508,7 +509,13 @@ class WireManager {
                 // cambia en nada, pero a partir de acá sí hay un punto real
                 // por cada codo, y el arrastre del tramo puede operar de
                 // forma consistente siempre.
-                if (allPoints.length !== wire.points.length + 2) {
+                // (se compara el contenido, no solo la cantidad: el
+                // enrutador también puede limpiar "rulos" sin cambiar
+                // cuántos puntos hay)
+                const visibleMid = allPoints.slice(1, -1);
+                const sameAsStored = visibleMid.length === wire.points.length &&
+                    visibleMid.every((p, i) => Math.abs(p.x - wire.points[i].x) < 0.01 && Math.abs(p.y - wire.points[i].y) < 0.01);
+                if (!sameAsStored) {
                     wire.points = allPoints.slice(1, -1).map(p => ({ ...p }));
                 }
 
@@ -1307,6 +1314,36 @@ class WireManager {
         return component.getPinExitDirection(ref.pinId);
     }
 
+    // Cajas de todos los componentes del lienzo, para que el enrutador
+    // automático los rodee. Se calcula una vez por redibujado.
+    _componentBoxes() {
+        const map = new Map();
+        for (const c of this.simulator.componentManager.getAll()) {
+            if (typeof c.getBounds === "function") map.set(c.id, c.getBounds());
+        }
+        return map;
+    }
+
+    // Puntos VISIBLES de un cable (pin, codos, pin). Lo usan renderAll()
+    // y el arrastre de tramos (onWireLayerDown) -- tienen que dar
+    // exactamente lo mismo, porque el tirador de cada tramo se busca
+    // por su número de tramo.
+    routeWire(wire, boxes = null) {
+        const valid = (p) => p && Number.isFinite(p.x) && Number.isFinite(p.y);
+        const start = this.getPinAbsolutePosition(wire.from);
+        const end   = this.getPinAbsolutePosition(wire.to);
+        if (!valid(start) || !valid(end)) return null;
+        const mids = (wire.points || []).filter(valid);
+        const map = boxes || this._componentBoxes();
+        const endBoxes = [map.get(wire.from.componentId), map.get(wire.to.componentId)].filter(Boolean);
+        return Utils.buildOrthogonalPoints(
+            [start, ...mids, end],
+            this.getPinExitDirectionFor(wire.from),
+            this.getPinExitDirectionFor(wire.to),
+            { obstacles: [...map.values()], endBoxes }
+        ).filter(valid);
+    }
+
     //------------------------------------------------------
     // Redibujar cables
     //------------------------------------------------------
@@ -1338,6 +1375,8 @@ class WireManager {
         // en vivo con captura: "no se muestran los tiradores porque
         // aparece el otro cable por encima"). El orden entre los DEMÁS
         // cables (ninguno es el seleccionado) no cambia.
+        const boxes = this._componentBoxes();
+
         const orderedWires = this.selectedWire
             ? [
                 ...this.wires.filter(w => w.id !== this.selectedWire),
@@ -1345,23 +1384,19 @@ class WireManager {
             ]
             : this.wires;
 
+        // Enrutar TODOS los cables primero y después separar los tramos
+        // que quedaron encimados en el mismo carril (Utils.nudgeOverlaps)
+        // -- si no, varios cables que rodean juntos un componente se
+        // veían como uno solo. Lo dibujado se guarda en _renderedRoutes
+        // para que el arrastre de un tramo parta de ESTOS puntos.
+        const routed = orderedWires.map(w => this.routeWire(w, boxes) || []);
+        const nudged = Utils.nudgeOverlaps(routed).map(r => Utils.simplifyOrthogonal(r));
+        this._renderedRoutes = new Map(orderedWires.map((w, k) => [w.id, nudged[k]]));
+
         orderedWires.forEach(wire => {
 
-            const start = this.getPinAbsolutePosition(wire.from);
-            const end   = this.getPinAbsolutePosition(wire.to);
-            if (!validPoint(start) || !validPoint(end)) return;
-
-            // Sanitiza los puntos intermedios: descarta cualquier
-            // entrada corrupta antes de pasársela a buildOrthogonalPoints.
-            // (belt + suspenders: buildOrthogonalPoints ya recibe coords
-            // válidas, pero por si mete NaN en algún caso borde, también
-            // filtramos el resultado final antes de dibujar).
-            const cleanMidPoints = (wire.points || []).filter(validPoint);
-            const startDir = this.getPinExitDirectionFor(wire.from);
-            const endDir   = this.getPinExitDirectionFor(wire.to);
-            const allPoints      = Utils
-                .buildOrthogonalPoints([start, ...cleanMidPoints, end], startDir, endDir)
-                .filter(validPoint);
+            const allPoints = this._renderedRoutes.get(wire.id);
+            if (!allPoints || allPoints.length < 2) return;
 
             const isSelectedWire  = this.selectedWire === wire.id;
 
